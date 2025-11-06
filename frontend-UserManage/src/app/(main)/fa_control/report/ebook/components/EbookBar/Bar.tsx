@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
 import CustomSelect from "@/components/SelectSection/SelectSearch"
 import { useDebounce } from "use-debounce"
+import client from "@/lib/axios/interceptors"
 
 const SelectSchema = z.object({
    code: z.string(),
@@ -64,23 +65,33 @@ export function EbookFilterBar({
    const [debouncedLocation] = useDebounce(watchLocation, 750)
    const [debouncedSearch] = useDebounce(watchSearch, 500)
 
-   const loadOptionsForSelect = useMemo(() => {
-     return async (input: string): Promise<{ value: string; label: string }[]> => {
-       const allCodes = filterOptions.codes || [];
-       
-       console.log("📊 Total codes from API:", allCodes.length);
-       
-       const filtered = input.trim() === ""
-         ? allCodes
-         : allCodes.filter((opt) => 
-             opt.label.toLowerCase().includes(input.toLowerCase()) ||
-             opt.value.toLowerCase().includes(input.toLowerCase())
-           );
    
-       console.log("🔍 Filtered results:", filtered.length);
-       return filtered;
-     };
-   }, [filterOptions.codes]);
+   // const loadOptionsForSelect = useMemo(() => {
+   //   return async (input: string): Promise<{ value: string; label: string }[]> => {
+   //     const allCodes = filterOptions.codes || [];
+   //     const filtered = input.trim() === ""
+   //       ? allCodes
+   //       : allCodes.filter((opt) => 
+   //           opt.label.toLowerCase().includes(input.toLowerCase()) ||
+   //           opt.value.toLowerCase().includes(input.toLowerCase())
+   //         );
+   
+   //     return filtered;
+   //   };
+   // }, [filterOptions.codes]);
+   const loadOptionsForSelect = async (input: string, offset?: number, pageSize?: number) => {
+      const params: any = { search: input || "" };
+
+      // ✅ ส่ง offset และ pageSize เฉพาะกรณี infinite scroll เท่านั้น
+      if (typeof offset === "number" && typeof pageSize === "number") {
+         params.offset = offset;
+         params.pageSize = pageSize;
+      }
+
+      const res = await client.get("/FA_Control_Fetch_Assets_FilterCode", { params });
+
+      return Array.isArray(res.data) ? res.data : (res.data?.recordset ?? []);
+   };
 
    useEffect(() => {
       if (isFirstRender.current) {
@@ -137,6 +148,7 @@ export function EbookFilterBar({
                                  formLabel="Code"
                                  placeholder="Code"
                                  loadOptions={loadOptionsForSelect}
+                                 enableInfiniteScroll={true}
                               />
                         )} />
                      </div>

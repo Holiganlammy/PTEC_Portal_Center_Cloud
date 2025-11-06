@@ -86,3 +86,16 @@ export interface UserWithRoles {
   Actived: number;
   PasswordExpire: Date;
 }
+
+export interface UserAssets {
+  UserID: number;
+  UserCode: string;
+  Name: string;
+  BranchID: number;
+  DepID: number;
+  Email: string;
+  DepCode: string;
+  UserType: string;
+  fristName: string;
+  lastName: string;
+}

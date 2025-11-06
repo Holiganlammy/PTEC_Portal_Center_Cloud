@@ -1,0 +1,21 @@
+interface carInfo {
+    car_infoid: string,
+    car_infocode: string,
+    starting_mile: number,
+    car_infostatus_companny: boolean,
+    car_categaryid: number,
+    car_typeid: number,
+    car_band: string,
+    car_tier: string,
+    car_color: string,
+    car_remarks: string,
+    rateoil: number,
+    active: number,
+    createby: number,
+    createdate: string,
+    updateby: number | null,
+    updatedate: string | null,
+    seat_count: number | null,
+    mileRate: number,
+    car_payname: string
+}

@@ -58,7 +58,7 @@ export default function FAControlEbookPage() {
   const [filterOptions, setFilterOptions] = useState<FilterOption>({});
   const [typeCode, setTypeCode] = useState<Assets_TypeGroup[]>([]);
   const [activeType, setActiveType] = useState<string>("PTEC");
-    const [currentFilters, setCurrentFilters] = useState({
+  const [currentFilters, setCurrentFilters] = useState({
     code: "",
     name: "",
     owner: "",
@@ -191,7 +191,6 @@ export default function FAControlEbookPage() {
   }, [pagination.hasNext, pagination.page, loading, initialLoading, loadAssets]);
 
   const handleFilterChange = useCallback((filters: any) => {
-      console.log("🎯 Filter changed, fetching new data...", filters)
       setCurrentFilters(filters)
       loadAssets(1, activeType, filters)
   }, [loadAssets])

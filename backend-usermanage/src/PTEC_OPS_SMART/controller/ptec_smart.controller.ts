@@ -26,6 +26,7 @@ import {
   SmartBill_WithdrawDtl_DeleteCategoryInput,
   SmartBill_WithdrawDtl_SaveChangesCategoryInput,
 } from '../dto/SmartBill.dto';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller('')
 export class AppController {
@@ -58,6 +59,7 @@ export class AppController {
         car_tier: car.car_tier,
         car_color: car.car_color,
         car_remarks: car.car_remarks,
+        car_milerate: car.car_milerate,
       };
 
       const headerResult = (await this.service.SmartBill_CreateForms(
@@ -97,6 +99,7 @@ export class AppController {
     }
   }
 
+  @Public()
   @Post('SmartBill_CarInfoSearch')
   @HttpCode(200)
   async SmartBill_CarInfoSearch(
@@ -105,7 +108,7 @@ export class AppController {
   ) {
     try {
       const carInfo = await this.service.SmartBill_CarInfoSearch(body);
-      if (carInfo.length === 0) {
+      if (!carInfo) {
         throw new HttpException('ไม่พบข้อมูลรถยนต์', HttpStatus.NOT_FOUND);
       }
       res.status(200).send(carInfo);
@@ -141,7 +144,7 @@ export class AppController {
   async SmartBill_SelectHeaders(@Res() res: Response) {
     try {
       const dataHeaders = await this.service.SmartBill_SelectHeaders();
-      if (dataHeaders.length === 0) {
+      if (!dataHeaders) {
         throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       }
       res.status(200).send(dataHeaders);
@@ -162,7 +165,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_SelectAllForms(body);
-      if (data.length === 0) {
+      if (!data) {
         throw new HttpException('ไม่พบข้อมูลแบบฟอร์ม', HttpStatus.NOT_FOUND);
       }
       res.status(200).send(data);
@@ -182,7 +185,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_ESGQuery(body);
-      if (data.length === 0) {
+      if (!data) {
         throw new HttpException(
           'ไม่พบข้อมูลแบบ ESGQuery',
           HttpStatus.NOT_FOUND,
@@ -205,7 +208,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_Withdraw_Save(body);
-      if (data.length === 0) {
+      if (!data) {
         throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       }
       res.status(200).send(data);
@@ -225,7 +228,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_Withdraw_SelectAllForms(body);
-      if (data.length === 0) {
+      if (!data) {
         throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       }
       res.status(200).send(data);
@@ -287,7 +290,7 @@ export class AppController {
     try {
       const data =
         await this.service.SmartBill_WithdrawDtl_SelectCategory(body);
-      if (data.length === 0) {
+      if (!data) {
         throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       }
       res.status(200).send(data);
@@ -330,7 +333,7 @@ export class AppController {
     try {
       const data =
         await this.service.SmartBill_WithdrawDtl_DeleteCategory(body);
-      if (data.length === 0) {
+      if (!data) {
         throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       }
       res.status(200).send(data);
@@ -350,8 +353,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_Withdraw_Delete(body);
-      if (!data?.length)
-        throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
+      if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       res.status(200).send(data);
     } catch (error: unknown) {
       throw new HttpException(
@@ -399,8 +401,7 @@ export class AppController {
     try {
       const data =
         await this.service.SmartBill_WithdrawDtl_SelectHotelGroup(body);
-      if (!data?.length)
-        throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
+      if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       res.status(200).send(data);
     } catch (error: unknown) {
       throw new HttpException(
@@ -422,8 +423,7 @@ export class AppController {
     try {
       const data =
         await this.service.SmartBill_WithdrawDtl_DeleteHotelGroup(body);
-      if (!data?.length)
-        throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
+      if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       res.status(200).send(data);
     } catch (error: unknown) {
       throw new HttpException(
@@ -438,8 +438,7 @@ export class AppController {
   async addRow(@Body() body: { car_infocode: string }, @Res() res: Response) {
     try {
       const data = await this.service.SmartBill_Withdraw_Addrow(body);
-      if (!data?.length)
-        throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
+      if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       res.status(200).send(data);
     } catch (error: unknown) {
       throw new HttpException(
@@ -457,8 +456,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_Withdraw_AddrowDtl(body);
-      if (!data?.length)
-        throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
+      if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       res.status(200).send(data);
     } catch (error: unknown) {
       throw new HttpException(
@@ -476,8 +474,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_WithdrawDtl_Delete(body);
-      if (!data?.length)
-        throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
+      if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       res.status(200).send(data);
     } catch (error: unknown) {
       throw new HttpException(

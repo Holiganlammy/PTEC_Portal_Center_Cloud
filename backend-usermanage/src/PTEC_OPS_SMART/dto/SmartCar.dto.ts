@@ -59,6 +59,10 @@ export class SmartBillHeaderInput {
   @IsString()
   @IsNotEmpty()
   car_remarks: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  car_milerate: number;
 }
 
 export class SmartBillOperationInput {
@@ -97,6 +101,10 @@ export class SmartBillOperationInput {
   @IsString()
   @IsNotEmpty()
   sb_operationid_location: string;
+
+  @IsString()
+  @IsNotEmpty()
+  car_milerate: number;
 }
 
 export class SmartBillAssociateInput {

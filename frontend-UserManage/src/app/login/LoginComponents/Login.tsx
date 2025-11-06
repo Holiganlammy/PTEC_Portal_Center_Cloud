@@ -129,10 +129,13 @@ export default function Login() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-black mb-2">
-            OPS Management on Cloud
+            PTEC Portal Systems
           </h1>
           <p className="text-gray-600 text-sm">
             Sign in to NAC Systems , User Management System , Reservation System
+          </p>
+          <p className="text-gray-600 text-sm">
+            SmartBill / SmartCar System , Audit System
           </p>
         </div>
 

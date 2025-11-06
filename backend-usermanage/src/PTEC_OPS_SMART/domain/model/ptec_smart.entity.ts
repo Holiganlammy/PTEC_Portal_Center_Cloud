@@ -17,6 +17,7 @@ export class CarInfoDto {
   car_tier: string;
   car_color: string;
   car_remarks: string;
+  car_milerate: number;
 }
 
 export class SmartBillOperationDto {
@@ -34,4 +35,8 @@ export class CreateSmartBillDto {
   carInfo: CarInfoDto[];
   smartBill_Operation: SmartBillOperationDto[];
   smartBill_Associate: SmartBillAssociateDto[];
+}
+
+export class outputSmartBill {
+  result: string;
 }

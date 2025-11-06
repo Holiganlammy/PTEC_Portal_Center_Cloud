@@ -1,7 +1,6 @@
 "use client";
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 
 const HomeComponent = () => {
   const [currentTime, setCurrentTime] = useState('');
@@ -24,10 +23,10 @@ const HomeComponent = () => {
     };
   }, []);
   return (
-    <div className="w-full bg-white text-gray-900 px-6 py-12">
+    <div className="w-full bg-white text-gray-900 px-6 py-10">
       {/* Header */}
-      <header className="mb-6 p-6 flex justify-between items-center">
-        <div className="text-sm text-gray-500 font-mono">{currentTime}</div>
+      <header className="mb-8 p-6 flex justify-between items-center">
+        <div className="text-sm text-gray-500 font-mono">เวลา : {currentTime}</div>
       </header>
 
       {/* Main Content */}
@@ -35,10 +34,10 @@ const HomeComponent = () => {
         {/* Main Title */}
         <div className="text-center mb-16">
           <h1 className="text-6xl md:text-7xl font-light text-black mb-6 tracking-tight">
-            Welcome Purethai Enterprise
+            Welcome to PTEC Portal Systems
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-lvh leading-relaxed">
-            สวัสดีครับ ยินดีต้อนรับสู่พื้นที่ของเรา
+            ระบบจัดการภายในองค์กร Purethai Energy Co., Ltd.
           </p>
         </div>
 

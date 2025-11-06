@@ -58,6 +58,12 @@ interface DataTableProps<TData, TValue> {
    onPageChange?: (newPage: number) => void
    onPageSizeChange?: (newSize: number) => void
    Loading?: boolean
+   // ✅ เพิ่ม props สำหรับ server-side pagination
+   pageCount?: number  // จำนวนหน้าทั้งหมดจาก server
+   totalRows?: number  // จำนวนแถวทั้งหมดจาก server
+   // ✅ เพิ่ม props สำหรับ server-side search
+   onSearchChange?: (searchValue: string) => void  // callback เมื่อ search เปลี่ยน
+   searchValue?: string  // ค่า search จาก parent (controlled)
 }
 
 export function DataTable<TData, TValue>({
@@ -69,13 +75,25 @@ export function DataTable<TData, TValue>({
    pagination,
    onPageChange,
    onPageSizeChange,
-   Loading
+   Loading,
+   pageCount,
+   totalRows,
+   onSearchChange,
+   searchValue: controlledSearchValue,  //รับค่า search จาก parent
 }: DataTableProps<TData, TValue>) {
    const [sorting, setSorting] = React.useState<SortingState>([])
    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
    const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
-   const [globalFilter, setGlobalFilter] = React.useState("")
+   
+   // ใช้ local state เฉพาะตอน client-side search
+   const [localSearchValue, setLocalSearchValue] = React.useState("")
+   
+   //ตรวจสอบว่าเป็น server-side search หรือไม่
+   const isServerSideSearch = Boolean(onSearchChange && controlledSearchValue !== undefined)
+   
+   //ใช้ค่า search ที่เหมาะสม (controlled หรือ local)
+   const globalFilter = isServerSideSearch ? controlledSearchValue : localSearchValue
 
    // Internal pagination state as fallback
    const [internalPagination, setInternalPagination] = React.useState({
@@ -84,24 +102,53 @@ export function DataTable<TData, TValue>({
    });
 
    const currentPagination = pagination ?? internalPagination;
-
    const finalSearchKeys = searchKeys || (searchKey ? [searchKey] : [])
+
+   // เป็น server-side เมื่อมีทั้ง pagination props และ pageCount
+   const isServerSidePagination = Boolean(
+      pagination && 
+      onPageChange && 
+      onPageSizeChange && 
+      pageCount !== undefined
+   )
+
+   console.log("🎯 DataTable Debug:", {
+      isServerSidePagination,
+      isServerSideSearch,
+      pagination,
+      pageCount,
+      totalRows,
+      searchValue: globalFilter,
+      hasPagination: !!pagination,
+      hasOnPageChange: !!onPageChange,
+      hasOnPageSizeChange: !!onPageSizeChange,
+      hasPageCount: pageCount !== undefined,
+      hasOnSearchChange: !!onSearchChange,
+   });
 
    const table = useReactTable({
       data,
       columns,
+      pageCount: isServerSidePagination ? pageCount : undefined,
+      manualPagination: isServerSidePagination,
+      manualFiltering: isServerSideSearch,
       onSortingChange: setSorting,
       onColumnFiltersChange: setColumnFilters,
       getCoreRowModel: getCoreRowModel(),
       getPaginationRowModel: getPaginationRowModel(),
       getSortedRowModel: getSortedRowModel(),
-      getFilteredRowModel: getFilteredRowModel(),
+      getFilteredRowModel: isServerSideSearch ? undefined : getFilteredRowModel(),
       onColumnVisibilityChange: setColumnVisibility,
       onRowSelectionChange: setRowSelection,
-      onGlobalFilterChange: setGlobalFilter,
+      onGlobalFilterChange: (value) => {
+         if (isServerSideSearch) {
+            onSearchChange?.(value as string)
+         } else {
+            setLocalSearchValue(value as string)
+         }
+      },
       onPaginationChange: (updaterOrValue) => {
          if (pagination && onPageChange && onPageSizeChange) {
-            // External pagination control
             if (typeof updaterOrValue === 'function') {
                const newPagination = updaterOrValue(currentPagination);
                if (newPagination.pageIndex !== currentPagination.pageIndex) {
@@ -119,7 +166,6 @@ export function DataTable<TData, TValue>({
                }
             }
          } else {
-            // Internal pagination control
             setInternalPagination(prev => {
                if (typeof updaterOrValue === 'function') {
                   return updaterOrValue(prev);
@@ -150,17 +196,32 @@ export function DataTable<TData, TValue>({
 
    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
       const value = event.target.value
-      table.setPageIndex(0)
-      if (finalSearchKeys.length > 1) {
-         setGlobalFilter(value)
-      } else if (finalSearchKeys.length === 1) {
-         table.getColumn(finalSearchKeys[0])?.setFilterValue(value)
+      
+      if (isServerSideSearch) {
+         onSearchChange?.(value)
+      } else {
+         table.setPageIndex(0)
+         if (finalSearchKeys.length > 1) {
+            setLocalSearchValue(value)
+         } else if (finalSearchKeys.length === 1) {
+            table.getColumn(finalSearchKeys[0])?.setFilterValue(value)
+         }
       }
    }
+   
    const handleColumnVisibilityChange = (value: boolean, columnId: string): void => {
       table.getColumn(columnId)?.toggleVisibility(!!value)
    }
+   
    const shouldShowSearch = finalSearchKeys.length > 0
+
+   const displayedRowsCount = isServerSidePagination 
+      ? Math.min(data.length, currentPagination.pageSize)
+      : table.getFilteredRowModel().rows.length
+
+   const totalRowsCount = isServerSidePagination 
+      ? (totalRows || 0)
+      : table.getFilteredRowModel().rows.length
 
    return (
       <div className="w-full">
@@ -232,30 +293,11 @@ export function DataTable<TData, TValue>({
                   {Loading ? (
                      Array.from({ length: table.getState().pagination.pageSize }).map((_, i) => (
                         <TableRow key={i}>
-                           <TableCell className="py-4">
-                              <div className="flex items-center space-x-3">
-                                 <Skeleton className="h-10 w-10 rounded-full" />
-                                 <div className="space-y-2">
-                                    <Skeleton className="h-4 w-[180px]" />
-                                    <Skeleton className="h-4 w-[120px]" />
-                                 </div>
-                              </div>
-                           </TableCell>
-                           <TableCell className="py-4">
-                              <Skeleton className="h-4 w-[100px]" />
-                           </TableCell>
-                           <TableCell className="py-4">
-                              <Skeleton className="h-4 w-[200px]" />
-                           </TableCell>
-                           <TableCell className="py-4">
-                              <Skeleton className="h-4 w-[80px]" />
-                           </TableCell>
-                           <TableCell className="py-4">
-                              <div className="flex space-x-2">
-                                 <Skeleton className="h-8 w-8" />
-                                 <Skeleton className="h-8 w-8" />
-                              </div>
-                           </TableCell>
+                           {columns.map((_, cellIndex) => (
+                              <TableCell key={cellIndex} className="py-4">
+                                 <Skeleton className="h-4 w-full" />
+                              </TableCell>
+                           ))}
                         </TableRow>
                      ))
                   ) : table.getRowModel().rows?.length ? (
@@ -293,10 +335,27 @@ export function DataTable<TData, TValue>({
          </div>
 
          <div className="sm:flex items-center justify-between px-2 pt-4">
+            {/*แสดงจำนวนแถวที่ถูกต้องทั้ง server-side และ client-side */}
             <div className="text-muted-foreground sm:flex-1 text-sm sm:ml-4 my-2">
-               {table.getFilteredSelectedRowModel().rows.length} of{" "}
-               {table.getFilteredRowModel().rows.length} row(s) selected.
+               {isServerSidePagination ? (
+                  // Server-side: แสดงช่วงของข้อมูลที่กำลังดู
+                  <>
+                     Showing {currentPagination.pageIndex * currentPagination.pageSize + 1} to{" "}
+                     {Math.min(
+                        (currentPagination.pageIndex + 1) * currentPagination.pageSize,
+                        totalRowsCount
+                     )}{" "}
+                     of {totalRowsCount.toLocaleString()} row(s)
+                  </>
+               ) : (
+                  // Client-side: แสดงจำนวนที่เลือกจากทั้งหมด
+                  <>
+                     {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                     {table.getFilteredRowModel().rows.length} row(s) selected.
+                  </>
+               )}
             </div>
+            
             <div className="grid grid-cols-2 sm:flex items-center space-x-0 sm:space-x-6 lg:space-x-8 mr-4 gap-2 sm:gap-0">
                {/* Rows per page */}
                <div className="flex items-center space-x-2 order-1 sm:order-none">
@@ -322,10 +381,10 @@ export function DataTable<TData, TValue>({
                   </Select>
                </div>
 
-               {/* Page info */}
+               {/* Page info ที่ถูกต้อง */}
                <div className="flex w-[100px] items-center justify-center text-sm font-medium">
                   Page {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
+                  {isServerSidePagination ? pageCount : table.getPageCount()}
                </div>
 
                {/* Navigation buttons */}
@@ -355,7 +414,7 @@ export function DataTable<TData, TValue>({
                   <div className="flex sm:hidden items-center space-x-1">
                      {(() => {
                         const currentPage = table.getState().pagination.pageIndex;
-                        const totalPages = table.getPageCount();
+                        const totalPages = isServerSidePagination ? (pageCount || 0) : table.getPageCount();
                         const pages = [];
 
                         let start = Math.max(0, currentPage - 1);
@@ -402,7 +461,7 @@ export function DataTable<TData, TValue>({
                      variant="outline"
                      size="icon"
                      className="hidden size-8 lg:flex"
-                     onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                     onClick={() => table.setPageIndex((isServerSidePagination ? (pageCount || 1) : table.getPageCount()) - 1)}
                      disabled={!table.getCanNextPage() || Loading}
                   >
                      <span className="sr-only">Go to last page</span>

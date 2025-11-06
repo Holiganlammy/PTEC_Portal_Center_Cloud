@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import PageLoading from "@/components/PageLoading";
 import { getAutoDataAssetCounted, getAutoData } from "../../service/documentService";
-import UserTable from "../../AssetsCountedTable/AssetsCountedTable";
+import AssetsCountTable from "../../AssetsCountedTable/AssetsCountedTable";
 import FilterForm from "./FilterForm";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -284,7 +284,7 @@ const fetchAssetsCounted = useCallback(async () => {
                   </Tabs>
                 </div>
               </div>
-              <UserTable
+              <AssetsCountTable
                 data={filteredAssets}
                 fetchAssetsCounted={fetchAssetsCounted}
               />

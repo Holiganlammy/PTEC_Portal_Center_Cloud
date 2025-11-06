@@ -178,8 +178,8 @@ export default function SiteHeader({ children }: SiteHeaderProps) {
                   />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-semibold text-white truncate">Pure Thai Energy</span>
-                  <span className="text-xs text-gray-400 truncate">Enterprise</span>
+                  <span className="text-sm font-semibold text-white truncate">PURETHAI ENERGY</span>
+                  <span className="text-xs text-gray-400 truncate">Company</span>
                 </div>
               </motion.div>
             )}

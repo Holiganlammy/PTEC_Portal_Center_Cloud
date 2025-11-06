@@ -734,7 +734,6 @@ export class AppController {
   @Get('/FA_Control_Fetch_Assets_FilterOptions')
   async FA_Control_Fetch_Assets_FilterOptions(@Res() res: Response) {
     try {
-      // result เป็น array เช่น [ { JSON_F52E2B61-18A1-11d1-B105-00805F49916B: "{...}" } ]
       const result = await this.service.FA_Control_Fetch_Assets_FilterOptions();
 
       if (!Array.isArray(result) || result.length === 0) {
@@ -749,6 +748,46 @@ export class AppController {
       return res.status(200).json(parsed);
     } catch (error: unknown) {
       console.error('Error in FA_Control_Fetch_Assets_FilterOptions:', error);
+      throw new HttpException(
+        error instanceof Error ? error.message : 'Unknown error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Public()
+  @Get('/FA_Control_Fetch_Assets_FilterCode')
+  async FA_Control_Fetch_Assets_FilterCode(
+    @Res() res: Response,
+    @Query('search') search: string = '',
+    @Query('offset') offset: number = 0,
+    @Query('pageSize') pageSize: number = 200,
+  ) {
+    try {
+      const result = await this.service.FA_Control_Fetch_Assets_FilterCode(
+        search,
+        offset,
+        pageSize,
+      );
+      res.status(200).send(result);
+    } catch (error: unknown) {
+      throw new HttpException(
+        error instanceof Error ? error.message : 'Unknown error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Public()
+  @Get('/FA_Control_Check_Assets_Codes')
+  async FA_Control_Check_Assets_Codes(
+    @Query('codes') codes: string[],
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.service.FA_Control_Check_Assets_Codes(codes);
+      res.status(200).send(result);
+    } catch (error: unknown) {
       throw new HttpException(
         error instanceof Error ? error.message : 'Unknown error',
         HttpStatus.INTERNAL_SERVER_ERROR,

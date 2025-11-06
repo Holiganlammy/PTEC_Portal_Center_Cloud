@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "New OPS",
-  description: "New OPS",
+  title: "PTEC Portal Systems",
+  description: "PTEC Portal Systems",
 };
 
 export default function RootLayout({

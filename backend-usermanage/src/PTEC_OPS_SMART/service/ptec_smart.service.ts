@@ -24,7 +24,8 @@ import * as fs from 'fs';
 @Injectable()
 export class AppService {
   private readonly uploadDir = 'D:/files/smartBill/';
-  private readonly baseUrl = 'http://vpnptec.dyndns.org:33080/smartBill/';
+  private readonly baseUrl =
+    process.env.BASE_URL || 'https://localhost:7777/smartbill/';
   private readonly usercode = 'SYSTEM';
   constructor(private readonly dbManager: DatabaseManagerService) {}
 
@@ -53,6 +54,7 @@ export class AppService {
       { name: 'car_tier', type: sql.NVarChar(50), value: req.car_tier },
       { name: 'car_color', type: sql.NVarChar(50), value: req.car_color },
       { name: 'car_remarks', type: sql.NVarChar(200), value: req.car_remarks },
+      { name: 'car_milerate', type: sql.Int(), value: req.car_milerate },
     ];
 
     return this.dbManager.executeStoredProcedure(
@@ -646,17 +648,30 @@ export class AppService {
     );
   }
 
-  async FA_Control_Running_NO(attach: string): Promise<{ ATT: string }[]> {
-    const params = [
-      { name: 'type_code', type: sql.VarChar(100), value: attach },
-      { name: 'date_time', type: sql.DateTime(), value: new Date() },
-      { name: 'nac_code', type: sql.VarChar(100), output: true },
-    ];
+  async FA_Control_Running_NO(attach: string): Promise<string> {
+    try {
+      const pool = await this.dbManager.getPool();
+      const request = pool.request();
+      request.input('code', sql.VarChar(100), attach);
+      request.input('date', sql.DateTime(), new Date());
+      request.output('docno', sql.VarChar(100));
+      const result = await request.execute(
+        `${databaseConfig.database}.dbo.RunningNo`,
+      );
 
-    return this.dbManager.executeStoredProcedure(
-      `${databaseConfig.database}.dbo.RunningNo`,
-      params,
-    );
+      const docno = result.output.docno as string;
+
+      if (!docno) {
+        throw new Error('Failed to generate running number');
+      }
+
+      console.log('Generated docno:', docno);
+      return docno;
+    } catch (error) {
+      console.error('Error in FA_Control_Running_NO:', error);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      throw new Error(`Cannot generate running number: ${error.message}`);
+    }
   }
 
   async NonPO_Attatch_Save(req: {
@@ -682,35 +697,50 @@ export class AppService {
     const file = req.files?.file as UploadedFile;
     const reqBody = req.body as { sb_code?: string };
     const st_code = reqBody.sb_code;
-    if (!file) {
-      throw new Error('No file uploaded');
-    }
+
+    if (!file) throw new Error('No file uploaded');
+
+    console.log('📦 req.files:', req.files);
+    console.log('📂 TEMP FILE PATH:', file.tempFilePath);
 
     const filename = file.name;
     const extension = path.extname(filename);
     const attach = 'ATT';
     const newPath = await this.FA_Control_Running_NO(attach);
 
-    if (!newPath || !newPath[0]?.ATT) {
-      throw new Error('Cannot generate running number');
-    }
+    if (!newPath) throw new Error('Cannot generate running number');
 
-    const newFileName = `${newPath[0].ATT}${extension}`;
+    const newFileName = `${newPath}${extension}`;
     const savePath = path.join(this.uploadDir, newFileName);
     fs.mkdirSync(this.uploadDir, { recursive: true });
-    await file.mv(savePath);
+
+    // Copy file
+    await fs.promises.copyFile(file.tempFilePath, savePath);
+    await fs.promises.unlink(file.tempFilePath);
+    const fileExists = fs.existsSync(savePath);
+    console.log('📄 File exists?', fileExists);
+
+    if (fileExists) {
+      const stats = fs.statSync(savePath);
+      console.log('📊 File size:', stats.size, 'bytes');
+    }
+
+    const fileUrl = `${this.baseUrl}${newFileName}`;
 
     const attachBody = {
       nonpocode: st_code ?? '',
-      url: `${this.baseUrl}${newFileName}`,
+      url: fileUrl,
       user: this.usercode,
       description: st_code ?? '',
     };
+
     await this.NonPO_Attatch_Save(attachBody);
 
     return {
       message: 'successfully',
       code: newPath,
+      url: fileUrl,
+      filePath: savePath, // เพิ่ม path จริง
     };
   }
 }

@@ -5,6 +5,7 @@ import {
   CreateUserResult,
   CheckUserPermission,
   UserWithRoles,
+  UserAssets,
 } from '../domain/model/ptec_useright.entity';
 import { Branch } from '../domain/model/ptec_useright.entity';
 import { Department } from '../domain/model/ptec_useright.entity';
@@ -292,6 +293,13 @@ export class AppService {
     return this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.GetUserWithRoles_Cloud`,
       [{ name: 'UserCode', type: sql.NVarChar(50), value: req.UserCode }],
+    );
+  }
+
+  async getsUserForAssetsControl(): Promise<UserAssets[]> {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.Fix_Assets_Control_Fetching_Users`,
+      [],
     );
   }
 }

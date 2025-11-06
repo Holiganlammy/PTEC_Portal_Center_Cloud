@@ -687,4 +687,21 @@ export class AppController {
       });
     }
   }
+
+  @Get('/getsUserForAssetsControl')
+  async getsUserForAssetsControl(@Res() res: Response) {
+    try {
+      const users = await this.appService.getsUserForAssetsControl();
+      res.status(200).send({
+        success: true,
+        data: users,
+      });
+    } catch (error) {
+      console.error('Error fetching users for assets control:', error);
+      res.status(500).send({
+        success: false,
+        message: 'Error fetching users for assets control',
+      });
+    }
+  }
 }

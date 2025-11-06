@@ -32,6 +32,7 @@ import {
 import debounce from "lodash.debounce"
 import { ControllerRenderProps, FieldPath, FieldValues } from "react-hook-form"
 import { useDebounce } from "use-debounce"
+
 type Option = {
   label: string
   value: string
@@ -46,9 +47,10 @@ interface CustomSelectProps<T extends FieldValues, K extends FieldPath<T>> {
   placeholder: string
   formLabel: string
   options?: Option[]
-  loadOptions?: (input: string) => Promise<Option[]>
+  loadOptions?: (input: string, offset?: number, pageSize?: number) => Promise<Option[]>
   errorString?: boolean
-  isMulti?: boolean;
+  isMulti?: boolean
+  enableInfiniteScroll?: boolean // เปิดใช้ infinite scroll แบบ offset
 }
 
 export default function CustomSelect<T extends FieldValues, K extends FieldPath<T>>({
@@ -59,6 +61,7 @@ export default function CustomSelect<T extends FieldValues, K extends FieldPath<
   loadOptions,
   errorString,
   isMulti,
+  enableInfiniteScroll = false,
 }: CustomSelectProps<T, K>) {
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
@@ -67,91 +70,111 @@ export default function CustomSelect<T extends FieldValues, K extends FieldPath<
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [triggerWidth, setTriggerWidth] = useState<number | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(false)
-  const [visibleCount, setVisibleCount] = useState(200);
   const [debouncedSearchValue] = useDebounce(searchValue, 300)
+  
+  // สำหรับ offset-based pagination
+  const [currentOffset, setCurrentOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const pageSize = 200
 
   const isAsync = !!loadOptions
 
+  // โหลดข้อมูลครั้งแรก
   useEffect(() => {
-    if (isAsync && loadOptions) {
-      loadOptions("").then(setFilteredOptions);
+    if (isAsync && open) {
+      loadInitialData()
     }
-  }, [isAsync, loadOptions]);
+  }, [open, isAsync])
 
+  const loadInitialData = async () => {
+    if (!loadOptions) return
+    
+    setIsLoading(true)
+    setCurrentOffset(0)
+    setHasMore(true)
+    
+    try {
+      const result = enableInfiniteScroll 
+        ? await loadOptions("", 0, pageSize)
+        : await loadOptions("")
+      
+      setFilteredOptions(result)
+      setHasMore(enableInfiniteScroll && result.length === pageSize)
+    } catch (error) {
+      console.error("Error loading initial data:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // โหลดข้อมูลเมื่อ search
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
 
     loadData(debouncedSearchValue)
   }, [debouncedSearchValue, open])
 
-  useEffect(() => {
-    if (!open) return;
-
-    if (debouncedSearchValue.trim() !== "") {
-      setVisibleCount(filteredOptions.length)
-    } else {
-      setVisibleCount(Math.min(filteredOptions.length, 200))
-    }
-  }, [debouncedSearchValue, filteredOptions.length, open])
-
-  useEffect(() => {
-    if (debouncedSearchValue.trim() === "" && options.length > 0) {
-      setFilteredOptions(options.slice(0, visibleCount)) // fallback option set
-    }
-  }, [debouncedSearchValue, options, visibleCount])
-
   const loadData = useCallback(
     async (input: string) => {
-      setIsLoading(true)
-
-      let result: Option[] = []
-
-      if (isAsync && loadOptions) {
-        result = await loadOptions(input)
-      } else {
-        result = options.filter((opt) =>
+      if (!loadOptions) {
+        // กรณีใช้ options แบบ sync
+        const result = options.filter((opt) =>
           opt.label.toLowerCase().includes(input.toLowerCase())
         )
+        setFilteredOptions(result)
+        return
       }
 
-      setFilteredOptions(result)
-      setIsLoading(false)
+      setIsLoading(true)
+      setCurrentOffset(0)
+      setHasMore(true)
 
-      return result.length > 0
+      try {
+        const result = enableInfiniteScroll
+          ? await loadOptions(input, 0, pageSize)
+          : await loadOptions(input)
+        
+        setFilteredOptions(result)
+        setHasMore(enableInfiniteScroll && result.length === pageSize)
+      } catch (error) {
+        console.error("Error loading data:", error)
+      } finally {
+        setIsLoading(false)
+      }
     },
-    [isAsync, loadOptions, options]
+    [loadOptions, options, enableInfiniteScroll, pageSize]
   )
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollTop + clientHeight >= scrollHeight - 10) {
-      setVisibleCount((prev) => prev + 100); // โหลดเพิ่มทีละ 100
+
+  // Infinite scroll handler
+  const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+    if (!enableInfiniteScroll || !hasMore || isLoadingMore || !loadOptions) return
+
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+    
+    // ตรวจสอบว่าเลื่อนใกล้ถึงด้านล่าง
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+      setIsLoadingMore(true)
+      
+      const nextOffset = currentOffset + pageSize
+
+      try {
+        const moreData = await loadOptions(debouncedSearchValue, nextOffset, pageSize)
+        
+        if (moreData.length > 0) {
+          setFilteredOptions((prev) => [...prev, ...moreData])
+          setCurrentOffset(nextOffset)
+          setHasMore(moreData.length === pageSize)
+        } else {
+          setHasMore(false)
+        }
+      } catch (error) {
+        console.error("Error loading more data:", error)
+      } finally {
+        setIsLoadingMore(false)
+      }
     }
-  };
-    const debouncedLoadRef = useRef<ReturnType<typeof debounce>>(undefined);
-
-    useEffect(() => {
-      debouncedLoadRef.current = debounce((input: string) => {
-        loadData(input);
-      }, 300);
-
-      return () => {
-        debouncedLoadRef.current?.cancel(); // cleanup debounce ถ้า component unmount
-      };
-    }, [loadData]);
-
-  useEffect(() => {
-    if (open && searchValue === "") {
-      debouncedLoadRef.current?.("")
-    } else if (open) {
-      debouncedLoadRef.current?.(searchValue)
-    }
-  }, [open, searchValue])
-
-  useEffect(() => {
-    if (open && !isAsync && filteredOptions.length === 0) {
-      setFilteredOptions(options); // sync mode preload
-    }
-  }, [open, isAsync, filteredOptions.length, options]);
+  }
 
   useLayoutEffect(() => {
     if (triggerRef.current) {
@@ -228,9 +251,7 @@ export default function CustomSelect<T extends FieldValues, K extends FieldPath<
       loadData("")
     }
   }
-  const filteredResult = searchValue
-  ? filteredOptions
-  : filteredOptions.slice(0, visibleCount);
+
   return (
     <FormItem className="flex flex-col">
       <FormLabel>{formLabel}</FormLabel>
@@ -290,28 +311,34 @@ export default function CustomSelect<T extends FieldValues, K extends FieldPath<
                 ) : filteredOptions.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground">ไม่พบข้อมูล</div>
                 ) : null}
-                <CommandGroup onScroll={handleScroll} className="max-h-[300px] overflow-y-auto">
-                  {filteredResult.length > 0 ? (
-                    filteredResult.map((option) => (
-                      <CommandItem
-                        key={option.value}
-                        value={option.label}
-                        onSelect={() => handleSelect(option.value)}
-                        className="cursor-pointer"
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4 shrink-0",
-                            (isMulti && Array.isArray(selectedOption) && selectedOption.some((s) => s.value === option.value)) ||
-                              (!isMulti && field.value === option.value)
-                              ? "opacity-100"
-                              : "opacity-0"
-                          )}
-                        />
-                        <span title={option.label}>{option.label}</span>
-                      </CommandItem>
-                    ))
-                  ) : null}
+                <CommandGroup 
+                  onScroll={handleScroll} 
+                  className="max-h-[300px] overflow-y-auto"
+                >
+                  {filteredOptions.map((option) => (
+                    <CommandItem
+                      key={option.value}
+                      value={option.label}
+                      onSelect={() => handleSelect(option.value)}
+                      className="cursor-pointer"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4 shrink-0",
+                          (isMulti && Array.isArray(selectedOption) && selectedOption.some((s) => s.value === option.value)) ||
+                            (!isMulti && field.value === option.value)
+                            ? "opacity-100"
+                            : "opacity-0"
+                        )}
+                      />
+                      <span title={option.label}>{option.label}</span>
+                    </CommandItem>
+                  ))}
+                  {isLoadingMore && (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      Loading more...
+                    </div>
+                  )}
                 </CommandGroup>
               </Command>
             </PopoverContent>

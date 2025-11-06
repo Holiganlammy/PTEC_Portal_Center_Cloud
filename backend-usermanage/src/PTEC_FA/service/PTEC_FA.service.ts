@@ -687,7 +687,7 @@ export class AppService {
         `${databaseConfig.database}.dbo.FA_Control_import_dataXLSX_toAssets`,
         [
           { name: 'count', type: sql.Int(), value: req.count },
-          { name: 'key', type: sql.NVarChar(), value: req.keyID },
+          { name: 'keyID', type: sql.NVarChar(), value: req.keyID },
         ],
       );
     } catch (error) {
@@ -1248,6 +1248,50 @@ export class AppService {
       );
     } catch (error) {
       console.error('Error in FA_Control_Fetch_Assets_FilterOptions:', error);
+      throw error;
+    }
+  }
+
+  async FA_Control_Fetch_Assets_FilterCode(
+    search: string,
+    offset: number,
+    pageSize: number,
+  ) {
+    try {
+      return this.dbManager.executeStoredProcedure(
+        `${databaseConfig.database}.dbo.FA_Control_Fetch_Asset_SearchCodes`,
+        [
+          {
+            name: 'search',
+            type: sql.NVarChar(100),
+            value: search,
+          },
+          {
+            name: 'offset',
+            type: sql.Int(),
+            value: offset,
+          },
+          {
+            name: 'pageSize',
+            type: sql.Int(),
+            value: pageSize,
+          },
+        ],
+      );
+    } catch (error) {
+      console.error('Error in FA_Control_Fetch_Assets_FilterCode:', error);
+      throw error;
+    }
+  }
+
+  async FA_Control_Check_Assets_Codes(codes: string[]) {
+    try {
+      return this.dbManager.executeStoredProcedure(
+        `${databaseConfig.database}.dbo.FA_Control_Validate_Import_Data`,
+        [{ name: 'codes', type: sql.NVarChar(), value: codes }],
+      );
+    } catch (error) {
+      console.error('Error in FA_Control_Check_Assets_Codes:', error);
       throw error;
     }
   }
