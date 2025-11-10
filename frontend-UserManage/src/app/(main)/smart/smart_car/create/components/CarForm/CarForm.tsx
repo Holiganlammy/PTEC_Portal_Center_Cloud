@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import client from '@/lib/axios/interceptors';
 import { CarInfo, Operation } from '../../service/type/types';
 import OperationForm from './OperationForm';
+import { useState } from 'react';
 
 interface CarFormProps {
   car: CarInfo;
@@ -38,6 +39,23 @@ interface CarFormProps {
   onUpdateOperationMileRates: (carIndex: number, mileRate: number) => void;
 }
 
+interface CarFormProps {
+  car: CarInfo;
+  carIndex: number;
+  typeCar: string;
+  carInfoDataCompanny: CarInfo[];
+  carInfoData: CarInfo[];
+  operations: Operation[];
+  totalCars: number;
+  onCarChange: (index: number, field: keyof CarInfo, value: any) => void;
+  onCarUpdate: (index: number, updatedCarData: Partial<CarInfo>) => void; // เพิ่มบรรทัดนี้
+  onRemoveCar: (index: number) => void;
+  onAddOperation: (carIndex: number) => void;
+  onOperationChange: (index: number, field: keyof Operation, value: any) => void;
+  onRemoveOperation: (index: number) => void;
+  onUpdateOperationMileRates: (carIndex: number, mileRate: number) => void;
+}
+
 export default function CarForm({ 
   car, 
   carIndex, 
@@ -47,6 +65,7 @@ export default function CarForm({
   operations,
   totalCars,
   onCarChange,
+  onCarUpdate, // เพิ่มบรรทัดนี้
   onRemoveCar,
   onAddOperation,
   onOperationChange,
@@ -54,26 +73,70 @@ export default function CarForm({
   onUpdateOperationMileRates
 }: CarFormProps) {
   
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  
   const carOperations = operations.filter(op => op.carIndex === carIndex);
   
-  const handleCarSelect = async (carData: CarInfo) => {
-    onCarChange(carIndex, 'car_infocode', carData.car_infocode);
+  const handleCarSelect = async (selectedCarCode: string) => {
+    console.log('=== START handleCarSelect ===');
+    console.log('Selected car code:', selectedCarCode);
     
-    const body = { car_infocode: carData.car_infocode };
-    await client.post('/SmartBill_CarInfoSearch', body)
-      .then((response) => {
-        if (response.data[0]?.car_infocode) {
-          const updatedCar = response.data[0];
-          Object.keys(updatedCar).forEach(key => {
-            onCarChange(carIndex, key as keyof CarInfo, updatedCar[key]);
-          });
-          
-          // Update operations mile rate if car_milerate exists
-          if (updatedCar.car_milerate !== undefined) {
-            onUpdateOperationMileRates(carIndex, updatedCar.car_milerate);
-          }
+    // หารถที่เลือกจาก list
+    const selectedCar = (typeCar === '1' ? carInfoDataCompanny : carInfoData)
+      .find(c => c.car_infocode === selectedCarCode);
+    
+    if (!selectedCar) {
+      console.error('Car not found in list');
+      return;
+    }
+    
+    console.log('Found car in list:', selectedCar);
+    
+    // ปิด popover ทันที
+    setOpen(false);
+    setSearchValue("");
+    
+    try {
+      const body = { car_infocode: selectedCar.car_infocode };
+      console.log('Calling API with:', body);
+      
+      const response = await client.post('/SmartBill_CarInfoSearch', body);
+      
+      console.log('API Response:', response.data);
+      
+      if (response.data && response.data.length > 0) {
+        const updatedCar = response.data[0];
+        console.log('Updated car from API:', updatedCar);
+        
+        // อัพเดทข้อมูลทั้งหมดพร้อมกัน
+        const carUpdateData = {
+          car_infocode: updatedCar.car_infocode || '',
+          car_typeid: updatedCar.car_typeid || 0,
+          car_band: updatedCar.car_band || '',
+          car_tier: updatedCar.car_tier || '',
+          car_color: updatedCar.car_color || '',
+          car_milerate: updatedCar.car_milerate || 0,
+          car_remarks: updatedCar.car_remarks || '',
+          car_categaryid: updatedCar.car_categaryid || '',
+        };
+        
+        console.log('Updating car with data:', carUpdateData);
+        onCarUpdate(carIndex, carUpdateData);
+        
+        // อัพเดท operations mile rate
+        if (updatedCar.car_milerate !== undefined) {
+          onUpdateOperationMileRates(carIndex, updatedCar.car_milerate);
         }
-      });
+        
+        console.log('=== END handleCarSelect (Success) ===');
+      } else {
+        console.log('No data returned from API');
+      }
+    } catch (error) {
+      console.error('Error fetching car data:', error);
+      console.log('=== END handleCarSelect (Error) ===');
+    }
   };
 
   const handleEndMileChange = (opIndex: number, value: string, carOps: Operation[]) => {
@@ -87,6 +150,7 @@ export default function CarForm({
       onOperationChange(nextOpIndex, 'sb_operationid_startmile', parseFloat(value));
     }
   };
+
 
   return (
     <div className="border-2 border-gray-300 rounded-xl p-6 space-y-6 bg-white">
@@ -120,39 +184,61 @@ export default function CarForm({
           <label className="text-sm font-medium text-gray-900">
             ทะเบียนรถ <span className="text-red-500">*</span>
           </label>
-          <Popover>
+          <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
+                aria-expanded={open}
                 className="w-full justify-between"
               >
                 {car.car_infocode || "เลือกหรือพิมพ์ทะเบียน"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-full p-0 max-w-3xl!">
-              <Command>
-                <CommandInput placeholder="ค้นหาทะเบียนรถ..." />
+            <PopoverContent className="w-[400px] p-0" align="start">
+              <Command shouldFilter={false}>
+                <CommandInput 
+                  placeholder="ค้นหาทะเบียนรถ..." 
+                  value={searchValue}
+                  onValueChange={setSearchValue}
+                />
                 <CommandEmpty>ไม่พบข้อมูล</CommandEmpty>
                 <CommandGroup className="max-h-[300px] overflow-auto">
-                  {(typeCar === '1' ? carInfoDataCompanny : carInfoData).map((carData) => (
-                    <CommandItem
-                      key={carData.car_infocode}
-                      value={carData.car_infocode}
-                      onSelect={() => handleCarSelect(carData)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          car.car_infocode === carData.car_infocode
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {carData.car_infocode}
-                    </CommandItem>
-                  ))}
+                  {(typeCar === '1' ? carInfoDataCompanny : carInfoData)
+                    .filter(carData => {
+                      if (!searchValue) return true;
+                      const search = searchValue.toLowerCase();
+                      return carData.car_infocode.toLowerCase().includes(search) ||
+                             carData.car_band?.toLowerCase().includes(search) ||
+                             carData.car_tier?.toLowerCase().includes(search);
+                    })
+                    .map((carData) => (
+                      <CommandItem
+                        key={carData.car_infocode}
+                        value={carData.car_infocode}
+                        onSelect={() => {
+                          console.log('CommandItem clicked:', carData.car_infocode);
+                          handleCarSelect(carData.car_infocode);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            car.car_infocode === carData.car_infocode
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{carData.car_infocode}</span>
+                          <span className="text-xs text-gray-500">
+                            {carData.car_band} {carData.car_tier} - {carData.car_color}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))}
                 </CommandGroup>
               </Command>
             </PopoverContent>
@@ -174,7 +260,7 @@ export default function CarForm({
             ประเภทของรถ <span className="text-red-500">*</span>
           </label>
           <Select
-            value={car.car_typeid ? car.car_typeid.toString() : ''}
+            value={car.car_typeid && car.car_typeid > 0 ? car.car_typeid.toString() : ''}
             onValueChange={(value) => onCarChange(carIndex, 'car_typeid', parseInt(value))}
           >
             <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg">
@@ -194,7 +280,7 @@ export default function CarForm({
           </label>
           <Input
             type="text"
-            value={car.car_band}
+            value={car.car_band || ''}
             onChange={(e) => onCarChange(carIndex, 'car_band', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
             placeholder="ยี่ห้อ"
@@ -207,7 +293,7 @@ export default function CarForm({
           </label>
           <Input
             type="text"
-            value={car.car_tier}
+            value={car.car_tier || ''}
             onChange={(e) => onCarChange(carIndex, 'car_tier', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
             placeholder="รุ่น"
@@ -220,7 +306,7 @@ export default function CarForm({
           </label>
           <Input
             type="text"
-            value={car.car_color}
+            value={car.car_color || ''}
             onChange={(e) => onCarChange(carIndex, 'car_color', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
             placeholder="สี"
@@ -258,9 +344,10 @@ export default function CarForm({
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-900">หมายเหตุ</label>
         <Textarea
-          value={car.car_remarks}
+          value={car.car_remarks || ''}
           onChange={(e) => onCarChange(carIndex, 'car_remarks', e.target.value)}
           placeholder="หมายเหตุเพิ่มเติม"
+          className="min-h-[80px]"
         />
       </div>
 

@@ -3,6 +3,7 @@ import { databaseConfig } from '../config/database.config';
 import * as sql from 'mssql';
 import {
   SmartBill_CarInfoSearchInput,
+  SmartBill_HeaderSearchInput,
   SmartBillAssociateInput,
   SmartBillHeaderInput,
   SmartBillOperationInput,
@@ -106,7 +107,7 @@ export class AppService {
       },
       {
         name: 'sb_operationid_location',
-        type: sql.NVarChar(100),
+        type: sql.NVarChar(500),
         value: data.sb_operationid_location,
       },
     ];
@@ -161,23 +162,65 @@ export class AppService {
     );
   }
 
-  async SmartBill_SelectHeaders() {
+  async SmartBill_SelectHeaders(req: SmartBill_HeaderSearchInput) {
     return this.dbManager.executeStoredProcedure(
-      `${databaseConfig.database}.dbo.SmartBill_SelectHeaders`,
+      `${databaseConfig.database}.dbo.SmartBill_SelectHeaders_Cloud`,
+      [
+        { name: 'page', type: sql.Int(), value: req.page },
+        { name: 'limit', type: sql.Int(), value: req.limit },
+        { name: 'search', type: sql.NVarChar(200), value: req.search },
+        { name: 'sb_code', type: sql.NVarChar(50), value: req.sb_code },
+        {
+          name: 'user_code',
+          type: sql.NVarChar(50),
+          value: req.user_code,
+        },
+        {
+          name: 'car_info_code',
+          type: sql.NVarChar(50),
+          value: req.car_info_code,
+        },
+        {
+          name: 'car_category_id',
+          type: sql.Int(),
+          value: req.car_category_id,
+        },
+        { name: 'status', type: sql.NVarChar(50), value: req.status },
+      ],
+    );
+  }
+
+  async SmartBill_Fetch_FilterOptions() {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_Fetch_FilterOptions_Cloud`,
       [],
+    );
+  }
+
+  async SmartBill_Control_Fetch_Filter_SearchCodes(
+    search: string,
+    offset: number,
+    pageSize: number,
+  ) {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_Control_Fetch_Filter_SearchCodes`,
+      [
+        { name: 'search', type: sql.NVarChar(100), value: search },
+        { name: 'offset', type: sql.Int(), value: offset },
+        { name: 'pageSize', type: sql.Int(), value: pageSize },
+      ],
     );
   }
 
   async SmartBill_SelectAllForms(body: { sb_Code: string }) {
     const params = [
       {
-        name: 'sb_Code',
-        type: sql.NVarChar(100),
+        name: 'sb_code',
+        type: sql.VarChar(20),
         value: body.sb_Code,
       },
     ];
-
-    return this.dbManager.executeStoredProcedure(
+    return this.dbManager.executeStoredProcedureMultiple(
       `${databaseConfig.database}.dbo.SmartBill_SelectAllForms`,
       params,
     );

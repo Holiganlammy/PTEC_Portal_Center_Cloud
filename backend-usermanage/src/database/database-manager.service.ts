@@ -42,6 +42,30 @@ export class DatabaseManagerService {
     return mapOutput ? mapOutput(result) : result.recordset;
   }
 
+  async executeStoredProcedureMultiple<T = any>(
+    fullyQualifiedProcName: string,
+    params: {
+      name: string;
+      type: sql.ISqlType;
+      value?: any;
+      output?: boolean;
+    }[],
+  ): Promise<T[][]> {
+    const pool = await this.getPool();
+    const request = pool.request();
+
+    for (const param of params) {
+      if (param.output) {
+        request.output(param.name, param.type);
+      } else {
+        request.input(param.name, param.type, param.value);
+      }
+    }
+
+    const result = await request.execute(fullyQualifiedProcName);
+    return result.recordsets as T[][];
+  }
+
   async query<T = any>(sqlQuery: string): Promise<T[]> {
     const pool = await this.getPool();
     const result = await pool.request().query(sqlQuery);

@@ -7,7 +7,7 @@ export interface UserData {
 export interface CarInfo {
   car_infocode: string;
   car_infostatus_companny: boolean;
-  car_categaryid: string;
+  car_categaryid: number;
   car_typeid: number;
   car_band: string;
   car_tier: string;

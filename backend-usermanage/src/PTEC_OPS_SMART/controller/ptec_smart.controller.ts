@@ -8,9 +8,14 @@ import {
   HttpCode,
   Res,
   Req,
+  Query,
 } from '@nestjs/common';
 import { AppService } from '../service/ptec_smart.service';
-import { CreateSmartBillDto } from '../domain/model/ptec_smart.entity';
+import {
+  CreateSmartBillDto,
+  SmartBill_Fetch_FilterOptions_Entity,
+  SmartBillHeaderSearchDto,
+} from '../domain/model/ptec_smart.entity';
 import {
   SmartBillAssociateInput,
   SmartBillOperationInput,
@@ -27,6 +32,7 @@ import {
   SmartBill_WithdrawDtl_SaveChangesCategoryInput,
 } from '../dto/SmartBill.dto';
 import { Public } from 'src/auth/decorators/public.decorator';
+// import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller('')
 export class AppController {
@@ -99,7 +105,7 @@ export class AppController {
     }
   }
 
-  @Public()
+  // @Public()
   @Post('SmartBill_CarInfoSearch')
   @HttpCode(200)
   async SmartBill_CarInfoSearch(
@@ -141,15 +147,118 @@ export class AppController {
 
   @Get('SmartBill_SelectHeaders')
   @HttpCode(200)
-  async SmartBill_SelectHeaders(@Res() res: Response) {
+  async SmartBill_SelectHeaders(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @Query('sb_code') sb_code: string,
+    @Query('user_code') user_code: string,
+    @Query('car_info_code') car_info_code: string,
+    @Query('car_category_id') car_category_id: number,
+    @Query('status') status: string,
+    @Query('search') search: string,
+    @Res() res: Response,
+  ) {
     try {
-      const dataHeaders = await this.service.SmartBill_SelectHeaders();
-      if (!dataHeaders) {
-        throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
+      const result = (await this.service.SmartBill_SelectHeaders({
+        page: Number(page),
+        limit: Number(limit),
+        sb_code: sb_code,
+        user_code: user_code,
+        car_info_code: car_info_code,
+        car_category_id: car_category_id,
+        status: status,
+        search: search,
+      })) as SmartBillHeaderSearchDto[];
+      if (result && result.length > 0) {
+        const totalCount = result[0].TotalCount;
+        const totalPages = Math.ceil(totalCount / limit);
+        const data = result.map((item) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { TotalCount, ...rest } = item;
+          return rest;
+        });
+        res.status(200).send({
+          message: 'Success',
+          code: 200,
+          data: data,
+          pagination: {
+            page: page,
+            limit: limit,
+            total: totalCount,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
+          },
+        });
+      } else {
+        res.status(200).send({
+          message: 'No data found',
+          code: 200,
+          data: [],
+          pagination: {
+            page: page,
+            limit: limit,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        });
       }
-      res.status(200).send(dataHeaders);
     } catch (error) {
       console.error('[SmartBill_SelectHeaders] Error:', error);
+      throw new HttpException(
+        'Internal Server Error: ' + error,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Public()
+  @Get('/SmartBill_Fetch_FilterOptions')
+  async fetchFilterOptions(@Res() res: Response) {
+    try {
+      const result = await this.service.SmartBill_Fetch_FilterOptions();
+      if (!Array.isArray(result) || result.length === 0) {
+        return res.status(404).json({ message: 'No data found' });
+      }
+      const raw = result[0] as Record<string, string>;
+      const jsonKey = Object.keys(raw)[0];
+      const parsed = JSON.parse(
+        raw[jsonKey],
+      ) as SmartBill_Fetch_FilterOptions_Entity;
+
+      res.status(200).send(parsed);
+    } catch (error) {
+      console.error('[SmartBill_Fetch_FilterOptions] Error:', error);
+      throw new HttpException(
+        'Internal Server Error: ' + error,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Public()
+  @Get('SmartBill_Control_Fetch_Filter_SearchCodes')
+  async SmartBill_Control_Fetch_Filter_SearchCodes(
+    @Res() res: Response,
+    @Query('search') search: string = '',
+    @Query('offset') offset: number = 0,
+    @Query('pageSize') pageSize: number = 200,
+  ) {
+    try {
+      const result =
+        await this.service.SmartBill_Control_Fetch_Filter_SearchCodes(
+          search,
+          offset,
+          pageSize,
+        );
+      res.status(200).send(result);
+    } catch (error) {
+      console.error(
+        '[SmartBill_Control_Fetch_Filter_SearchCodes] Error:',
+        error,
+      );
       throw new HttpException(
         'Internal Server Error: ' + error,
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -165,6 +274,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_SelectAllForms(body);
+      console.log('data', data);
       if (!data) {
         throw new HttpException('ไม่พบข้อมูลแบบฟอร์ม', HttpStatus.NOT_FOUND);
       }

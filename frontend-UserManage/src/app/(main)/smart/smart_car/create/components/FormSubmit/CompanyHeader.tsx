@@ -10,9 +10,10 @@ import logosmplus from "@/image/LogoSMPlus.png";
 interface CompanyHeaderProps {
   companyName: string;
   onCompanyChange: (value: string) => void;
+  sbCode?: string;
 }
 
-export default function CompanyHeader({ companyName, onCompanyChange }: CompanyHeaderProps) {
+export default function CompanyHeader({ companyName, onCompanyChange, sbCode }: CompanyHeaderProps) {
   return (
     <div className="border-b border-gray-200 bg-white p-8">
       <div className="grid grid-cols-12 gap-4 items-center">
@@ -42,7 +43,7 @@ export default function CompanyHeader({ companyName, onCompanyChange }: CompanyH
         </div>
         <div className="col-span-3">
           <div className="h-10 border-2 border-gray-300 rounded-md flex items-center justify-center">
-            <span className="text-xs text-gray-500 font-medium">None</span>
+            <span className="text-xs text-gray-500 font-medium">{('เลขที่เอกสาร: ' + sbCode) || 'None'}</span>
           </div>
         </div>
       </div>

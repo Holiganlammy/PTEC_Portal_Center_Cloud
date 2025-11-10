@@ -3,7 +3,7 @@ import Link from "next/link"
 import { 
   LockKeyholeOpen, 
   User, 
-  PanelLeft, // เปลี่ยนเป็น PanelLeft
+  PanelLeft,
   Settings as SettingsIcon,
   LogOut,
   ChevronsUpDown,
@@ -50,7 +50,7 @@ interface MenuItem {
   parent_id: number | null;
   order_no: number;
   children?: MenuItem[];
-  icon?: string; //  เพิ่ม icon field
+  icon?: string;
   name: string;
   path: string;
 }
@@ -59,7 +59,6 @@ interface SiteHeaderProps {
   children: React.ReactNode;
 }
 
-//  Icon mapping helper
 const getIcon = (menuName?: string) => {
   const icons: Record<string, JSX.Element> = {
     "dashboard": <BarChart3 className="h-4 w-4" />,
@@ -96,7 +95,19 @@ export default function SiteHeader({ children }: SiteHeaderProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [openChangePassword, setOpenChangePassword] = useState(false)
   const [menus, setMenu] = useState<MenuItem[]>([])
-  const menuTree = useMemo(() => buildMenuTree(menus as MenuItem[]), [menus])
+  
+  // ✅ กรองเฉพาะเมนูที่แสดง (ไม่ใช่ hidden routes)
+  const visibleMenus = useMemo(() => {
+    return menus.filter(menu => {
+      // กรองออก: parent_id = NULL && order_no = NULL
+      if (menu.parent_id === null && menu.order_no === null) {
+        return false;
+      }
+      return true;
+    });
+  }, [menus]);
+  
+  const menuTree = useMemo(() => buildMenuTree(visibleMenus as MenuItem[]), [visibleMenus])
   const hasFetchedMenus = useRef(false)
 
   const handleLogout = () => {
@@ -115,11 +126,21 @@ export default function SiteHeader({ children }: SiteHeaderProps) {
         headers: dataConfig().header
       })
       const data = await response.data
+      
       if (data.length > 0) {
-        setMenu(data)
+        setMenu(data) // เก็บทั้งหมด (รวม hidden routes)
+        
+        // Debug: แสดงจำนวนเมนูที่แสดงและซ่อน
+        const visible = data.filter((m: MenuItem) => 
+          !(m.parent_id === null && m.order_no === null)
+        );
+        const hidden = data.filter((m: MenuItem) => 
+          m.parent_id === null && m.order_no === null
+        );
+        
       }
     } catch (error) {
-      console.error("Error fetching users:", error)
+      console.error("Error fetching menus:", error)
     }
   }, [session?.user?.UserID])
 
@@ -218,17 +239,16 @@ export default function SiteHeader({ children }: SiteHeaderProps) {
                   <TooltipContent 
                     side="right" 
                     className="bg-gray-900 text-white border-gray-800"
-                    //  แสดง Tooltip เฉพาะตอนพับ หรือลบ condition นี้ถ้าต้องการแสดงเสมอ
                   >
                     <p>Home</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Menu Items */}
+              {/* Menu Items - ✅ ใช้ visibleMenus แทน menus */}
               {session &&
                 menuTree
-                  .sort((a, b) => a.order_no - b.order_no)
+                  .sort((a, b) => (a.order_no || 0) - (b.order_no || 0))
                   .map((item) => (
                     <SidebarMenuItem
                       key={item.id}
@@ -358,7 +378,7 @@ export default function SiteHeader({ children }: SiteHeaderProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden h-full">
-        {/* Top Header -  ย้าย PanelLeft มาที่นี่ */}
+        {/* Top Header */}
         <div className="h-[60px] border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex items-center px-6 shrink-0 gap-4">
           {/*  Toggle Sidebar Button */}
           <Button

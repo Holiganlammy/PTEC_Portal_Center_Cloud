@@ -116,32 +116,6 @@ export interface FA_Control_AnnualGraph {
   create_month: number;
   nac_count: number;
 }
-
-export interface FA_Control_Fetch_Assets {
-  AssetID: string;
-  Code: string;
-  Name: string;
-  BranchID: number;
-  Details: string | null;
-  typeCode: string;
-  SerialNo: string | null;
-  Asset_group: string;
-  Group_name: string;
-  Price: number;
-  CreateDate: string; // ISO date string
-  UpdateDate: string;
-  UpdateBy: string;
-  Position: string;
-  OwnerID: string;
-  ImagePath: string;
-  ImagePath_2: string;
-  nac_processing: string | null;
-  bac_status: number;
-  Old_Details: string;
-  Old_UpdateBy: string;
-  Old_UpdateDate: string;
-}
-
 export interface FA_Control_Assets_TypeGroup {
   typeGroupID: string;
   typeCode: string;

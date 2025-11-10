@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { AppService } from '../service/PTEC_FA.service';
 import { Response, Request as ExpressRequest } from 'express';
-import { Public } from '../../auth/decorators/public.decorator';
+// import { Public } from '../../auth/decorators/public.decorator';
 import {
   FA_Control_Create_Detail_NAC,
   FA_Control_New_Assets_Xlsx,
@@ -104,7 +104,7 @@ export class AppController {
       );
     }
   }
-  @Public()
+  // @Public()
   @Get('/FA_Control_Fetch_Assets')
   async FA_Control_Fetch_Assets(
     @Query('usercode') usercode: string,
@@ -730,7 +730,7 @@ export class AppController {
     }
   }
 
-  @Public()
+  // @Public()
   @Get('/FA_Control_Fetch_Assets_FilterOptions')
   async FA_Control_Fetch_Assets_FilterOptions(@Res() res: Response) {
     try {
@@ -755,7 +755,7 @@ export class AppController {
     }
   }
 
-  @Public()
+  // @Public()
   @Get('/FA_Control_Fetch_Assets_FilterCode')
   async FA_Control_Fetch_Assets_FilterCode(
     @Res() res: Response,
@@ -778,7 +778,7 @@ export class AppController {
     }
   }
 
-  @Public()
+  // @Public()
   @Get('/FA_Control_Check_Assets_Codes')
   async FA_Control_Check_Assets_Codes(
     @Query('codes') codes: string[],

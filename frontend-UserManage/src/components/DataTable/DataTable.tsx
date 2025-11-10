@@ -112,19 +112,19 @@ export function DataTable<TData, TValue>({
       pageCount !== undefined
    )
 
-   console.log("🎯 DataTable Debug:", {
-      isServerSidePagination,
-      isServerSideSearch,
-      pagination,
-      pageCount,
-      totalRows,
-      searchValue: globalFilter,
-      hasPagination: !!pagination,
-      hasOnPageChange: !!onPageChange,
-      hasOnPageSizeChange: !!onPageSizeChange,
-      hasPageCount: pageCount !== undefined,
-      hasOnSearchChange: !!onSearchChange,
-   });
+   // console.log("🎯 DataTable Debug:", {
+   //    isServerSidePagination,
+   //    isServerSideSearch,
+   //    pagination,
+   //    pageCount,
+   //    totalRows,
+   //    searchValue: globalFilter,
+   //    hasPagination: !!pagination,
+   //    hasOnPageChange: !!onPageChange,
+   //    hasOnPageSizeChange: !!onPageSizeChange,
+   //    hasPageCount: pageCount !== undefined,
+   //    hasOnSearchChange: !!onSearchChange,
+   // });
 
    const table = useReactTable({
       data,

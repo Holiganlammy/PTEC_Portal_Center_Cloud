@@ -7,6 +7,7 @@ import timezone from "dayjs/plugin/timezone";
 import { AlertCircle, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import client from '@/lib/axios/interceptors';
 import {
   AlertDialog,
@@ -32,11 +33,15 @@ import FileUpload from '@/app/(main)/smart/smart_car/create/components/FormSubmi
 // Import types
 import { UserData, CarInfo, Operation, SmartBillHeader } from '@/app/(main)/smart/smart_car/create/service/type/types';
 
-export default function FormsStart() {
+export default function FormsUpdate() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const sbCode = searchParams.get('code');
+  
   dayjs.extend(utc);
   dayjs.extend(timezone);
   
+  const [isLoading, setIsLoading] = useState(true);
   const [typeCar, setTypeCar] = useState<string>('');
   const [carInfoDataCompanny, setCarInfoDataCompanny] = useState<CarInfo[]>([]);
   const [carInfoData, setCarInfoData] = useState<CarInfo[]>([]);
@@ -65,7 +70,6 @@ export default function FormsStart() {
     reamarks: '',
   });
 
-  // Separate cars array
   const [cars, setCars] = useState<CarInfo[]>([{
     car_infocode: '',
     car_infostatus_companny: false,
@@ -78,7 +82,6 @@ export default function FormsStart() {
     car_milerate: 0,
   }]);
 
-  // Separate operations array with carIndex reference
   const [operations, setOperations] = useState<Operation[]>([]);
 
   const [smartBill_Associate, setSmartBill_Associate] = useState([{
@@ -88,6 +91,133 @@ export default function FormsStart() {
   }]);
 
   const [dataFilesCount, setDataFilesCount] = useState<any>(null);
+
+  const fetchSmartBillData = async (code: string) => {
+    try {
+      setIsLoading(true);
+      
+      const response = await client.post('/SmartBill_SelectAllForms', {
+        sb_Code: code
+      });
+
+      console.log('Fetched data:', response.data);
+
+      if (!response.data || response.data.length === 0) {
+        showAlert('ไม่พบข้อมูล', 'ไม่พบข้อมูลที่ต้องการแก้ไข');
+        setIsLoading(false);
+        return;
+      }
+      const headerAndCarData = response.data[0];
+      
+      if (headerAndCarData && headerAndCarData.length > 0) {
+        const firstRecord = headerAndCarData[0];
+        
+        // ตั้งค่า Header
+        setSmartBillHeader({
+          usercode: firstRecord.usercode || '',
+          sb_name: firstRecord.sb_name || 'PTEC',
+          sb_fristName: firstRecord.sb_fristName || '',
+          sb_lastName: firstRecord.sb_lastName || '',
+          clean_status: firstRecord.clean_status ? 1 : 0,
+          group_status: firstRecord.group_status ? 1 : 0,
+          reamarks: firstRecord.reamarks || '',
+        });
+
+        // ตั้งค่า Cars จาก header data (แต่ละ record คือ 1 รถ)
+        const carsData = headerAndCarData.map((record: any) => ({
+          car_infocode: record.car_infocode || '',
+          car_infostatus_companny: record.car_infostatus_companny || false,
+          car_categaryid: 5, // ใช้ค่า default หรือดึงจาก record ถ้ามี
+          car_typeid: parseInt(record.car_typeid) || 0,
+          car_band: record.car_band || '',
+          car_tier: record.car_tier || '',
+          car_color: record.car_color || '',
+          car_remarks: record.car_remarks || '',
+          car_milerate: 0,
+        }));
+        
+        setCars(carsData);
+        if (carsData[0].car_infostatus_companny) {
+          setTypeCar('1'); // รถบริษัท
+        } else {
+          setTypeCar('2'); // รถส่วนตัว
+        }
+      }
+
+      // Index 1: Operations
+      const operationsData = response.data[1];
+      
+      if (operationsData && operationsData.length > 0) {
+        const opsData = operationsData.map((op: any, index: number) => ({
+          carIndex: 0, // ถ้ามีหลายรถ ต้องจับคู่กับรถที่ถูกต้อง
+          sb_operationid_startdate: op.sb_operationid_startdate 
+            ? dayjs(op.sb_operationid_startdate).toDate() 
+            : null,
+          sb_operationid_startmile: parseFloat(op.sb_operationid_startmile) || 0,
+          sb_operationid_startoil: op.sb_operationid_startoil?.toString() || '',
+          sb_operationid_enddate: op.sb_operationid_enddate 
+            ? dayjs(op.sb_operationid_enddate).toDate() 
+            : null,
+          sb_operationid_endoil: op.sb_operationid_endoil?.toString() || '',
+          sb_operationid_endmile: op.sb_operationid_endmile?.toString() || '',
+          sb_paystatus: op.sb_paystatus ? '1' : '0',
+          sb_operationid_location: op.sb_operationid_location || '',
+        }));
+        
+        setOperations(opsData);
+
+        // อัปเดต car_milerate จาก operation แรก
+        if (opsData.length > 0) {
+          setCars(prevCars => {
+            const newCars = [...prevCars];
+            if (newCars[0]) {
+              newCars[0].car_milerate = opsData[0].sb_operationid_startmile;
+            }
+            return newCars;
+          });
+        }
+      }
+
+      // Index 2: Associate (ถ้ามี)
+      const associateData = response.data[2];
+      if (associateData && associateData.length > 0) {
+        setSmartBill_Associate(associateData.map((assoc: any) => ({
+          allowance_usercode: assoc.allowance_usercode || '',
+          sb_associate_startdate: assoc.sb_associate_startdate || '',
+          sb_associate_enddate: assoc.sb_associate_enddate || ''
+        })));
+      }
+
+      // Index 3: Files
+      const filesData = response.data[3];
+      
+      if (filesData && filesData.length > 0) {
+        const files = filesData.map((file: any) => ({
+          file: file.url, // URL ของรูปภาพ
+          fileData: null, // ไม่มี fileData สำหรับไฟล์ที่มีอยู่แล้ว
+          filename: file.description || `File_${file.NonPO_attatchid}`,
+          isExisting: true, // flag สำหรับไฟล์ที่มีอยู่แล้ว
+          fileId: file.NonPO_attatchid, // เก็บ ID ไว้สำหรับการลบ (ถ้าต้องการ)
+        }));
+        setDataFilesCount(files);
+      }
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // เรียกใช้ fetchSmartBillData เมื่อมี sbCode
+  useEffect(() => {
+    if (sbCode) {
+      fetchSmartBillData(sbCode);
+    } else {
+      setIsLoading(false);
+    }
+  }, [sbCode]);
 
   // Handlers
   const handleCompanyChange = (value: string) => {
@@ -115,13 +245,11 @@ export default function FormsStart() {
     setOperations(newOperations);
   };
 
-  // Remove car and its operations
   const handleRemoveCar = (carIndex: number) => {
     const newCars = [...cars];
     newCars.splice(carIndex, 1);
     setCars(newCars);
 
-    // Remove all operations for this car and adjust indices
     const newOperations = operations
       .filter(op => op.carIndex !== carIndex)
       .map(op => ({
@@ -139,7 +267,6 @@ export default function FormsStart() {
     });
   };
 
-  // Add operation to specific car
   const handleAddOperation = (carIndex: number) => {
     const carOperations = operations.filter(op => op.carIndex === carIndex);
     const lastOp = carOperations[carOperations.length - 1];
@@ -159,7 +286,6 @@ export default function FormsStart() {
     }]);
   };
 
-  // Update operations when car mileRate changes
   const updateOperationMileRates = (carIndex: number, mileRate: number) => {
     const carOperations = operations.filter(op => op.carIndex === carIndex);
     if (carOperations.length > 0) {
@@ -172,7 +298,6 @@ export default function FormsStart() {
     }
   };
 
-  // Remove operation
   const handleRemoveOperation = (opIndex: number) => {
     const newOperations = [...operations];
     newOperations.splice(opIndex, 1);
@@ -184,24 +309,13 @@ export default function FormsStart() {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Debug: ตรวจสอบไฟล์ที่เลือก
-    console.log('Selected file:', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      isFile: file instanceof File
-    });
-
     const fileBolb = URL.createObjectURL(file);
     const newFile = {
       file: fileBolb,
       fileData: file,
       filename: file.name,
+      isExisting: false,
     };
-
-    // Debug: ตรวจสอบ newFile object
-    console.log('newFile object:', newFile);
-    console.log('fileData is File:', newFile.fileData instanceof File);
 
     if (!dataFilesCount) {
       setDataFilesCount([newFile]);
@@ -225,7 +339,6 @@ export default function FormsStart() {
       return;
     }
 
-    // Validate header
     if (
       smartBillHeader.usercode === '' ||
       smartBillHeader.sb_fristName === '' ||
@@ -241,13 +354,11 @@ export default function FormsStart() {
       return;
     }
 
-    // Check if all cars are existing cars (not new ones)
     const allCarsAreExisting = cars.every(car => 
       (typeCar === '1' ? carInfoDataCompanny : carInfoData)
         .some((existingCar) => existingCar.car_infocode === car.car_infocode)
     );
 
-    // If all cars are existing cars and no operations, require operations
     if (allCarsAreExisting && operations.length === 0) {
       showAlert(
         "แจ้งเตือน",
@@ -256,7 +367,6 @@ export default function FormsStart() {
       return;
     }
 
-    // Validate all cars
     for (let i = 0; i < cars.length; i++) {
       const car = cars[i];
       if (
@@ -278,7 +388,6 @@ export default function FormsStart() {
       }
     }
 
-    // Validate operations (if any exist)
     for (let i = 0; i < operations.length; i++) {
       const op = operations[i];
       if (
@@ -303,7 +412,6 @@ export default function FormsStart() {
         return;
       }
 
-      // Check mile validation
       if (parseFloat(op.sb_operationid_startmile as any) > parseFloat(op.sb_operationid_endmile)) {
         const carOps = operations.filter(o => o.carIndex === op.carIndex);
         const opIndexInCar = carOps.indexOf(op) + 1;
@@ -312,12 +420,13 @@ export default function FormsStart() {
       }
     }
 
-    if (!dataFilesCount) {
+    if (!dataFilesCount || dataFilesCount.length === 0) {
       showAlert("แจ้งเตือน", 'อัปโหลดรูปภาพอย่างน้อย 1 รูป');
       return;
     }
 
     const body = {
+      sb_code: sbCode,
       smartBill_Header: [smartBillHeader],
       carInfo: cars.map(car => ({
         ...car,
@@ -335,41 +444,38 @@ export default function FormsStart() {
       smartBill_Associate: smartBill_Associate,
     };
 
-    console.log('Submitting data:', JSON.stringify(body, null, 2));
+    console.log('Updating data:', JSON.stringify(body, null, 2));
 
-    await client.post('/SmartBill_CreateForms', body)
-      .then(async (response) => {
-        for (let i = 0; i < dataFilesCount.length; i++) {
-          let formData_1 = new FormData();
-          console.log('File data:', dataFilesCount[i].fileData);
-          console.log('File type:', typeof dataFilesCount[i].fileData);
-          console.log('Is File instance:', dataFilesCount[i].fileData instanceof File);
-          formData_1.append('file', dataFilesCount[i].fileData);
-          formData_1.append('sb_code', response.data);
+    try {
+      // ใช้ POST สำหรับ update (ตาม API ของคุณ)
+      const response = await client.post('/SmartBill_CreateForms', body);
+      
+      // อัปโหลดไฟล์ใหม่ (ถ้ามี)
+      const newFiles = dataFilesCount.filter((file: any) => !file.isExisting);
+      
+      for (let i = 0; i < newFiles.length; i++) {
+        let formData_1 = new FormData();
+        formData_1.append('file', newFiles[i].fileData);
+        formData_1.append('sb_code', sbCode || '');
 
-          await client.post('/SmartBill_files', formData_1, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          })
-            .then((res) => {
-              if (i === dataFilesCount.length - 1) {
-                showAlert("สำเร็จ", 'บันทึกรายการแล้ว', 'success');
-                // setTimeout(() => {
-                //   window.location.href = '/FormUpdate?' + response.data;
-                // }, 1500);
-              }
-            })
-            .catch((error) => {
-              console.error('Upload error:', error);
-              showAlert("เกิดข้อผิดพลาด", `ไม่สามารถอัพโหลดไฟล์ได้: ${error.message}`);
-            });
-          if (!dataFilesCount[i].fileData || !(dataFilesCount[i].fileData instanceof File)) {
-            showAlert("เกิดข้อผิดพลาด", `ไฟล์ที่ ${i + 1} ไม่ถูกต้อง กรุณาเลือกไฟล์ใหม่`);
-            return;
-          }
-        }
-      });
+        await client.post('/SmartBill_files', formData_1, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+
+      showAlert("สำเร็จ", 'อัปเดตรายการแล้ว', 'success');
+      
+      // รีเฟรชข้อมูล
+      setTimeout(() => {
+        fetchSmartBillData(sbCode || '');
+      }, 1500);
+
+    } catch (error: any) {
+      console.error('Update error:', error);
+      showAlert("เกิดข้อผิดพลาด", `ไม่สามารถอัปเดตข้อมูลได้: ${error.message}`);
+    }
   };
 
   const gettingUsers = async () => {
@@ -383,6 +489,28 @@ export default function FormsStart() {
     gettingUsers();
   }, []);
 
+  // แสดง Loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    );
+  }
+  if (!sbCode) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-600">ไม่พบรหัสเอกสาร กรุณาระบุ code ใน URL</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -391,6 +519,7 @@ export default function FormsStart() {
           <CompanyHeader 
             companyName={smartBillHeader.sb_name}
             onCompanyChange={handleCompanyChange}
+            sbCode={sbCode}
           />
 
           {/* Form Content */}
@@ -467,7 +596,7 @@ export default function FormsStart() {
                   ...prev,
                   clean_status: parseInt(value)
                 }))}
-               >
+              >
                 {[
                   { value: 0, label: 'ไม่ได้ล้างรถ' },
                   { value: 1, label: 'ล้างรถ' }
@@ -499,26 +628,7 @@ export default function FormsStart() {
                 onClick={() => handleSubmit()}
                 className="px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-all"
               >
-                {(() => {
-                  // Check if all cars are existing cars (not new ones)
-                  const allCarsAreExisting = cars.every(car => 
-                    (typeCar === '1' ? carInfoDataCompanny : carInfoData)
-                      .some((existingCar) => existingCar.car_infocode === car.car_infocode)
-                  );
-                  
-                  // If all cars are existing, show "ส่งฟอร์ม"
-                  if (allCarsAreExisting) {
-                    return 'ส่งฟอร์ม';
-                  }
-                  
-                  // If there are operations, show "ส่งฟอร์ม"
-                  if (operations.length > 0) {
-                    return 'ส่งฟอร์ม';
-                  }
-                  
-                  // Default case (new cars without operations)
-                  return 'เพิ่มข้อมูลรถ';
-                })()}
+                อัปเดตข้อมูล
               </button>
             </div>
           </div>

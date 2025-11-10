@@ -1,3 +1,5 @@
+import { OptionEntity } from 'src/PTEC_FA/domain/ptec_fa.entity';
+
 export class SmartBillHeaderDto {
   usercode: string;
   sb_name: string;
@@ -39,4 +41,36 @@ export class CreateSmartBillDto {
 
 export class outputSmartBill {
   result: string;
+}
+
+export class SmartBillHeaderSearchDto {
+  usercode?: string;
+  sb_id?: number;
+  sb_code?: string;
+  sb_status_name?: string;
+  sb_name?: string;
+  userid?: number;
+  sb_fristName?: string;
+  sb_lastName?: string;
+  car_infoid?: string;
+  reamarks?: string;
+  clean_status?: number;
+  admin_approve?: string;
+  admin_approveDate?: string;
+  createdate?: string;
+  car_infocode?: string;
+  car_band?: string;
+  car_tier?: string;
+  car_color?: string;
+  car_categary_name?: number;
+  car_categaryid?: number;
+  TotalCount: number;
+}
+
+export interface SmartBill_Fetch_FilterOptions_Entity {
+  sb_codes: OptionEntity[];
+  usercodes: OptionEntity[];
+  car_infocodes: OptionEntity[];
+  car_categories: OptionEntity[];
+  sb_status: OptionEntity[];
 }

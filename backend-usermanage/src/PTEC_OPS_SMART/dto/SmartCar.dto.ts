@@ -130,3 +130,31 @@ export class SmartBill_CarInfoSearchInput {
   @IsNotEmpty()
   car_infocode: string;
 }
+
+export class SmartBill_HeaderSearchInput {
+  @IsNumber()
+  @IsNotEmpty()
+  page: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  limit: number;
+
+  @IsString()
+  search: string;
+
+  @IsString()
+  sb_code: string;
+
+  @IsString()
+  user_code: string;
+
+  @IsString()
+  car_info_code: string;
+
+  @IsNumber()
+  car_category_id: number;
+
+  @IsString()
+  status: string;
+}
