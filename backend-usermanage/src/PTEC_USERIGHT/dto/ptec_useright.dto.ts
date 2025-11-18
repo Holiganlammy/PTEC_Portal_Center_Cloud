@@ -77,3 +77,14 @@ export class User {
   @IsString()
   password: string;
 }
+
+export class GetWelfareDto {
+  @IsString()
+  usercode: string;
+
+  @IsNumber()
+  welfaretypeid: number;
+
+  @IsString()
+  sbc_hotelProvince: string;
+}

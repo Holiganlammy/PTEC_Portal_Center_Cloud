@@ -5,6 +5,7 @@ import { useState } from "react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import Image from "next/image";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -82,9 +83,11 @@ export function CommentItem({ comments, onSend }: Props) {
 
             {/* Avatar ขวา */}
             {!isLeft && comment.img_profile ? (
-              <img
+              <Image
                 src={comment.img_profile}
                 alt={comment.img_profile}
+                width={32}
+                height={32}
                 className="w-8 h-8 rounded-full object-cover ml-2"
               />
             ) : (

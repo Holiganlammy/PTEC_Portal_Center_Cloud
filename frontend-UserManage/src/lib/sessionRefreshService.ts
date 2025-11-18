@@ -4,7 +4,7 @@
 class SessionRefreshService {
   private intervalId: NodeJS.Timeout | null = null;
   private isRefreshing: boolean = false;
-  private readonly REFRESH_INTERVAL = 10 * 60 * 1000; // 10 นาที
+  private readonly REFRESH_INTERVAL = 60 * 60 * 1000; // 1 hour
   private failureCount: number = 0;
   private readonly MAX_FAILURES = 2;
   private isStopped: boolean = false;

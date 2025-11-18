@@ -14,6 +14,7 @@ export interface CarInfo {
   car_color: string;
   car_remarks: string;
   car_milerate?: number;
+  car_payname?: string;
 }
 
 export interface Operation {

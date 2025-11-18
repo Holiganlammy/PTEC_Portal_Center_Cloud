@@ -285,7 +285,7 @@ export class AppService {
       },
     ];
 
-    return this.dbManager.executeStoredProcedure(
+    return this.dbManager.executeStoredProcedureMultiple(
       `${databaseConfig.database}.dbo.SmartBill_Withdraw_SelectAllForms`,
       params,
     );
@@ -309,7 +309,7 @@ export class AppService {
     ];
 
     return this.dbManager.executeStoredProcedure(
-      `${databaseConfig.database}.dbo.SmartBill_Withdraw_SelectAllForms`,
+      `${databaseConfig.database}.dbo.SmartBill_WithdrawDtl_SelectCategory`,
       params,
     );
   }
@@ -580,7 +580,7 @@ export class AppService {
         type: sql.NVarChar(20),
         value: body.car_infocode,
       },
-      { name: 'remark', type: sql.NVarChar(20), value: body.remark },
+      { name: 'remark', type: sql.NVarChar(300), value: body.remark },
       {
         name: 'sbwdtl_operationid_startdate',
         type: sql.NVarChar(20),
@@ -602,7 +602,7 @@ export class AppService {
         value: body.sbwdtl_operationid_startmile,
       },
     ];
-    return this.dbManager.executeStoredProcedure(
+    return this.dbManager.executeStoredProcedureMultiple(
       `${databaseConfig.database}.dbo.SmartBill_Withdraw_AddrowDtl`,
       params,
     );
@@ -626,7 +626,7 @@ export class AppService {
         type: sql.NVarChar(20),
         value: body.usercode ?? null,
       },
-      { name: 'pure_card', type: sql.Money(), value: body.pure_card ?? null },
+      { name: 'purecard', type: sql.Money(), value: body.purecard ?? null },
       {
         name: 'condition',
         type: sql.Int(),

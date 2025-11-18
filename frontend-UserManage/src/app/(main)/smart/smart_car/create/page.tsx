@@ -8,6 +8,7 @@ import { AlertCircle, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import client from '@/lib/axios/interceptors';
+import { useRouter } from 'next/navigation'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,8 +32,11 @@ import FileUpload from '@/app/(main)/smart/smart_car/create/components/FormSubmi
 
 // Import types
 import { UserData, CarInfo, Operation, SmartBillHeader } from '@/app/(main)/smart/smart_car/create/service/type/types';
+import { ro } from 'date-fns/locale';
+import { set } from 'date-fns';
 
 export default function FormsStart() {
+  const router = useRouter();
   const { data: session } = useSession();
   dayjs.extend(utc);
   dayjs.extend(timezone);
@@ -65,7 +69,6 @@ export default function FormsStart() {
     reamarks: '',
   });
 
-  // Separate cars array
   const [cars, setCars] = useState<CarInfo[]>([{
     car_infocode: '',
     car_infostatus_companny: false,
@@ -78,7 +81,6 @@ export default function FormsStart() {
     car_milerate: 0,
   }]);
 
-  // Separate operations array with carIndex reference
   const [operations, setOperations] = useState<Operation[]>([]);
 
   const [smartBill_Associate, setSmartBill_Associate] = useState([{
@@ -89,7 +91,6 @@ export default function FormsStart() {
 
   const [dataFilesCount, setDataFilesCount] = useState<any>(null);
 
-  // Handlers
   const handleCompanyChange = (value: string) => {
     setSmartBillHeader(prev => ({ ...prev, sb_name: value }));
   };
@@ -115,13 +116,11 @@ export default function FormsStart() {
     setOperations(newOperations);
   };
 
-  // Remove car and its operations
   const handleRemoveCar = (carIndex: number) => {
     const newCars = [...cars];
     newCars.splice(carIndex, 1);
     setCars(newCars);
 
-    // Remove all operations for this car and adjust indices
     const newOperations = operations
       .filter(op => op.carIndex !== carIndex)
       .map(op => ({
@@ -139,7 +138,6 @@ export default function FormsStart() {
     });
   };
 
-  // Add operation to specific car
   const handleAddOperation = (carIndex: number) => {
     const carOperations = operations.filter(op => op.carIndex === carIndex);
     const lastOp = carOperations[carOperations.length - 1];
@@ -159,7 +157,6 @@ export default function FormsStart() {
     }]);
   };
 
-  // Update operations when car mileRate changes
   const updateOperationMileRates = (carIndex: number, mileRate: number) => {
     const carOperations = operations.filter(op => op.carIndex === carIndex);
     if (carOperations.length > 0) {
@@ -172,7 +169,6 @@ export default function FormsStart() {
     }
   };
 
-  // Remove operation
   const handleRemoveOperation = (opIndex: number) => {
     const newOperations = [...operations];
     newOperations.splice(opIndex, 1);
@@ -184,24 +180,12 @@ export default function FormsStart() {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Debug: ตรวจสอบไฟล์ที่เลือก
-    console.log('Selected file:', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      isFile: file instanceof File
-    });
-
     const fileBolb = URL.createObjectURL(file);
     const newFile = {
       file: fileBolb,
       fileData: file,
       filename: file.name,
     };
-
-    // Debug: ตรวจสอบ newFile object
-    console.log('newFile object:', newFile);
-    console.log('fileData is File:', newFile.fileData instanceof File);
 
     if (!dataFilesCount) {
       setDataFilesCount([newFile]);
@@ -225,7 +209,6 @@ export default function FormsStart() {
       return;
     }
 
-    // Validate header
     if (
       smartBillHeader.usercode === '' ||
       smartBillHeader.sb_fristName === '' ||
@@ -241,13 +224,26 @@ export default function FormsStart() {
       return;
     }
 
-    // Check if all cars are existing cars (not new ones)
     const allCarsAreExisting = cars.every(car => 
       (typeCar === '1' ? carInfoDataCompanny : carInfoData)
         .some((existingCar) => existingCar.car_infocode === car.car_infocode)
     );
 
-    // If all cars are existing cars and no operations, require operations
+    // ตรวจสอบว่าหากเลือก "รถบริษัท" แล้วมีการเพิ่มรถใหม่ ให้แจ้งเตือน
+    if (typeCar === '1') {
+      const hasNewCars = cars.some(car => 
+        !carInfoDataCompanny.some((existingCar) => existingCar.car_infocode === car.car_infocode)
+      );
+      
+      if (hasNewCars) {
+        showAlert(
+          "แจ้งเตือน",
+          "ไม่สามารถเพิ่มรถใหม่ในหมวดหมู่ 'รถบริษัท' ได้ กรุณาเลือกรถที่มีอยู่แล้ว หรือเปลี่ยนเป็น 'รถส่วนตัว'"
+        );
+        return;
+      }
+    }
+
     if (allCarsAreExisting && operations.length === 0) {
       showAlert(
         "แจ้งเตือน",
@@ -321,7 +317,7 @@ export default function FormsStart() {
       smartBill_Header: [smartBillHeader],
       carInfo: cars.map(car => ({
         ...car,
-        car_infostatus_companny: typeCar
+        car_infostatus_companny: parseInt(typeCar)
       })),
       smartBill_Operation: operations.map(({ carIndex, ...rest }) => ({
         ...rest,
@@ -341,9 +337,6 @@ export default function FormsStart() {
       .then(async (response) => {
         for (let i = 0; i < dataFilesCount.length; i++) {
           let formData_1 = new FormData();
-          console.log('File data:', dataFilesCount[i].fileData);
-          console.log('File type:', typeof dataFilesCount[i].fileData);
-          console.log('Is File instance:', dataFilesCount[i].fileData instanceof File);
           formData_1.append('file', dataFilesCount[i].fileData);
           formData_1.append('sb_code', response.data);
 
@@ -355,9 +348,6 @@ export default function FormsStart() {
             .then((res) => {
               if (i === dataFilesCount.length - 1) {
                 showAlert("สำเร็จ", 'บันทึกรายการแล้ว', 'success');
-                // setTimeout(() => {
-                //   window.location.href = '/FormUpdate?' + response.data;
-                // }, 1500);
               }
             })
             .catch((error) => {
@@ -511,12 +501,10 @@ export default function FormsStart() {
                     return 'ส่งฟอร์ม';
                   }
                   
-                  // If there are operations, show "ส่งฟอร์ม"
                   if (operations.length > 0) {
                     return 'ส่งฟอร์ม';
                   }
                   
-                  // Default case (new cars without operations)
                   return 'เพิ่มข้อมูลรถ';
                 })()}
               </button>
@@ -525,30 +513,82 @@ export default function FormsStart() {
         </div>
       </div>
 
-      {/* Alert Dialog */}
-      <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              {alertType === 'error' ? (
-                <AlertCircle className="h-5 w-5 text-red-600" />
-              ) : (
-                <Check className="h-5 w-5 text-green-600" />
-              )}
-              {alertTitle}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-base">
+      {/* Success Alert Dialog */}
+      <AlertDialog open={alertOpen && alertType === 'success'} onOpenChange={setAlertOpen}>
+        <AlertDialogContent className="max-w-md mx-4 sm:mx-auto bg-white rounded-2xl shadow-2xl border-0 p-10 overflow-hidden">
+          {/* Success Header */}
+          <div className="px-6">
+            <AlertDialogHeader className="space-y-4">
+              <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center w-20 h-20 bg-green-400 rounded-full shadow-lg animate-pulse">
+                  <Check className="h-10 w-10 text-white" strokeWidth={3} />
+                </div>
+              </div>
+              <AlertDialogTitle className="text-2xl font-bold text-center text-green-800">
+                {alertTitle}
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+          </div>
+          
+          {/* Success Content */}
+          <div className="px-6 mb-10">
+            <AlertDialogDescription className="text-gray-700 text-center leading-relaxed text-lg">
               {alertMessage}
             </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
+          </div>
+          
+          {/* Success Footer */}
+          <AlertDialogFooter className="px-6 pb-8 pt-2">
             <AlertDialogAction
-              className={cn(
-                "min-w-[100px]",
-                alertType === 'success' 
-                  ? "bg-green-600 hover:bg-green-700" 
-                  : "bg-gray-900 hover:bg-gray-800"
-              )}
+              onClick={() => {
+                setAlertOpen(false);
+                // Redirect after success
+                setTimeout(() => {
+                  router.push('/smart/smart_bill/create');
+                }, 300);
+              }}
+              className="w-full h-12 bg-black text-white font-semibold rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300 focus:ring-opacity-50"
+            >
+              เรียบร้อย
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Error Alert Dialog */}
+      <AlertDialog open={alertOpen && alertType === 'error'} onOpenChange={setAlertOpen}>
+        <AlertDialogContent className="max-w-md mx-4 sm:mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 p-10 overflow-hidden">
+          {/* Error Icon Section */}
+          <div className="px-6 pt-10">
+            <AlertDialogHeader className="space-y-5">
+              <div className="flex items-center justify-center">
+                <div className="relative">
+                  {/* Outer glow ring */}
+                  <div className="absolute inset-0 bg-red-500/20 dark:bg-red-500/30 rounded-full blur-xl animate-pulse"></div>
+                  {/* Icon container */}
+                  <div className="relative flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 rounded-full shadow-xl">
+                    <AlertCircle className="h-11 w-11 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+              </div>
+              
+              <AlertDialogTitle className="text-2xl font-semibold text-center text-gray-900 dark:text-gray-50 tracking-tight">
+                {alertTitle}
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+          </div>
+          
+          {/* Error Message */}
+          <div className="px-8 mb-8">
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400 text-center leading-relaxed text-base">
+              {alertMessage}
+            </AlertDialogDescription>
+          </div>
+          
+          {/* Action Footer */}
+          <AlertDialogFooter className="px-6 pb-8 pt-2">
+            <AlertDialogAction
+              className="w-full h-12 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
             >
               ตรวจสอบ
             </AlertDialogAction>

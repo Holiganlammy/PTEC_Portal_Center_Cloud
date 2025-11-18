@@ -40,7 +40,7 @@ interface DialogSubmitReservationProps {
 
 export function DialogSubmitReservation({ open, setOpen, car, status }: DialogSubmitReservationProps) {
    const router = useRouter();
-   const { data: session, status } = useSession({
+   const { data: session } = useSession({
   required: false,
 });
    const [allCarsData, setAllCarsData] = useState<CarType[]>([]);

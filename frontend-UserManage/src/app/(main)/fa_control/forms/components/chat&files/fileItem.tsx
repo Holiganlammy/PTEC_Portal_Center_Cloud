@@ -6,6 +6,7 @@ import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import Image from "next/image";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -151,9 +152,11 @@ export function FileItem({ fileItem, onUpload }: Props) {
             {/* Avatar */}
 
             {file.img_profile ? (
-              <img
+              <Image
                 src={file.img_profile}
                 alt={file.img_profile}
+                width={32}
+                height={32}
                 className="w-8 h-8 rounded-full object-cover flex items-center justify-center select-none"
               />
             ) : (

@@ -85,27 +85,68 @@ export default function OperationForm({
           <label className="text-sm font-medium text-gray-900">
             วันที่ออกเดินทาง <span className="text-red-500">*</span>
           </label>
-          <input
-            type="datetime-local"
-            value={operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate).format('YYYY-MM-DDTHH:mm') : ''}
-            onChange={(e) => {
-              onOperationChange(operationIndex, 'sb_operationid_startdate', dayjs(e.target.value));
-              onOperationChange(operationIndex, 'sb_operationid_enddate', dayjs(e.target.value));
-            }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="date"
+              value={operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate).format('YYYY-MM-DD') : ''}
+              onChange={(e) => {
+                const currentTime = operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate).format('HH:mm') : '00:00';
+                const newDateTime = dayjs(`${e.target.value} ${currentTime}`);
+                onOperationChange(operationIndex, 'sb_operationid_startdate', newDateTime);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              placeholder="วันที่"
+            />
+            <input
+              type="time"
+              value={operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate).format('HH:mm') : ''}
+              onChange={(e) => {
+                const currentDate = operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+                const newDateTime = dayjs(`${currentDate} ${e.target.value}`);
+                onOperationChange(operationIndex, 'sb_operationid_startdate', newDateTime);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              step="60"
+              style={{
+                colorScheme: 'light'
+              }}
+              lang="en-GB"
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-900">
             วันที่สิ้นสุด <span className="text-red-500">*</span>
           </label>
-          <input
-            type="datetime-local"
-            value={operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate).format('YYYY-MM-DDTHH:mm') : ''}
-            onChange={(e) => onOperationChange(operationIndex, 'sb_operationid_enddate', dayjs(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="date"
+              value={operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate).format('YYYY-MM-DD') : ''}
+              onChange={(e) => {
+                const currentTime = operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate).format('HH:mm') : '00:00';
+                const newDateTime = dayjs(`${e.target.value} ${currentTime}`);
+                onOperationChange(operationIndex, 'sb_operationid_enddate', newDateTime);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              placeholder="วันที่"
+            />
+            <input
+              type="time"
+              value={operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate).format('HH:mm') : ''}
+              onChange={(e) => {
+                const currentDate = operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+                const newDateTime = dayjs(`${currentDate} ${e.target.value}`);
+                onOperationChange(operationIndex, 'sb_operationid_enddate', newDateTime);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              step="60"
+              style={{
+                colorScheme: 'light'
+              }}
+              lang="en-GB"
+            />
+          </div>
         </div>
       </div>
 

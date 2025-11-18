@@ -28,6 +28,7 @@
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
@@ -48,6 +49,8 @@
     "recharts": "^2.15.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
+    "thai-baht-text": "^2.0.5",
+    "vaul": "^1.1.2",
     "xlsx": "^0.18.5",
     "zod": "^3.25.58"
   },

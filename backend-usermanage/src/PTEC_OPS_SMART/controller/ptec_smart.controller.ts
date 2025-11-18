@@ -14,6 +14,7 @@ import { AppService } from '../service/ptec_smart.service';
 import {
   CreateSmartBillDto,
   SmartBill_Fetch_FilterOptions_Entity,
+  SmartBill_Withdraw_AddrowDtlResponseDto,
   SmartBillHeaderSearchDto,
 } from '../domain/model/ptec_smart.entity';
 import {
@@ -310,7 +311,7 @@ export class AppController {
     }
   }
 
-  @Post('SmartBill_Withdraw_Save')
+  @Post('/SmartBill_Withdraw_Save')
   @HttpCode(200)
   async SmartBill_Withdraw_Save(
     @Body() body: SmartBill_Withdraw_SaveInput,
@@ -419,14 +420,19 @@ export class AppController {
     @Res() res: Response,
   ) {
     try {
-      for (let i = 0; i < body.length; i++) {
+      // ✅ แปลงเป็น Array ถ้าไม่ใช่
+      const items = Array.isArray(body) ? body : [body];
+      for (let i = 0; i < items.length; i++) {
         const data =
-          await this.service.SmartBill_WithdrawDtl_SaveChangesCategory(body[i]);
-        if (i + 1 === body.length) {
+          await this.service.SmartBill_WithdrawDtl_SaveChangesCategory(
+            items[i],
+          );
+        if (i + 1 === items.length) {
           res.status(200).send(data);
         }
       }
     } catch (error: unknown) {
+      console.error('Backend Error:', error);
       throw new HttpException(
         error instanceof Error ? error.message : 'Unknown error',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -473,7 +479,7 @@ export class AppController {
     }
   }
 
-  @Post('WithdrawDtl_SaveChangesHotelGroup')
+  @Post('SmartBill_WithdrawDtl_SaveChangesHotelGroup')
   @HttpCode(200)
   async saveHotelGroup(
     @Body()
@@ -485,24 +491,65 @@ export class AppController {
     @Res() res: Response,
   ) {
     try {
-      let result: any[] | null = null;
+      const results: any[] = [];
+      let hasError = false;
+      let errorMessage = '';
+
+      // Loop บันทึกทีละ guest
       for (let i = 0; i < body.length; i++) {
-        result = await this.service.SmartBill_WithdrawDtl_SaveChangesHotelGroup(
-          body[i],
-        );
+        const result =
+          await this.service.SmartBill_WithdrawDtl_SaveChangesHotelGroup(
+            body[i],
+          );
+
+        let status: { status?: string; message?: string } | undefined;
+        if (Array.isArray(result) && Array.isArray(result[0])) {
+          status = result[0][0] as { status?: string; message?: string };
+        } else if (Array.isArray(result)) {
+          status = result[0] as { status?: string; message?: string };
+        }
+
+        // ✅ ตรวจสอบ status
+        if (!status) {
+          hasError = true;
+          errorMessage = 'SP ไม่ส่งผลลัพธ์กลับมา';
+          break;
+        }
+
+        if (status.status === 'failed') {
+          hasError = true;
+          errorMessage = status.message || 'เกิดข้อผิดพลาดในการบันทึก';
+          break;
+        }
+
+        results.push(status);
       }
-      if (!result?.length)
-        throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
-      res.status(200).send(result);
+
+      // ✅ ถ้ามี error
+      if (hasError) {
+        return res.status(400).json({
+          status: 'failed',
+          message: errorMessage,
+          data: null,
+        });
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        message: `บันทึกข้อมูล ${body.length} รายการสำเร็จ`,
+        data: results,
+      });
     } catch (error: unknown) {
-      throw new HttpException(
-        error instanceof Error ? error.message : 'Unknown error',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      console.error('❌ Error in saveHotelGroup:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        data: null,
+      });
     }
   }
 
-  @Post('WithdrawDtl_SelectHotelGroup')
+  @Post('SmartBill_WithdrawDtl_SelectHotelGroup')
   @HttpCode(200)
   async selectHotelGroup(
     @Body() body: { sbc_hotelid: number },
@@ -543,7 +590,7 @@ export class AppController {
     }
   }
 
-  @Post('Withdraw_Addrow')
+  @Post('SmartBill_Withdraw_Addrow')
   @HttpCode(200)
   async addRow(@Body() body: { car_infocode: string }, @Res() res: Response) {
     try {
@@ -558,7 +605,7 @@ export class AppController {
     }
   }
 
-  @Post('Withdraw_AddrowDtl')
+  @Post('SmartBill_Withdraw_AddrowDtl')
   @HttpCode(200)
   async addRowDtl(
     @Body() body: SmartBill_Withdraw_AddrowDtlInput,
@@ -566,9 +613,33 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_Withdraw_AddrowDtl(body);
-      if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
-      res.status(200).send(data);
+
+      if (!data || data.length === 0) {
+        throw new HttpException(
+          'ไม่พบข้อมูลที่ส่งกลับจากระบบ',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const result =
+        data[0][0] as unknown as SmartBill_Withdraw_AddrowDtlResponseDto;
+
+      if (result && result.status === 'success') {
+        const response = {
+          success: true,
+          message: 'เพิ่มข้อมูลสำเร็จ',
+          inserted_id: result.inserted_id ?? null,
+        };
+        return res.status(200).send(response);
+      } else {
+        return res.status(400).send({
+          success: false,
+          message: result?.message || 'เพิ่มข้อมูลไม่สำเร็จ',
+          detail: result,
+        });
+      }
     } catch (error: unknown) {
+      console.error('Error in addRowDtl:', error);
       throw new HttpException(
         error instanceof Error ? error.message : 'Unknown error',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -576,7 +647,7 @@ export class AppController {
     }
   }
 
-  @Post('WithdrawDtl_Delete')
+  @Post('SmartBill_WithdrawDtl_Delete')
   @HttpCode(200)
   async withdrawDtlDelete(
     @Body() body: { sbwdtl_id: number },
@@ -584,6 +655,7 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_WithdrawDtl_Delete(body);
+      console.log('data', data);
       if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       res.status(200).send(data);
     } catch (error: unknown) {
@@ -594,7 +666,7 @@ export class AppController {
     }
   }
 
-  @Post('Withdraw_updateSBW')
+  @Post('SmartBill_Withdraw_updateSBW')
   @HttpCode(200)
   async updateSBW(
     @Body() body: SmartBill_Withdraw_updateSBWInput,
@@ -611,7 +683,7 @@ export class AppController {
     }
   }
 
-  @Get('Withdraw_SelectCostOther')
+  @Get('SmartBill_Withdraw_SelectCostOther')
   @HttpCode(200)
   async selectCostOther(@Res() res: Response) {
     try {

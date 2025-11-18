@@ -79,9 +79,6 @@ export default function CarForm({
   const carOperations = operations.filter(op => op.carIndex === carIndex);
   
   const handleCarSelect = async (selectedCarCode: string) => {
-    console.log('=== START handleCarSelect ===');
-    console.log('Selected car code:', selectedCarCode);
-    
     // หารถที่เลือกจาก list
     const selectedCar = (typeCar === '1' ? carInfoDataCompanny : carInfoData)
       .find(c => c.car_infocode === selectedCarCode);
@@ -128,8 +125,6 @@ export default function CarForm({
         if (updatedCar.car_milerate !== undefined) {
           onUpdateOperationMileRates(carIndex, updatedCar.car_milerate);
         }
-        
-        console.log('=== END handleCarSelect (Success) ===');
       } else {
         console.log('No data returned from API');
       }

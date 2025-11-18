@@ -6,6 +6,7 @@ import {
   CheckUserPermission,
   UserWithRoles,
   UserAssets,
+  Province,
 } from '../domain/model/ptec_useright.entity';
 import { Branch } from '../domain/model/ptec_useright.entity';
 import { Department } from '../domain/model/ptec_useright.entity';
@@ -27,6 +28,7 @@ import { CreateUserDto } from '../dto/CreateUser.dto';
 import { EditUserDto } from '../dto/EditUser.dto';
 import { JwtService } from '@nestjs/jwt';
 import { DatabaseManagerService } from 'src/database/database-manager.service';
+import { GetWelfareDto } from '../dto/ptec_useright.dto';
 
 @Injectable()
 export class AppService {
@@ -300,6 +302,28 @@ export class AppService {
     return this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.Fix_Assets_Control_Fetching_Users`,
       [],
+    );
+  }
+
+  async getProvincesList(): Promise<Province[]> {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.Provinces_List`,
+      [],
+    );
+  }
+
+  async useright_getWelfare(req: GetWelfareDto) {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.useright_getWelfare`,
+      [
+        { name: 'usercode', type: sql.NVarChar(50), value: req.usercode },
+        { name: 'welfaretypeid', type: sql.Int(), value: req.welfaretypeid },
+        {
+          name: 'sbc_hotelProvince',
+          type: sql.NVarChar(100),
+          value: req.sbc_hotelProvince,
+        },
+      ],
     );
   }
 }

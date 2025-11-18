@@ -171,7 +171,7 @@ export class SmartBill_Withdraw_updateSBWInput {
   usercode?: string | null;
 
   @IsNotEmpty()
-  pure_card?: number | null;
+  purecard?: number | null;
 
   @IsNotEmpty()
   condition: number | string;

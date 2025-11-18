@@ -38,6 +38,7 @@ import * as crypto from 'crypto';
 // import { sendResetPasswordEmail } from 'src/utils/sendEmailForgetPassword';
 import { sendOtpWithGmailAPI } from 'src/utils/sendEmailOTPLoginGmailAPI';
 import { sendResetPasswordWithGmailAPI } from 'src/utils/sendEmailForgetPasswordGmailAPI';
+import { GetWelfareDto } from '../dto/ptec_useright.dto';
 
 @Controller('')
 export class AppController {
@@ -701,6 +702,40 @@ export class AppController {
       res.status(500).send({
         success: false,
         message: 'Error fetching users for assets control',
+      });
+    }
+  }
+
+  @Get('/Provinces_List')
+  async getProvincesList(@Res() res: Response) {
+    try {
+      const provinces = await this.appService.getProvincesList();
+      res.status(200).send({
+        success: true,
+        data: provinces,
+      });
+    } catch (error) {
+      console.error('Error fetching provinces list:', error);
+      res.status(500).send({
+        success: false,
+        message: 'Error fetching provinces list',
+      });
+    }
+  }
+
+  @Post('/useright_getWelfare')
+  async useright_getWelfare(@Body() req: GetWelfareDto, @Res() res: Response) {
+    try {
+      const welfare = await this.appService.useright_getWelfare(req);
+      res.status(200).send({
+        success: true,
+        data: welfare,
+      });
+    } catch (error) {
+      console.error('Error fetching welfare data:', error);
+      res.status(500).send({
+        success: false,
+        message: 'Error fetching welfare data',
       });
     }
   }

@@ -1,6 +1,9 @@
 'use client';
 
 import { Upload, X } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
+import ImageDialog from '@/components/ImageDialog/ImageDialog'; // import ตัวใหม่
 
 interface FileUploadProps {
   dataFilesCount: any;
@@ -9,6 +12,14 @@ interface FileUploadProps {
 }
 
 export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove }: FileUploadProps) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const handleOpenDialog = (index: number) => {
+    setSelectedIndex(index);
+    setDialogOpen(true);
+  };
+
   return (
     <div className="space-y-4">
       <label className="text-sm font-medium mr-5 text-gray-900">
@@ -28,11 +39,14 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
       {dataFilesCount && dataFilesCount.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           {dataFilesCount.map((item: any, index: number) => (
-            <div key={index} className="relative group">
-              <img
+            <div key={index} className="relative group cursor-pointer">
+              <Image
                 src={item.file}
                 alt={item.filename}
+                width={200}
+                height={200}
                 className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                onClick={() => handleOpenDialog(index)}
               />
               <button
                 onClick={() => onFileRemove(index)}
@@ -44,6 +58,14 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
           ))}
         </div>
       )}
+
+      {/* Image Dialog */}
+      <ImageDialog
+        images={dataFilesCount.map((f: any) => ({ file: f.file, filename: f.filename }))}
+        initialIndex={selectedIndex}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </div>
   );
 }

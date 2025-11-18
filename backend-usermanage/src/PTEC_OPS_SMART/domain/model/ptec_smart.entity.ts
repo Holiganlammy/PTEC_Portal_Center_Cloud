@@ -74,3 +74,12 @@ export interface SmartBill_Fetch_FilterOptions_Entity {
   car_categories: OptionEntity[];
   sb_status: OptionEntity[];
 }
+
+export class SmartBill_Withdraw_AddrowDtlResponseDto {
+  success: boolean;
+  message?: string;
+  inserted_id?: number | null;
+  detail?: Record<string, any>;
+  status?: string;
+  error_message: string;
+}
