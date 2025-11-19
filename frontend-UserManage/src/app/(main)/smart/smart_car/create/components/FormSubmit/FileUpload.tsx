@@ -3,7 +3,7 @@
 import { Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
-import ImageDialog from '@/components/ImageDialog/ImageDialog'; // import ตัวใหม่
+import ImageDialog from '@/components/ImageDialog/ImageDialog';
 
 interface FileUploadProps {
   dataFilesCount: any;
@@ -19,6 +19,9 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
     setSelectedIndex(index);
     setDialogOpen(true);
   };
+
+  // ✅ สร้างตัวแปรที่มีค่า default เป็น array ว่าง
+  const files = dataFilesCount || [];
 
   return (
     <div className="space-y-4">
@@ -36,9 +39,9 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
         />
       </label>
 
-      {dataFilesCount && dataFilesCount.length > 0 && (
+      {files.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-          {dataFilesCount.map((item: any, index: number) => (
+          {files.map((item: any, index: number) => (
             <div key={index} className="relative group cursor-pointer">
               <Image
                 src={item.file}
@@ -61,7 +64,7 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
 
       {/* Image Dialog */}
       <ImageDialog
-        images={dataFilesCount.map((f: any) => ({ file: f.file, filename: f.filename }))}
+        images={files.map((f: any) => ({ file: f.file, filename: f.filename }))}
         initialIndex={selectedIndex}
         open={dialogOpen}
         onOpenChange={setDialogOpen}

@@ -2,21 +2,21 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = 'nodejs';
+// ✅ เพิ่ม: Bypass SSL verification สำหรับ development
+if (process.env.NODE_ENV === 'development' || process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 
 const secret = process.env.NEXTAUTH_SECRET;
 
-// 👇 เปลี่ยน cache key จาก userId เป็น userId + roleId
 const menuCache = new Map<string, { paths: string[]; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
-// 👇 เปลี่ยม function signature เพิ่ม roleId
 async function fetchUserAccessiblePaths(
   userId: number, 
-  roleId: number, // 👈 เพิ่ม
+  roleId: number,
   token: string = ""
 ) {
-  // 👇 สร้าง cache key จาก userId + roleId
   const cacheKey = `${userId}-${roleId}`;
   const cached = menuCache.get(cacheKey);
   
@@ -26,6 +26,9 @@ async function fetchUserAccessiblePaths(
   }
 
   try {
+    // ✅ เพิ่ม error logging ที่ละเอียดขึ้น
+    console.log(`[RBAC] 🔍 Fetching menu for user ${userId}...`);
+
     const res = await fetch(`${process.env.Localhost_API}/Apps_List_Menu`, {
       method: "POST",
       headers: {
@@ -48,12 +51,12 @@ async function fetchUserAccessiblePaths(
     }
 
     const menus = await res.json();
+    console.log(`[RBAC] 📋 Raw menus response:`, JSON.stringify(menus).substring(0, 200));
     
     const accessiblePaths = (menus || [])
       .filter((m: any) => m.path !== null && m.path !== undefined && m.path !== "")
       .map((m: any) => m.path);
 
-    // 👇 cache ด้วย key ใหม่
     menuCache.set(cacheKey, {
       paths: accessiblePaths,
       timestamp: Date.now()
@@ -62,7 +65,14 @@ async function fetchUserAccessiblePaths(
     console.log(`[RBAC] ✅ User ${userId} (role ${roleId}) accessible paths (${accessiblePaths.length}):`, accessiblePaths);
     return accessiblePaths;
   } catch (err) {
-    console.error("[RBAC] Middleware fetch error:", err);
+    // ✅ แสดง error แบบละเอียด
+    console.error("[RBAC] ❌ Middleware fetch error:", err);
+    console.error("[RBAC] Error details:", {
+      message: err instanceof Error ? err.message : 'Unknown error',
+      cause: err instanceof Error ? err.cause : undefined,
+      userId,
+      roleId
+    });
     return [];
   }
 }
@@ -89,32 +99,62 @@ function isPathAllowed(requestPath: string, allowedPaths: string[]): boolean {
 }
 
 export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret });
   const { pathname } = req.nextUrl;
 
-  const publicPaths = ["/login", "/forget_password", "/reset-password", "/unauthorized", "/"];
-  
-  if (publicPaths.some(path => pathname === path || pathname.startsWith(path + "/"))) {
+  // ✅ ต้องเช็ค static files ก่อนทุกอย่าง
+  if (
+    pathname.startsWith('/_next/static') ||
+    pathname.startsWith('/_next/image') ||
+    pathname.startsWith('/static') ||
+    pathname === '/favicon.ico' ||
+    pathname.endsWith('.png') ||
+    pathname.endsWith('.jpg') ||
+    pathname.endsWith('.jpeg') ||
+    pathname.endsWith('.svg') ||
+    pathname.endsWith('.ico')
+  ) {
     return NextResponse.next();
   }
 
+  // ✅ Public paths
+  const publicPaths = [
+    "/login", 
+    "/forget_password", 
+    "/reset-password", 
+    "/unauthorized",
+    "/api/auth",
+  ];
+  
+  // ✅ Home page
+  if (pathname === "/home" || pathname === "/") {
+    return NextResponse.next();
+  }
+  
+  if (publicPaths.some(path => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
+
+  // Get token
+  const token = await getToken({ req, secret });
+
   if (!token) {
+    console.log(`[AUTH] ❌ No token for path: ${pathname}`);
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   const userId = token.UserID || token.userid || token.sub;
-  const roleId = token.role_id; // 👈 เพิ่ม - ดึง role_id จาก token
+  const roleId = token.role_id;
 
   if (!userId) {
+    console.log(`[AUTH] ❌ No userId in token for path: ${pathname}`);
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
-  // 👇 ส่ง roleId เข้าไปด้วย
   const allowedPaths = await fetchUserAccessiblePaths(
     Number(userId), 
-    Number(roleId), // 👈 เพิ่ม
+    Number(roleId),
     String(token.access_token || "")
   );
 
@@ -122,11 +162,12 @@ export async function middleware(req: NextRequest) {
     console.log("[AUTH] ❌ Token expired (401 from API)");
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("redirect", pathname);
-    loginUrl.searchParams.set("reason", "api_401");
+    loginUrl.searchParams.set("reason", "session_expired");
     return NextResponse.redirect(loginUrl);
   }
 
   if (allowedPaths.length === 0) {
+    console.log(`[RBAC] ❌ No accessible paths for user ${userId}`);
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
@@ -144,9 +185,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/users/:path*",
-    "/fa_control/:path*",
-    "/smart/:path*",
-    "/reservations/:path*",
+    // ✅ แก้ matcher ให้ถูกต้อง - ต้อง exclude _next/static และ _next/image
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico).*)",
   ],
 };

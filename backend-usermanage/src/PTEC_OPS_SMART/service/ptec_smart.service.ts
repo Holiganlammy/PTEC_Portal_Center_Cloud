@@ -25,8 +25,7 @@ import * as fs from 'fs';
 @Injectable()
 export class AppService {
   private readonly uploadDir = 'D:/files/smartBill/';
-  private readonly baseUrl =
-    process.env.BASE_URL || 'https://localhost:7777/smartbill/';
+  private readonly baseUrl = process.env.BASE_URL;
   private readonly usercode = 'SYSTEM';
   constructor(private readonly dbManager: DatabaseManagerService) {}
 

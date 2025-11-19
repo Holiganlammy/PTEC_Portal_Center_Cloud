@@ -30,6 +30,8 @@ async function bootstrap(): Promise<void> {
         'http://localhost:3000',
         'https://localhost:3000',
         'https://203.150.63.138:33002',
+        'http://10.81.234.6:3000',
+        'http://192.168.247.71:33002',
       ],
       credentials: true,
     });

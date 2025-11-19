@@ -33,14 +33,12 @@ export default function ImageDialog({
     setPosition({ x: 0, y: 0 });
   }, [initialIndex, open]);
 
-  // ✅ Reset position เมื่อเปลี่ยนรูปหรือ reset zoom
   React.useEffect(() => {
     if (scale === 1) {
       setPosition({ x: 0, y: 0 });
     }
   }, [scale]);
 
-  // ✅ Zoom ด้วย wheel
   React.useEffect(() => {
     const container = imageContainerRef.current;
     if (!container) return;
@@ -50,7 +48,6 @@ export default function ImageDialog({
       const delta = -e.deltaY / 500;
       setScale(prev => {
         const newScale = Math.min(Math.max(0.5, prev + delta), 5);
-        // Reset position ถ้า zoom กลับมา 1
         if (newScale === 1) {
           setPosition({ x: 0, y: 0 });
         }
@@ -62,9 +59,8 @@ export default function ImageDialog({
     return () => container.removeEventListener('wheel', handleWheel);
   }, []);
 
-  // ✅ Handle Mouse Down - เริ่มลาก
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (scale <= 1) return; // ลากได้เฉพาะตอนซูม
+    if (scale <= 1) return;
     
     setIsDragging(true);
     setDragStart({
@@ -73,7 +69,6 @@ export default function ImageDialog({
     });
   };
 
-  // ✅ Handle Mouse Move - ลาก
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || scale <= 1) return;
 
@@ -83,12 +78,10 @@ export default function ImageDialog({
     });
   };
 
-  // ✅ Handle Mouse Up - หยุดลาก
   const handleMouseUp = () => {
     setIsDragging(false);
   };
 
-  // ✅ Handle Touch Events for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     if (scale <= 1) return;
     
@@ -114,7 +107,11 @@ export default function ImageDialog({
     setIsDragging(false);
   };
 
+  // ✅ เพิ่มการตรวจสอบ
   if (!images || images.length === 0) return null;
+
+  // ✅ ตรวจสอบว่า currentIndex ไม่เกินขอบเขต
+  const safeIndex = Math.min(currentIndex, images.length - 1);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,17 +120,14 @@ export default function ImageDialog({
           <DialogTitle>รูปภาพ</DialogTitle>
         </VisuallyHidden>
 
-        {/* ปุ่มปิด */}
         <DialogClose className="absolute top-4 right-4 z-20 p-2 bg-black/50 rounded-full hover:bg-black/70 text-white transition-colors">
           <X className="w-6 h-6" />
         </DialogClose>
 
-        {/* Zoom indicator */}
         <div className="absolute top-4 left-4 z-20 px-3 py-1.5 bg-black/50 rounded-full text-white text-sm font-medium">
           {Math.round(scale * 100)}%
         </div>
 
-        {/* ภาพใหญ่ + zoom + pan */}
         <div 
           ref={imageContainerRef}
           className="relative w-full h-full flex items-center justify-center overflow-hidden select-none"
@@ -159,8 +153,8 @@ export default function ImageDialog({
             }}
           >
             <Image
-              src={images[currentIndex].file}
-              alt={images[currentIndex].filename}
+              src={images[safeIndex].file}
+              alt={images[safeIndex].filename}
               width={1200}
               height={1200}
               className="object-contain max-w-full max-h-full select-none pointer-events-none"
@@ -173,7 +167,6 @@ export default function ImageDialog({
             />
           </div>
 
-          {/* Navigation arrows */}
           {images.length > 1 && (
             <>
               <button
@@ -206,7 +199,6 @@ export default function ImageDialog({
             </>
           )}
 
-          {/* Navigation dots */}
           {images.length > 1 && (
             <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-20">
               {images.map((_, i) => (
@@ -219,7 +211,7 @@ export default function ImageDialog({
                     setPosition({ x: 0, y: 0 });
                   }}
                   className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    i === currentIndex 
+                    i === safeIndex 
                       ? "bg-white w-8" 
                       : "bg-white/50 hover:bg-white/70"
                   }`}
@@ -230,16 +222,14 @@ export default function ImageDialog({
           )}
         </div>
 
-        {/* Image counter */}
         {images.length > 1 && (
           <div className="absolute bottom-20 left-0 right-0 flex justify-center z-20 pointer-events-none">
             <div className="px-3 py-1.5 bg-black/50 rounded-full text-white text-sm font-medium">
-              {currentIndex + 1} / {images.length}
+              {safeIndex + 1} / {images.length}
             </div>
           </div>
         )}
 
-        {/* Zoom controls */}
         <div className="absolute bottom-6 right-6 z-20 flex gap-2">
           <button
             onClick={() => {
@@ -276,7 +266,6 @@ export default function ImageDialog({
           </button>
         </div>
 
-        {/* Hint text เมื่อ zoom */}
         {scale > 1 && (
           <div className="absolute top-16 left-4 z-20 px-3 py-1.5 bg-black/50 rounded-full text-white text-xs">
             ลากเพื่อเลื่อนดูรูป
