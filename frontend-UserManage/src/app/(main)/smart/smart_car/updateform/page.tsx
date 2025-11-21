@@ -137,10 +137,12 @@ export default function FormsUpdate() {
         }));
         
         setCars(carsData);
-        if (carsData[0].car_infostatus_companny) {
+        
+        // ตั้งค่าประเภทรถตาม car_infostatus_companny
+        if (carsData[0]?.car_infostatus_companny === true) {
           setTypeCar('1'); // รถบริษัท
         } else {
-          setTypeCar('2'); // รถส่วนตัว
+          setTypeCar('0'); // รถส่วนตัว (car_infostatus_companny = false)
         }
       }
 
@@ -218,6 +220,28 @@ export default function FormsUpdate() {
       setIsLoading(false);
     }
   }, [sbCode]);
+
+  // โหลดข้อมูลรถเมื่อ typeCar มีค่า (สำหรับหน้า update)
+  useEffect(() => {
+    const loadCarData = async () => {
+      if (typeCar && (typeCar === '0' || typeCar === '1')) {
+        try {
+          const body = { car_infocode: null };
+          const response = await client.post('/SmartBill_CarInfoSearch', body);
+          
+          const companyData = response.data.filter((res: any) => res.car_infostatus_companny === true);
+          const personalData = response.data.filter((res: any) => res.car_infostatus_companny === false);
+          
+          setCarInfoDataCompanny(companyData);
+          setCarInfoData(personalData);
+        } catch (error) {
+          console.error('Error loading car data:', error);
+        }
+      }
+    };
+
+    loadCarData();
+  }, [typeCar]);
 
   // Handlers
   const handleCompanyChange = (value: string) => {
@@ -324,10 +348,47 @@ export default function FormsUpdate() {
     }
   };
 
-  const handleFileRemove = (index: number) => {
+  const handleFileRemove = async (index: number) => {
     const list = [...dataFilesCount];
+    const fileToRemove = list[index];
+    
+    // ถ้าเป็นไฟล์ที่มีอยู่แล้วในระบบ ต้องลบจาก backend ด้วย
+    if (fileToRemove.isExisting && fileToRemove.fileId) {
+      try {
+        // เรียก API ลบไฟล์จาก backend
+        const response = await client.post('/NonPO_Delete_Attach_By_attachid', {
+          attachid: fileToRemove.fileId
+        });
+        
+        // แสดงผลสำเร็จ
+        showAlert(
+          "ลบไฟล์สำเร็จ", 
+          `ไฟล์ ${fileToRemove.filename} ถูกลบออกจากระบบแล้ว`, 
+          'success'
+        );
+        
+      } catch (error: any) {
+        console.error('Error deleting file from backend:', error);
+        showAlert(
+          "เกิดข้อผิดพลาด", 
+          `ไม่สามารถลบไฟล์ ${fileToRemove.filename} จากระบบได้: ${error.message || 'กรุณาลองใหม่อีกครั้ง'}`
+        );
+        return; // ไม่ลบจาก UI หากลบจาก backend ไม่สำเร็จ
+      }
+    }
+    
+    // ลบออกจาก state
     list.splice(index, 1);
     setDataFilesCount(list.length > 0 ? list : null);
+    
+    // ถ้าเป็นไฟล์ใหม่ที่ยังไม่ได้บันทึก แสดงข้อความธรรมดา
+    if (!fileToRemove.isExisting) {
+      showAlert(
+        "ลบไฟล์สำเร็จ", 
+        `ไฟล์ ${fileToRemove.filename} ถูกลบออกจากรายการแล้ว`, 
+        'success'
+      );
+    }
   };
 
   const handleSubmit = async () => {
@@ -392,7 +453,8 @@ export default function FormsUpdate() {
       const op = operations[i];
       if (
         !op.sb_operationid_startdate ||
-        op.sb_operationid_startmile === 0 ||
+        op.sb_operationid_startmile === null ||
+        op.sb_operationid_startmile === undefined ||
         op.sb_operationid_startoil === '' ||
         !op.sb_operationid_enddate ||
         op.sb_operationid_endoil === '' ||
@@ -457,6 +519,7 @@ export default function FormsUpdate() {
         let formData_1 = new FormData();
         formData_1.append('file', newFiles[i].fileData);
         formData_1.append('sb_code', sbCode || '');
+        formData_1.append('usercode', session?.user?.UserCode || '');
 
         await client.post('/SmartBill_files', formData_1, {
           headers: {
@@ -535,11 +598,11 @@ export default function FormsUpdate() {
 
             {/* Car Type Selection */}
             <CarTypeSelection 
+              key={`car-type-${typeCar}-${Date.now()}`} // Force re-render with key
               typeCar={typeCar}
               onTypeCarChange={setTypeCar}
               onCarInfoDataChange={handleCarInfoDataChange}
             />
-
             <div className="h-px bg-gray-200"></div>
 
             {/* Cars Section */}
@@ -566,6 +629,7 @@ export default function FormsUpdate() {
                   onRemoveOperation={handleRemoveOperation}
                   onCarUpdate={handleCarUpdate}
                   onUpdateOperationMileRates={updateOperationMileRates}
+                  isUpdateMode={true} // เพิ่ม prop เพื่อบอกว่าเป็นหน้า update
                 />
               ))}
             </div>

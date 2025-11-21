@@ -277,9 +277,11 @@ export default function FormsStart() {
     // Validate operations (if any exist)
     for (let i = 0; i < operations.length; i++) {
       const op = operations[i];
+      console.log('Validating operation:', op);
       if (
         !op.sb_operationid_startdate ||
-        op.sb_operationid_startmile === 0 ||
+        op.sb_operationid_startmile === null ||
+        op.sb_operationid_startmile === undefined ||
         op.sb_operationid_startoil === '' ||
         !op.sb_operationid_enddate ||
         op.sb_operationid_endoil === '' ||
@@ -339,6 +341,7 @@ export default function FormsStart() {
           let formData_1 = new FormData();
           formData_1.append('file', dataFilesCount[i].fileData);
           formData_1.append('sb_code', response.data);
+          formData_1.append('usercode', session?.user?.UserCode || '');
 
           await client.post('/SmartBill_files', formData_1, {
             headers: {

@@ -189,9 +189,19 @@ export default function OperationForm({
             ไมล์สิ้นสุด <span className="text-red-500">*</span>
           </Label>
           <Input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={operation.sb_operationid_endmile}
-            onChange={(e) => onEndMileChange(operationIndex, e.target.value, carOperations)}
+            onInput={(e) => {
+              // อนุญาตเฉพาะตัวเลข
+              const target = e.target as HTMLInputElement;
+              target.value = target.value.replace(/[^0-9]/g, '');
+            }}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^0-9]/g, '');
+              onEndMileChange(operationIndex, value, carOperations);
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
             placeholder="0"
           />

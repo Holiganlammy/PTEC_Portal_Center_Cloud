@@ -180,6 +180,19 @@ interface CostOther {
   updatedate: string | null
 }
 
+interface UserHotelWelfare {
+  BranchID: number
+  DepCode: string
+  DepID: number
+  Email: string
+  Name: string
+  UserCode: string
+  UserID: number
+  UserType: null
+  fristName: string
+  lastName: string
+}
+
 
 type NewItemForm = 
   | FuelNewItem 

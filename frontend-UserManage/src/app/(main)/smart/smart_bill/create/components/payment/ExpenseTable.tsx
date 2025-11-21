@@ -57,6 +57,8 @@ import Swal from 'sweetalert2'
 import client from '@/lib/axios/interceptors'
 import { Label } from '@/components/ui/label'
 import { useSession } from 'next-auth/react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+
 
 interface ExpenseTableProps {
   smartBill_WithdrawDtl: smartBill_Withdraw_Detail[]
@@ -87,10 +89,11 @@ export default function ExpenseTable({
   const [openUserCombobox, setOpenUserCombobox] = useState(false)
   const [openProvinceCombobox, setOpenProvinceCombobox] = useState(false)
   const [openGuestCombobox, setOpenGuestCombobox] = useState<{[key: number]: boolean}>({})
+  const [selectedRemark, setSelectedRemark] = useState<string | null>(null)
   
   // Options from API
   const [options, setOptions] = useState<{
-    users?: UserData[]
+    users?: UserHotelWelfare[]
     provinces?: Provinces[]
     costOther?: CostOther[]
   }>({})
@@ -406,7 +409,7 @@ export default function ExpenseTable({
   const getSelectedUserName = () => {
     if (!allowanceItem.usercode) return 'เลือกผู้เดินทาง'
     const user = options.users?.find(u => u.UserCode === allowanceItem.usercode)
-    return user ? `${user.Fullname} (${user.UserCode})` : allowanceItem.usercode
+    return user ? `${user.Name} (${user.UserCode})` : allowanceItem.usercode
   }
 
   // calculateDays ใหม่ - ใช้ชั่วโมง
@@ -525,7 +528,7 @@ export default function ExpenseTable({
     const billAmount = parseFloat(hotelItem.amount?.toString() || '0') || 0
     
     const guestTotal = totalGuestRate * nights
-    const billTotal = billAmount * nights // แก้ไขให้คูณกับจำนวนคืน
+    const billTotal = billAmount // ใช้ยอดบิลรวมโดยตรง ไม่คูณกับจำนวนคืน
     return Math.min(guestTotal, billTotal)
   }
 
@@ -1061,7 +1064,7 @@ export default function ExpenseTable({
                                   {options.users?.map((user) => (
                                     <CommandItem
                                       key={user.UserCode}
-                                      value={`${user.Fullname} ${user.UserCode}`}
+                                      value={`${user.Name} ${user.UserCode}`}
                                       onSelect={() => handleAllowanceUserSelect(user.UserCode)}
                                       className="cursor-pointer"
                                     >
@@ -1071,7 +1074,7 @@ export default function ExpenseTable({
                                         }`}
                                       />
                                       <div className="flex flex-col">
-                                        <span className="font-medium">{user.Fullname}</span>
+                                        <span className="font-medium">{user.Name}</span>
                                         <span className="text-xs text-gray-500">{user.UserCode}</span>
                                       </div>
                                     </CommandItem>
@@ -1267,21 +1270,41 @@ export default function ExpenseTable({
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">จำนวนคืน</Label>
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             value={hotelItem.nights || ''}
-                            onChange={(e) => setHotelItem({ ...hotelItem, nights: e.target.value })}
+                            onInput={(e) => {
+                              // อนุญาตเฉพาะตัวเลข
+                              const target = e.target as HTMLInputElement;
+                              target.value = target.value.replace(/[^0-9]/g, '');
+                            }}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9]/g, '');
+                              setHotelItem({ ...hotelItem, nights: value });
+                            }}
                             placeholder="0"
                           />
                         </div>
                       </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">ยอดตามบิล/คืน (บาท)</Label>
+                          <Label className="text-sm font-medium">ยอดบิลรวม (บาท)</Label>
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             value={hotelItem.amount || ''}
-                            onChange={(e) => setHotelItem({ ...hotelItem, amount: e.target.value })}
-                            placeholder="0.00"
+                            onInput={(e) => {
+                              // อนุญาตเฉพาะตัวเลข
+                              const target = e.target as HTMLInputElement;
+                              target.value = target.value.replace(/[^0-9]/g, '');
+                            }}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9]/g, '');
+                              setHotelItem({ ...hotelItem, amount: value });
+                            }}
+                            placeholder="0"
                             className="text-right font-mono"
                           />
                         </div>
@@ -1312,7 +1335,7 @@ export default function ExpenseTable({
                                     {guest.usercode ? (
                                       (() => {
                                         const user = options.users?.find(u => u.UserCode === guest.usercode)
-                                        return user ? `${user.Fullname} (${user.UserCode})` : guest.usercode
+                                        return user ? `${user.Name} (${user.UserCode})` : guest.usercode
                                       })()
                                     ) : 'เลือกผู้พัก'}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -1326,7 +1349,7 @@ export default function ExpenseTable({
                                       {options.users?.map((user) => (
                                         <CommandItem
                                           key={user.UserCode}
-                                          value={`${user.Fullname} ${user.UserCode}`}
+                                          value={`${user.Name} ${user.UserCode}`}
                                           onSelect={() => {
                                             handleHotelGuestSelect(user.UserCode, gIdx)
                                             setOpenGuestCombobox(prev => ({ ...prev, [gIdx]: false }))
@@ -1339,8 +1362,8 @@ export default function ExpenseTable({
                                             }`}
                                           />
                                           <div className="flex flex-col">
-                                            <span className="font-medium">{user.Fullname}</span>
-                                            <span className="text-xs text-gray-500">{user.UserCode}</span>
+                                            <span className="font-medium">{user.Name}</span>
+                                            <span className="text-xs">{user.UserCode}</span>
                                           </div>
                                         </CommandItem>
                                       ))}
@@ -1411,7 +1434,7 @@ export default function ExpenseTable({
                               return totalGuestRate.toLocaleString()
                             })()} × {parseFloat(hotelItem.nights?.toString() || '0') || 0} = {calculateHotelTotal().toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท</div>
                             <div>ยอดบิลรวม: {(parseFloat(hotelItem.amount?.toString() || '0') || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท</div>
-                            <div>เบิกได้: ต่ำกว่าระหว่างสิทธิ์และบิล = {calculateHotelMaxAllowance().toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท</div>
+                            <div>เบิกได้: ต่ำกว่าระหว่างสิทธิ์และบิลรวม = {calculateHotelMaxAllowance().toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท</div>
                           </div>
                         </div>
                       </div>
@@ -1462,16 +1485,24 @@ export default function ExpenseTable({
                   </TableCell>
                   <TableCell>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={type === 'fuel' ? (fuelItem.amount || '') : (otherItem.amount || '')}
+                      onInput={(e) => {
+                        // อนุญาตเฉพาะตัวเลข
+                        const target = e.target as HTMLInputElement;
+                        target.value = target.value.replace(/[^0-9]/g, '');
+                      }}
                       onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '');
                         if (type === 'fuel') {
-                          setFuelItem({ ...fuelItem, amount: e.target.value })
+                          setFuelItem({ ...fuelItem, amount: value })
                         } else {
-                          setOtherItem({ ...otherItem, amount: e.target.value })
+                          setOtherItem({ ...otherItem, amount: value })
                         }
                       }}
-                      placeholder="0.00"
+                      placeholder="0"
                       className="h-9 text-right"
                     />
                   </TableCell>
@@ -1493,10 +1524,20 @@ export default function ExpenseTable({
                 <TableRow className="bg-yellow-50 dark:bg-yellow-950/20">
                   <TableCell>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={tollItem.amount || ''}
-                      onChange={(e) => setTollItem({ ...tollItem, amount: e.target.value })}
-                      placeholder="0.00"
+                      onInput={(e) => {
+                        // อนุญาตเฉพาะตัวเลข
+                        const target = e.target as HTMLInputElement;
+                        target.value = target.value.replace(/[^0-9]/g, '');
+                      }}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        setTollItem({ ...tollItem, amount: value });
+                      }}
+                      placeholder="0"
                       className="h-9 text-right"
                     />
                   </TableCell>
@@ -1651,12 +1692,45 @@ export default function ExpenseTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-start gap-2">
+                    <>
+                    <TableCell className="max-w-[200px]">
+                      <div className="flex items-start gap-2 group">
                         <MapPin className="h-3.5 w-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-slate-900 dark:text-slate-100 line-clamp-2">{item.remark}</span>
+                        <div className="flex-1 min-w-0">
+                          <p 
+                            className="text-sm text-slate-900 dark:text-slate-100 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors relative"
+                            onClick={() => setSelectedRemark(item.remark || '')}
+                          >
+                            {item.remark}
+                            {/* แสดง ... เมื่อข้อความยาวเกิน 2 บรรทัด */}
+                            {item.remark && item.remark.length > 80 && (
+                              <span className="text-blue-500 font-semibold"> ...</span>
+                            )}
+                          </p>
+                          {/* Hint text */}
+                          <span className="text-xs text-slate-400 dark:text-slate-500 transition-opacity">
+                            คลิกเพื่อดูรายละเอียด
+                          </span>
+                        </div>
                       </div>
                     </TableCell>
+
+                    <Dialog open={!!selectedRemark} onOpenChange={() => setSelectedRemark(null)}>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <MapPin className="h-5 w-5 text-blue-500" />
+                            รายละเอียดกิจกรรม
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4">
+                          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {selectedRemark}
+                          </p>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    </>
                     <TableCell className="text-center">
                       <span className="text-sm font-mono text-slate-900 dark:text-slate-100">
                         {item.sbwdtl_operationid_startmile?.toLocaleString()}

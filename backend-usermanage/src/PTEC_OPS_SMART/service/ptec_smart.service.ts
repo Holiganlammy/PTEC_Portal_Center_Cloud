@@ -737,7 +737,8 @@ export class AppService {
 
   async handleFileUpload(req: Request) {
     const file = req.files?.file as UploadedFile;
-    const reqBody = req.body as { sb_code?: string };
+    const reqBody = req.body as { sb_code?: string; usercode?: string };
+    const usercode = reqBody.usercode;
     const st_code = reqBody.sb_code;
 
     if (!file) throw new Error('No file uploaded');
@@ -772,7 +773,7 @@ export class AppService {
     const attachBody = {
       nonpocode: st_code ?? '',
       url: fileUrl,
-      user: this.usercode,
+      user: usercode ?? '',
       description: st_code ?? '',
     };
 
