@@ -15,7 +15,9 @@ import {
   CreateSmartBillDto,
   SmartBill_Fetch_FilterOptions_Entity,
   SmartBill_Withdraw_AddrowDtlResponseDto,
+  SmartBill_Withdraw_ListEntity,
   SmartBillHeaderSearchDto,
+  SmartCar_Fetch_FilterOptions_Entity,
 } from '../domain/model/ptec_smart.entity';
 import {
   SmartBillAssociateInput,
@@ -216,10 +218,34 @@ export class AppController {
   }
 
   @Public()
-  @Get('/SmartBill_Fetch_FilterOptions')
+  @Get('/SmartCar_Fetch_FilterOptions')
   async fetchFilterOptions(@Res() res: Response) {
     try {
-      const result = await this.service.SmartBill_Fetch_FilterOptions();
+      const result = await this.service.SmartCar_Fetch_FilterOptions();
+      if (!Array.isArray(result) || result.length === 0) {
+        return res.status(404).json({ message: 'No data found' });
+      }
+      const raw = result[0] as Record<string, string>;
+      const jsonKey = Object.keys(raw)[0];
+      const parsed = JSON.parse(
+        raw[jsonKey],
+      ) as SmartCar_Fetch_FilterOptions_Entity;
+
+      res.status(200).send(parsed);
+    } catch (error) {
+      console.error('[SmartCar_Fetch_FilterOptions] Error:', error);
+      throw new HttpException(
+        'Internal Server Error: ' + error,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Public()
+  @Get('/SmartBill_Fetch_FilterOptions')
+  async SmartBill_Fetch_FilterOptions(@Res() res: Response) {
+    try {
+      const result = await this.service.SmartBill_Control_Fetch_FilterOptions();
       if (!Array.isArray(result) || result.length === 0) {
         return res.status(404).json({ message: 'No data found' });
       }
@@ -231,7 +257,7 @@ export class AppController {
 
       res.status(200).send(parsed);
     } catch (error) {
-      console.error('[SmartBill_Fetch_FilterOptions] Error:', error);
+      console.error('[SmartCar_Fetch_FilterOptions] Error:', error);
       throw new HttpException(
         'Internal Server Error: ' + error,
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -343,6 +369,72 @@ export class AppController {
         throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       }
       res.status(200).send(data);
+    } catch (error: unknown) {
+      throw new HttpException(
+        error instanceof Error ? error.message : 'Unknown error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('SmartBill_Withdraw_List')
+  @HttpCode(200)
+  async SmartBill_Withdraw_List(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @Query('sbw_code') sbw_code: string,
+    @Query('usercode') usercode: string,
+    @Query('car_infocode') car_infocode: string,
+    @Query('company') company: string,
+    @Query('search') search: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = (await this.service.SmartBill_Withdraw_List({
+        page: Number(page),
+        limit: Number(limit),
+        sbw_code: sbw_code,
+        usercode: usercode,
+        car_infocode: car_infocode,
+        company: company,
+        search: search,
+      })) as SmartBill_Withdraw_ListEntity[];
+      if (result && result.length > 0) {
+        const totalCount = result[0].TotalCount;
+        const totalPages = Math.ceil(totalCount / limit);
+        const data = result.map((item) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { TotalCount, ...rest } = item;
+          return rest;
+        });
+        res.status(200).send({
+          message: 'Success',
+          code: 200,
+          data: data,
+          pagination: {
+            page: page,
+            limit: limit,
+            total: totalCount,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
+          },
+        });
+      } else {
+        res.status(200).send({
+          message: 'No data found',
+          code: 200,
+          data: [],
+          pagination: {
+            page: page,
+            limit: limit,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        });
+      }
     } catch (error: unknown) {
       throw new HttpException(
         error instanceof Error ? error.message : 'Unknown error',

@@ -194,3 +194,33 @@ export class SmartBillUploadInput {
   @IsNotEmpty()
   sb_code: string;
 }
+
+export class SmartBill_Withdraw_List {
+  @IsNumber()
+  @IsNotEmpty()
+  page: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  limit: number;
+
+  @IsString()
+  @IsOptional()
+  sbw_code?: string;
+
+  @IsString()
+  @IsOptional()
+  usercode?: string;
+
+  @IsString()
+  @IsOptional()
+  car_infocode?: string;
+
+  @IsString()
+  @IsOptional()
+  company?: string;
+
+  @IsString()
+  @IsOptional()
+  search?: string;
+}

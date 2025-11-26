@@ -51,3 +51,4 @@ interface SmartCar_FilterOption {
   car_categories?: OptionEntity[];
   sb_statuses?: OptionEntity[];
 }
+

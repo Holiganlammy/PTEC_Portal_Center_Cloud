@@ -21,7 +21,7 @@ import PaymentHeader from './components/payment/PaymentHeader'
 import VehicleSelection from './components/payment/VehicleSelection'
 import ExpenseTable from './components/payment/ExpenseTable'
 import SummarySection from './components/payment/SummarySection'
-import AddExpenseDialog from './components/payment/AddExpenseDialog'
+import AddExpenseDialog from './components/dialog/AddExpenseDialog'
 
 // Import dialogs
 import client from '@/lib/axios/interceptors'

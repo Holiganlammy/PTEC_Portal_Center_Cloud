@@ -13,6 +13,7 @@ import {
    VisibilityState,
 } from "@tanstack/react-table"
 import { ChevronDown, Loader2 } from "lucide-react"
+import { useDebounce } from "use-debounce"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
    ChevronLeft,
@@ -44,6 +45,7 @@ import {
    TableHeader,
    TableRow,
 } from "@/components/ui/table"
+import { useEffect } from "react"
 
 interface DataTableProps<TData, TValue> {
    columns: ColumnDef<TData, TValue>[]
@@ -85,26 +87,17 @@ export function DataTable<TData, TValue>({
    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
    const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
-   
-   // ใช้ local state เฉพาะตอน client-side search
    const [localSearchValue, setLocalSearchValue] = React.useState("")
-   
-   //ตรวจสอบว่าเป็น server-side search หรือไม่
    const isServerSideSearch = Boolean(onSearchChange && controlledSearchValue !== undefined)
-   
-   //ใช้ค่า search ที่เหมาะสม (controlled หรือ local)
-   const globalFilter = isServerSideSearch ? controlledSearchValue : localSearchValue
-
-   // Internal pagination state as fallback
    const [internalPagination, setInternalPagination] = React.useState({
       pageIndex: 0,
       pageSize: 20,
    });
-
+   const [internalSearchValue, setInternalSearchValue] = React.useState("")
+   const [debouncedInternalSearch] = useDebounce(internalSearchValue, 1000)
+   const globalFilter = isServerSideSearch ? debouncedInternalSearch : localSearchValue
    const currentPagination = pagination ?? internalPagination;
    const finalSearchKeys = searchKeys || (searchKey ? [searchKey] : [])
-
-   // เป็น server-side เมื่อมีทั้ง pagination props และ pageCount
    const isServerSidePagination = Boolean(
       pagination && 
       onPageChange && 
@@ -125,6 +118,18 @@ export function DataTable<TData, TValue>({
    //    hasPageCount: pageCount !== undefined,
    //    hasOnSearchChange: !!onSearchChange,
    // });
+   useEffect(() => {
+      if (isServerSideSearch && onSearchChange) {
+         onSearchChange(debouncedInternalSearch)
+      }
+   }, [debouncedInternalSearch, isServerSideSearch, onSearchChange])
+
+   useEffect(() => {
+      if (isServerSideSearch && controlledSearchValue === "" && internalSearchValue !== "") {
+         // ถ้า parent clear search ให้ clear internal ด้วย
+         setInternalSearchValue("")
+      }
+   }, [controlledSearchValue, isServerSideSearch])
 
    const table = useReactTable({
       data,
@@ -142,7 +147,7 @@ export function DataTable<TData, TValue>({
       onRowSelectionChange: setRowSelection,
       onGlobalFilterChange: (value) => {
          if (isServerSideSearch) {
-            onSearchChange?.(value as string)
+            setInternalSearchValue?.(value as string)
          } else {
             setLocalSearchValue(value as string)
          }
@@ -198,7 +203,7 @@ export function DataTable<TData, TValue>({
       const value = event.target.value
       
       if (isServerSideSearch) {
-         onSearchChange?.(value)
+         setInternalSearchValue?.(value)
       } else {
          table.setPageIndex(0)
          if (finalSearchKeys.length > 1) {
@@ -230,9 +235,11 @@ export function DataTable<TData, TValue>({
                <Input
                   placeholder={searchPlaceholder}
                   value={
-                     finalSearchKeys.length > 1
-                        ? globalFilter
-                        : (table.getColumn(finalSearchKeys[0])?.getFilterValue() as string) ?? ""
+                     isServerSideSearch
+                        ? internalSearchValue
+                        : finalSearchKeys.length > 1
+                           ? globalFilter
+                           : (table.getColumn(finalSearchKeys[0])?.getFilterValue() as string) ?? ""
                   }
                   onChange={handleSearchChange}
                   className="max-w-sm"

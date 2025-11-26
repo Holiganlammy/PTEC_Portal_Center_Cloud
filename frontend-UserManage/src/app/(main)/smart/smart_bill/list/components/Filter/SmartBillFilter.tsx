@@ -10,58 +10,42 @@ import { z } from "zod"
 
 
 const SelectSchema = z.object({
-   sb_code: z.string(),
+   sbw_code: z.string(),
    usercode: z.string(),
    car_infocode: z.string(),
-   car_category: z.string(),
-   sb_status: z.string().optional(),
+   company: z.string(),
 })
 type SelectType = z.infer<typeof SelectSchema>
-
-export default function SmartCarFilter({
+    
+export default function SmartBillFilter({
    filterOptions,
    onFilterChange
 }: {
-   filterOptions: SmartCar_FilterOption,
+   filterOptions: SmartBill_FilterOption,
    onFilterChange: (filters: SelectType) => void
 }) {
     const isFirstRender = useRef(true)
     const form = useForm<SelectType>({
         resolver: zodResolver(SelectSchema),
         defaultValues: {
-            sb_code: "",
+            sbw_code: "",
             usercode: "",
             car_infocode: "",
-            car_category: "",
-            sb_status: "",
+            company: "",
         },
     })
 
-    const [watchSbCode, watchUsercode, watchCarInfocode, watchCarCategory, watchSbStatus] = form.watch([
-      "sb_code",
+    const [watchSbwCode, watchUsercode, watchCarInfocode, watchCompany] = form.watch([
+      "sbw_code",
       "usercode",
       "car_infocode",
-      "car_category",
-      "sb_status"
+      "company"
    ])
 
-    const [debouncedSbCode] = useDebounce(watchSbCode, 750)
+    const [debouncedSbwCode] = useDebounce(watchSbwCode, 750)
     const [debouncedUsercode] = useDebounce(watchUsercode, 750)
     const [debouncedCarInfocode] = useDebounce(watchCarInfocode, 750)
-    const [debouncedCarCategory] = useDebounce(watchCarCategory, 750)
-    const [debouncedSbStatus] = useDebounce(watchSbStatus, 750)
-
-    const loadOptionsForSelect = async (input: string, offset?: number, pageSize?: number) => {
-      const params: any = { search: input || "" };
-
-      if (typeof offset === "number" && typeof pageSize === "number") {
-         params.offset = offset;
-         params.pageSize = pageSize;
-      }
-      const res = await client.get("/SmartBill_Control_Fetch_Filter_SearchCodes", { params });
-      return Array.isArray(res.data) ? res.data : (res.data?.recordset ?? []);
-   };
-
+    const [debouncedCompany] = useDebounce(watchCompany, 750)
 
     useEffect(() => {
         if (isFirstRender.current) {
@@ -69,16 +53,15 @@ export default function SmartCarFilter({
             return
             }
             const newFilters = {
-            sb_code: debouncedSbCode || "",
+            sbw_code: debouncedSbwCode || "",
             usercode: debouncedUsercode || "",
             car_infocode: debouncedCarInfocode || "",
-            car_category: debouncedCarCategory || "",
-            sb_status: debouncedSbStatus || "",
+            company: debouncedCompany || "",
             }
             if (onFilterChange) {
             onFilterChange(newFilters)
         }
-    }, [debouncedSbCode, debouncedUsercode, debouncedCarInfocode, debouncedCarCategory, debouncedSbStatus])
+    }, [debouncedSbwCode, debouncedUsercode, debouncedCarInfocode, debouncedCompany])
     
   return (
         <Form {...form}>
@@ -88,15 +71,16 @@ export default function SmartCarFilter({
             >
                 <div className="w-full max-w-[200px]">
                     <FormField 
-                        name="sb_code" 
+                        name="sbw_code" 
                         control={form.control} 
                         render={({ field }) => (
                             <CustomSelect
                                 field={field}
                                 formLabel="เลขที่ทำรายการ"
-                                placeholder="กรุณาเลือก เลขที่ทำรายการ"
-                                loadOptions={loadOptionsForSelect}
-                                enableInfiniteScroll={true}
+                                placeholder="กรุณาเลือก Smart Bill Code"
+                                options={filterOptions.sbw_code}
+                                // loadOptions={loadOptionsForSelect}
+                                // enableInfiniteScroll={true}
                             />
                         )} />
                 </div>
@@ -110,7 +94,7 @@ export default function SmartCarFilter({
                             field={field}
                             formLabel="ผู้ทำรายการ"
                             placeholder="กรุณาเลือก User Code"
-                            options={filterOptions.usercodes}
+                            options={filterOptions.usercode}
                         />
                     )} />
                 </div>
@@ -124,35 +108,21 @@ export default function SmartCarFilter({
                                 field={field}
                                 formLabel="ทะเบียนรถ"
                                 placeholder="กรุณาเลือก ทะเบียนรถ"
-                                options={filterOptions.car_infocodes}
+                                options={filterOptions.car_infocode}
                             />
                     )} />
                 </div>
 
                 <div className="w-full max-w-[200px]">
                     <FormField 
-                        name="car_category" 
+                        name="company" 
                         control={form.control} 
                         render={({ field }) => (
                             <CustomSelect
                                 field={field}
-                                formLabel="ประเภทของรถ"
-                                placeholder="กรุณาเลือก ประเภทของรถ"
-                                options={filterOptions.car_categories}
-                            />
-                    )} />
-                </div>
-
-                <div className="w-full max-w-[200px]">
-                    <FormField 
-                        name="sb_status" 
-                        control={form.control} 
-                        render={({ field }) => (
-                            <CustomSelect
-                                field={field}
-                                formLabel="สถานะ"
-                                placeholder="กรุณาเลือก สถานะ"
-                                options={filterOptions.sb_statuses}
+                                formLabel="บริษัท"
+                                placeholder="กรุณาเลือก Company"
+                                options={filterOptions.company}
                             />
                     )} />
                 </div>

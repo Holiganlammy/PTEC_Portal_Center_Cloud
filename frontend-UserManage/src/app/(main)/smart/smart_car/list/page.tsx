@@ -106,7 +106,7 @@ export default function SmartCarListPage() {
     useEffect(() => {
         const fetchFilterOptions = async () => {
             try {
-                const response = await client.get("SmartBill_Fetch_FilterOptions");
+                const response = await client.get("SmartCar_Fetch_FilterOptions");
                 const data = response.data;
                 setFilterOptions(data);
             } catch (err) {

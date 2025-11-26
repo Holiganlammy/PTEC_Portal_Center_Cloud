@@ -67,12 +67,19 @@ export class SmartBillHeaderSearchDto {
   TotalCount: number;
 }
 
-export interface SmartBill_Fetch_FilterOptions_Entity {
+export interface SmartCar_Fetch_FilterOptions_Entity {
   sb_codes: OptionEntity[];
   usercodes: OptionEntity[];
   car_infocodes: OptionEntity[];
   car_categories: OptionEntity[];
   sb_status: OptionEntity[];
+}
+
+export interface SmartBill_Fetch_FilterOptions_Entity {
+  sbw_code: OptionEntity[];
+  usercode: OptionEntity[];
+  car_infocode: OptionEntity[];
+  company: OptionEntity[];
 }
 
 export class SmartBill_Withdraw_AddrowDtlResponseDto {
@@ -82,4 +89,31 @@ export class SmartBill_Withdraw_AddrowDtlResponseDto {
   detail?: Record<string, any>;
   status?: string;
   error_message: string;
+}
+
+export class SmartBill_Withdraw_ListEntity {
+  Name: string;
+  UserCode: string;
+  active: boolean;
+  car_band: string;
+  car_color: string;
+  car_infocode: string;
+  car_infoid: number;
+  car_payname: string;
+  car_paytype: number;
+  car_tier: string;
+  condition: number;
+  createby: number;
+  createdate: string;
+  depcode: string;
+  lock_status: boolean;
+  ownercode: string;
+  ownerid: number;
+  pure_card: any;
+  sbw_code: string;
+  sbw_id: number;
+  seccode: string;
+  statusid: number;
+  typePay: string;
+  TotalCount: number;
 }

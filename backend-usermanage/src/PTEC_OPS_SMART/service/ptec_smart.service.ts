@@ -13,6 +13,7 @@ import {
   SmartBill_CreateCostAllowanceInput,
   SmartBill_CreateCostInput,
   SmartBill_Withdraw_AddrowDtlInput,
+  SmartBill_Withdraw_List,
   SmartBill_Withdraw_SaveInput,
   SmartBill_Withdraw_updateSBWInput,
   SmartBill_WithdrawDtl_DeleteCategoryInput,
@@ -189,7 +190,14 @@ export class AppService {
     );
   }
 
-  async SmartBill_Fetch_FilterOptions() {
+  async SmartCar_Fetch_FilterOptions() {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartCar_Fetch_FilterOptions_Cloud`,
+      [],
+    );
+  }
+
+  async SmartBill_Control_Fetch_FilterOptions() {
     return this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.SmartBill_Fetch_FilterOptions_Cloud`,
       [],
@@ -287,6 +295,25 @@ export class AppService {
     return this.dbManager.executeStoredProcedureMultiple(
       `${databaseConfig.database}.dbo.SmartBill_Withdraw_SelectAllForms`,
       params,
+    );
+  }
+
+  async SmartBill_Withdraw_List(req: SmartBill_Withdraw_List) {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_Withdraw_List_Cloud`,
+      [
+        { name: 'page', type: sql.Int(), value: req.page },
+        { name: 'limit', type: sql.Int(), value: req.limit },
+        { name: 'sbw_code', type: sql.VarChar(50), value: req.sbw_code },
+        { name: 'usercode', type: sql.NVarChar(100), value: req.usercode },
+        {
+          name: 'car_infocode',
+          type: sql.NVarChar(100),
+          value: req.car_infocode,
+        },
+        { name: 'company', type: sql.NVarChar(100), value: req.company },
+        { name: 'search', type: sql.NVarChar(100), value: req.search },
+      ],
     );
   }
 
