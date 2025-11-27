@@ -21,7 +21,7 @@ import SubmitSuccess from "@/components/SubmitAlert/AlertSubmitSuccess/SubmitSuc
 import dataConfig from "@/config/config"
 import client from "@/lib/axios/interceptors"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronsUpDown } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 
 const signupSchema = z.object({
   Firstname: z.string().min(2, "ชื่อ ต้องมีอย่างน้อย 2 ตัวอักษร"),
@@ -66,6 +66,8 @@ export default function Signup({
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
   const form = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -111,6 +113,8 @@ export default function Signup({
           password: "",
           role_id: ""
         });
+
+        setShowPassword(false); // รีเซ็ตสถานะแสดงรหัสผ่าน
 
         setTimeout(() => setShowSuccessAlert(false), 5000);
       } else {
@@ -197,15 +201,18 @@ export default function Signup({
                   control={form.control}
                   name="branchid"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกสาขา"
-                      formLabel="สาขา"
-                      options={branches.map(branch => ({
-                        value: branch.branchid.toString(),
-                        label: branch.name
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกสาขา"
+                        formLabel="สาขา"
+                        options={branches.map(branch => ({
+                          value: branch.branchid.toString(),
+                          label: branch.name
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -214,15 +221,18 @@ export default function Signup({
                   control={form.control}
                   name="department"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกฝ่าย"
-                      formLabel="ฝ่าย"
-                      options={departments.map(department => ({
-                        value: department.depid.toString(),
-                        label: department.name
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกฝ่าย"
+                        formLabel="ฝ่าย"
+                        options={departments.map(department => ({
+                          value: department.depid.toString(),
+                          label: department.name
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -231,17 +241,20 @@ export default function Signup({
                   control={form.control}
                   name="secid"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกแผนก (หากมี)"
-                      formLabel="แผนก (หากมี)"
-                      options={sections.filter((section, index, self) =>
-                        index === self.findIndex(s => s.name === section.name)
-                      ).map(section => ({
-                        value: section.secid.toString(),
-                        label: section.codename
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกแผนก (หากมี)"
+                        formLabel="แผนก (หากมี)"
+                        options={sections.filter((section, index, self) =>
+                          index === self.findIndex(s => s.name === section.name)
+                        ).map(section => ({
+                          value: section.secid.toString(),
+                          label: section.codename
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -250,15 +263,18 @@ export default function Signup({
                   control={form.control}
                   name="positionid"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกตำแหน่ง"
-                      formLabel="ตำแหน่ง"
-                      options={positions.map(position => ({
-                        value: position.positionid.toString(),
-                        label: position.position
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกตำแหน่ง"
+                        formLabel="ตำแหน่ง"
+                        options={positions.map(position => ({
+                          value: position.positionid.toString(),
+                          label: position.position
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -267,15 +283,18 @@ export default function Signup({
                   control={form.control}
                   name="empupper"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกหัวหน้า"
-                      formLabel="หัวหน้า"
-                      options={users.map(user => ({
-                        value: user.UserID.toString(),
-                        label: user.Fullname
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกหัวหน้า"
+                        formLabel="หัวหน้า"
+                        options={users.map(user => ({
+                          value: user.UserID.toString(),
+                          label: user.Fullname
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -295,24 +314,28 @@ export default function Signup({
                 />
 
                {/* role_id */}
-                <div>
-                <FormLabel className="mb-2">บทบาทผู้ใช้</FormLabel>
-                  <FormField
-                    control={form.control}
-                    name="role_id"
-                    render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-full flex">
-                        <SelectValue className="font-bold" placeholder="บทบาทผู้ใช้" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Admin</SelectItem>
-                        <SelectItem value="2">User</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="role_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>บทบาทผู้ใช้</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="เลือกบทบาทผู้ใช้" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">Admin</SelectItem>
+                          <SelectItem value="2">User</SelectItem>
+                          <SelectItem value="8">User (SmartBill / SmartCar)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
                 {/* Password */}
                 <FormField
@@ -322,7 +345,28 @@ export default function Signup({
                     <FormItem className="max-w-sm">
                       <FormLabel>รหัสผ่าน</FormLabel>
                       <FormControl>
-                        <Input placeholder="กรุณากรอกรหัสผ่าน" type="password" {...field} />
+                        <div className="relative">
+                          <Input 
+                            placeholder="กรุณากรอกรหัสผ่าน" 
+                            type={showPassword ? "text" : "password"} 
+                            {...field}
+                            className="pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                            disabled={!field.value}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-500" />
+                            )}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                       <p className="text-xs text-gray-500 mt-1">
