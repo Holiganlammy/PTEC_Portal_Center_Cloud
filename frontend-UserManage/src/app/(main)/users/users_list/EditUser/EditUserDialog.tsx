@@ -21,6 +21,7 @@ import SubmitFailed from "@/components/SubmitAlert/AlertSubmitFailed/SubmitFaile
 import dataConfig from '@/config/config';
 import client from '@/lib/axios/interceptors';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Eye, EyeOff } from "lucide-react"
 
 const editSchema = z.object({
   Firstname: z.string().min(2, "กรุณากรอกชื่อ"),
@@ -33,8 +34,18 @@ const editSchema = z.object({
   empupper: z.string().optional(),
   email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง"),
   role_id: z.string().min(1, "กรุณาเลือกบทบาทผู้ใช้"),
-  password: z.string().optional().or(z.string().min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")
-    .regex(/[!@#$%^&*(),.?":{}|<>]/, "รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัว"))
+  password: z.string()
+    .refine((val) => val === "" || val.length >= 8, {
+      message: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"
+    })
+    .refine((val) => val === "" || /[A-Z]/.test(val), {
+      message: "รหัสผ่านต้องมีอักษรตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว"
+    })
+    .refine((val) => val === "" || /[!@#$%^&*(),.?":{}|<>_\-]/.test(val), {
+      message: "รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัว"
+    })
+    .optional()
+    .or(z.literal(""))
 });
 
 type EditForm = z.infer<typeof editSchema>
@@ -42,7 +53,7 @@ interface EditUserDialogProps {
   user: UserEdit | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onUserUpdated?: () => void // callback เมื่ออัปเดตสำเร็จ
+  onUserUpdated?: () => void
   users: UserData[]
   branches: Branch[]
   departments: department[]
@@ -56,6 +67,7 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [fullNameValue, setFullNameValue] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<EditForm>({
     resolver: zodResolver(editSchema),
@@ -89,6 +101,7 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
         password: "",
         role_id: user.role_id?.toString() ?? ""
       });
+      setShowPassword(false); // รีเซ็ตสถานะแสดงรหัสผ่านเมื่อเปิด dialog
     }
   }, [user, open, form]);
 
@@ -201,15 +214,18 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
                   control={form.control}
                   name="branchid"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกสาขา"
-                      formLabel="สาขา"
-                      options={branches.map(branch => ({
-                        value: branch.branchid.toString(),
-                        label: branch.name
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกสาขา"
+                        formLabel="สาขา"
+                        options={branches.map(branch => ({
+                          value: branch.branchid.toString(),
+                          label: branch.name
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -218,15 +234,18 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
                   control={form.control}
                   name="department"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกแผนก"
-                      formLabel="แผนก"
-                      options={departments.map(department => ({
-                        value: department.depid.toString(),
-                        label: department.name
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกแผนก"
+                        formLabel="แผนก"
+                        options={departments.map(department => ({
+                          value: department.depid.toString(),
+                          label: department.name
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -235,15 +254,18 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
                   control={form.control}
                   name="secid"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกฝ่าย (หากมี)"
-                      formLabel="ฝ่าย"
-                      options={sections.map(section => ({
-                        value: section.secid.toString(),
-                        label: section.codename
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกฝ่าย (หากมี)"
+                        formLabel="ฝ่าย"
+                        options={sections.map(section => ({
+                          value: section.secid.toString(),
+                          label: section.codename
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -252,15 +274,18 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
                   control={form.control}
                   name="positionid"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกตำแหน่ง"
-                      formLabel="ตำแหน่ง"
-                      options={positions.map(position => ({
-                        value: position.positionid.toString(),
-                        label: position.position
-                      }))}
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกตำแหน่ง"
+                        formLabel="ตำแหน่ง"
+                        options={positions.map(position => ({
+                          value: position.positionid.toString(),
+                          label: position.position
+                        }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -269,20 +294,23 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
                   control={form.control}
                   name="empupper"
                   render={({ field }) => (
-                    <CustomSelect
-                      field={field}
-                      placeholder="เลือกหัวหน้า (หากมี)"
-                      formLabel="หัวหน้า"
-                      options={users
-                        .filter(u => u.UserID !== user?.UserID)
-                        .map(userData => ({
-                          value: userData.UserID,
-                          label: `${userData.UserCode} - ${userData.Fullname.includes(':')
-                            ? userData.Fullname.split(':')[1].trim()
-                            : userData.Fullname}`
-                        }))
-                      }
-                    />
+                    <FormItem>
+                      <CustomSelect
+                        field={field}
+                        placeholder="เลือกหัวหน้า (หากมี)"
+                        formLabel="หัวหน้า"
+                        options={users
+                          .filter(u => u.UserID !== user?.UserID)
+                          .map(userData => ({
+                            value: userData.UserID,
+                            label: `${userData.UserCode} - ${userData.Fullname.includes(':')
+                              ? userData.Fullname.split(':')[1].trim()
+                              : userData.Fullname}`
+                          }))
+                        }
+                      />
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -301,50 +329,72 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
                   )}
                 />
 
-                <div>
-                <FormLabel className="mb-2">บทบาทผู้ใช้</FormLabel>
-                  <FormField
-                    control={form.control}
-                    name="role_id"
-                    render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-full flex">
-                        <SelectValue className="font-bold" placeholder="บทบาทผู้ใช้" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Admin</SelectItem>
-                        <SelectItem value="2">User</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    )}
-                  />
-                </div>
-
-              </div>
-              {/* Password */}
+                {/* Role */}
                 <FormField
                   control={form.control}
-                  name="password"
+                  name="role_id"
                   render={({ field }) => (
-                    <FormItem className="max-w-md">
-                      <FormLabel>รหัสผ่านใหม่</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="กรอกรหัสผ่านใหม่ (ถ้าต้องการเปลี่ยน)"
-                          type="password"
-                          {...field}
-                        />
-                      </FormControl>
+                    <FormItem>
+                      <FormLabel>บทบาทผู้ใช้</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="เลือกบทบาทผู้ใช้" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">Admin</SelectItem>
+                          <SelectItem value="2">User</SelectItem>
+                          <SelectItem value="8">User (SmartBill/SmartCar)</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
-                      <p className="text-xs text-gray-500 mt-1">
-                        หากไม่ต้องการเปลี่ยนรหัสผ่าน ให้เว้นว่างไว้
-                      </p>
-                      <p className="text-xs text-red-500 mt-1">
-                        รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร, มีอักษรตัวใหญ่อย่างน้อย 1 ตัว และมีอักขระพิเศษอย่างน้อย 1 ตัว (เช่น !@# หรือ _-)
-                      </p>
                     </FormItem>
                   )}
                 />
+
+              </div>
+              {/* Password */}
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem className="max-w-md">
+                    <FormLabel>รหัสผ่านใหม่</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          placeholder="กรอกรหัสผ่านใหม่ (ถ้าต้องการเปลี่ยน)"
+                          type={showPassword ? "text" : "password"}
+                          {...field}
+                          className="pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                          disabled={!field.value}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-500" />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-xs text-gray-500 mt-1">
+                      หากไม่ต้องการเปลี่ยนรหัสผ่าน ให้เว้นว่างไว้
+                    </p>
+                    <p className="text-xs text-red-500 mt-1">
+                      รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร, มีอักษรตัวใหญ่อย่างน้อย 1 ตัว และมีอักขระพิเศษอย่างน้อย 1 ตัว (เช่น !@# หรือ _-)
+                    </p>
+                  </FormItem>
+                )}
+              />
 
               {/* Footer buttons */}
               <DialogFooter>
