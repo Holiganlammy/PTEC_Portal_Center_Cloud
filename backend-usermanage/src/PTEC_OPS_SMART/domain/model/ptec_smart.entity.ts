@@ -117,3 +117,15 @@ export class SmartBill_Withdraw_ListEntity {
   typePay: string;
   TotalCount: number;
 }
+
+export interface ESG_Report_Entity {
+  car_band: string;
+  car_color: string;
+  car_infocode: string;
+  car_remarks: string;
+  car_tier: string;
+  mile: number;
+  oil: number;
+  rateoil: number;
+  TotalCount: number;
+}

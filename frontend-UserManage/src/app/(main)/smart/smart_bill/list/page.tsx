@@ -10,6 +10,14 @@ import { useDebounce } from "use-debounce";
 import SmartBillDataTable from "./components/SmartBillDataTable";
 import SmartBillFilter from "./components/Filter/SmartBillFilter";
 
+interface SmartBillFilter_Map{
+    sbw_code: string,
+    usercode: string,
+    car_infocode: string,
+    company: string,
+    search?: string,
+}
+
 export default function SmartBillListPage() {
     const [pagination, setPagination] = useState({
         pageIndex: 0,
@@ -127,7 +135,7 @@ export default function SmartBillListPage() {
         smartBillData(0, newPageSize, currentFilters, debouncedDatatableSearch);
     }, [smartBillData, currentFilters, debouncedDatatableSearch]);
 
-    const handleFilterChange = useCallback((filters: any) => {
+    const handleFilterChange = useCallback((filters: SmartBillFilter_Map) => {
         const mappedFilters = {
             sbw_code: filters.sbw_code || "",
             usercode: filters.usercode || "",

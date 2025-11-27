@@ -224,3 +224,41 @@ export class SmartBill_Withdraw_List {
   @IsOptional()
   search?: string;
 }
+
+export class ESG_Report {
+  @IsNumber()
+  @IsNotEmpty()
+  page: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  limit: number;
+
+  @IsString()
+  @IsOptional()
+  startDate?: string;
+
+  @IsString()
+  @IsOptional()
+  endDate?: string;
+
+  @IsString()
+  @IsOptional()
+  car_infocode?: string;
+
+  @IsString()
+  @IsOptional()
+  car_band?: string;
+
+  @IsString()
+  @IsOptional()
+  car_color?: string;
+
+  @IsString()
+  @IsOptional()
+  car_tier?: string;
+
+  @IsString()
+  @IsOptional()
+  search?: string;
+}

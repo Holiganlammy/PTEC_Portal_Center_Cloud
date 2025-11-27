@@ -62,7 +62,7 @@ export default function AssetsFilterForm({
     const [debouncedSearch] = useDebounce(watchSearch, 500)
 
     const loadOptionsForSelect = async (input: string, offset?: number, pageSize?: number) => {
-      const params: any = { search: input || "" };
+      const params: Record<string, any> = { search: input || "" };
 
       if (typeof offset === "number" && typeof pageSize === "number") {
          params.offset = offset;

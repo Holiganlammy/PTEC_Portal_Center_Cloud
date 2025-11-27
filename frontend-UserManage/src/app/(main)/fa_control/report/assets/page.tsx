@@ -11,7 +11,15 @@ import { useSession } from "next-auth/react";
 import client from "@/lib/axios/interceptors";
 import { getAutoData } from "../list_asset_counted/service/documentService";
 import { useDebounce } from "use-debounce";
-import { url } from "inspector";
+
+interface Assets_Filter_Map {
+    code: string;
+    name: string;
+    owner: string;
+    group: string;
+    location: string;
+    search?: string;
+}
 
 export default function AssetPage() {
     const [typeCode, setTypeCode] = useState<Assets_TypeGroup[]>([]);
@@ -182,9 +190,13 @@ export default function AssetPage() {
         loadAssets(0, newPageSize, activeType, currentFilters, debouncedDatatableSearch);
     }, [loadAssets, activeType, currentFilters, debouncedDatatableSearch]);
 
-    const handleFilterChange = useCallback((filters: any) => {
-        setCurrentFilters(filters);
-        loadAssets(0, pagination.pageSize, activeType, filters, debouncedDatatableSearch);
+    const handleFilterChange = useCallback((filters: Assets_Filter_Map) => {
+        const normalizedFilters = {
+            ...filters,
+            search: filters.search || ""
+        };
+        setCurrentFilters(normalizedFilters);
+        loadAssets(0, pagination.pageSize, activeType, normalizedFilters, debouncedDatatableSearch);
     }, [loadAssets, pagination.pageSize, activeType, debouncedDatatableSearch]);
 
     const handleDatatableSearchChange = useCallback((searchValue: string) => {

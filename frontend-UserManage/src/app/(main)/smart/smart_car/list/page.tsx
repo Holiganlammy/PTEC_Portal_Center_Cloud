@@ -11,6 +11,15 @@ import client from "@/lib/axios/interceptors";
 import { useDebounce } from "use-debounce";
 import SmartCarFilter from "./components/Filter/SmartCarFillter";
 
+interface SmartCarMapFilter{
+    sb_code: string,
+    usercode: string,
+    car_infocode: string,
+    car_category: string,
+    sb_status?: string,
+    search?: string,
+}
+
 export default function SmartCarListPage() {
     const [pagination, setPagination] = useState({
         pageIndex: 0,
@@ -131,7 +140,7 @@ export default function SmartCarListPage() {
         smartCarData(0, newPageSize, currentFilters, debouncedDatatableSearch);
     }, [smartCarData, currentFilters, debouncedDatatableSearch]);
 
-    const handleFilterChange = useCallback((filters: any) => {
+    const handleFilterChange = useCallback((filters: SmartCarMapFilter) => {
         const mappedFilters = {
             sb_codes: filters.sb_code || "",
             usercodes: filters.usercode || "",
@@ -140,6 +149,7 @@ export default function SmartCarListPage() {
             sb_statuses: filters.sb_status || "",
             search: "",
         };
+        
 
         setCurrentFilters(mappedFilters);
         smartCarData(0, pagination.pageSize, mappedFilters, debouncedDatatableSearch);

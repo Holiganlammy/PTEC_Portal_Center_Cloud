@@ -13,6 +13,7 @@ import {
 import { AppService } from '../service/ptec_smart.service';
 import {
   CreateSmartBillDto,
+  ESG_Report_Entity,
   SmartBill_Fetch_FilterOptions_Entity,
   SmartBill_Withdraw_AddrowDtlResponseDto,
   SmartBill_Withdraw_ListEntity,
@@ -314,24 +315,96 @@ export class AppController {
     }
   }
 
-  @Post('SmartBill_ESGQuery')
+  @Public()
+  @Get('SmartBill_ESGQuery')
   @HttpCode(200)
   async SmartBill_ESGQuery(
-    @Body() body: { startDate: string; endDate: string },
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @Query('car_infocode') car_infocode: string,
+    @Query('car_band') car_band: string,
+    @Query('car_color') car_color: string,
+    @Query('car_tier') car_tier: string,
+    @Query('search') search: string,
     @Res() res: Response,
   ) {
     try {
-      const data = await this.service.SmartBill_ESGQuery(body);
-      if (!data) {
-        throw new HttpException(
-          'ไม่พบข้อมูลแบบ ESGQuery',
-          HttpStatus.NOT_FOUND,
-        );
+      const result = (await this.service.SmartBill_ESGQuery({
+        page: page,
+        limit: limit,
+        startDate: startDate,
+        endDate: endDate,
+        search: search,
+        car_infocode: car_infocode,
+        car_band: car_band,
+        car_color: car_color,
+        car_tier: car_tier,
+      })) as ESG_Report_Entity[];
+      if (result && result.length > 0) {
+        const totalCount = result[0].TotalCount;
+        const totalPages = Math.ceil(totalCount / limit);
+        const data = result.map((item) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { TotalCount, ...rest } = item;
+          return rest;
+        });
+        res.status(200).send({
+          message: 'Success',
+          code: 200,
+          data: data,
+          pagination: {
+            page: page,
+            limit: limit,
+            total: totalCount,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
+          },
+        });
+      } else {
+        res.status(200).send({
+          message: 'No data found',
+          code: 200,
+          data: [],
+          pagination: {
+            page: page,
+            limit: limit,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        });
       }
-      res.status(200).send(data);
     } catch (error: unknown) {
       throw new HttpException(
         error instanceof Error ? error.message : 'Unknown error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Public()
+  @Get('SmartBill_ESG_Fetch_FilterOptions')
+  async SmartBill_ESG_Fetch_FilterOptions(@Res() res: Response) {
+    try {
+      const result = await this.service.SmartBill_ESG_Fetch_FilterOptions();
+      if (!Array.isArray(result) || result.length === 0) {
+        return res.status(404).json({ message: 'No data found' });
+      }
+      const raw = result[0] as Record<string, string>;
+      const jsonKey = Object.keys(raw)[0];
+      const parsed = JSON.parse(
+        raw[jsonKey],
+      ) as SmartCar_Fetch_FilterOptions_Entity;
+
+      res.status(200).send(parsed);
+    } catch (error) {
+      console.error('[SmartBill_ESG_Fetch_FilterOptions] Error:', error);
+      throw new HttpException(
+        'Internal Server Error: ' + error,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -377,6 +450,7 @@ export class AppController {
     }
   }
 
+  @Public()
   @Get('SmartBill_Withdraw_List')
   @HttpCode(200)
   async SmartBill_Withdraw_List(

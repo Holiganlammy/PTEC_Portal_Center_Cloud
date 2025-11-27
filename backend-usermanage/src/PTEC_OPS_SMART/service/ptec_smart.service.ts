@@ -10,6 +10,7 @@ import {
 } from '../dto/SmartCar.dto';
 import { DatabaseManagerService } from 'src/database/database-manager.service';
 import {
+  ESG_Report,
   SmartBill_CreateCostAllowanceInput,
   SmartBill_CreateCostInput,
   SmartBill_Withdraw_AddrowDtlInput,
@@ -233,23 +234,41 @@ export class AppService {
     );
   }
 
-  async SmartBill_ESGQuery(body: { startDate: string; endDate: string }) {
+  async SmartBill_ESGQuery(req: ESG_Report) {
     const params = [
+      { name: 'page', type: sql.Int(), value: req.page },
+      { name: 'limit', type: sql.Int(), value: req.limit },
+      {
+        name: 'car_infocode',
+        type: sql.NVarChar(100),
+        value: req.car_infocode,
+      },
+      { name: 'car_band', type: sql.NVarChar(100), value: req.car_band },
+      { name: 'car_color', type: sql.NVarChar(100), value: req.car_color },
+      { name: 'car_tier', type: sql.NVarChar(100), value: req.car_tier },
+      { name: 'search', type: sql.NVarChar(200), value: req.search },
       {
         name: 'startDate',
         type: sql.NVarChar(100),
-        value: body.startDate,
+        value: req.startDate,
       },
       {
         name: 'endDate',
         type: sql.NVarChar(100),
-        value: body.endDate,
+        value: req.endDate,
       },
     ];
 
     return this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.SmartBill_ESGQuery`,
       params,
+    );
+  }
+
+  async SmartBill_ESG_Fetch_FilterOptions() {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_ESG_Fetch_FilterOptions`,
+      [],
     );
   }
 

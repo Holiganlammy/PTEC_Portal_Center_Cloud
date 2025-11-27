@@ -18,6 +18,15 @@ import {
 import { getAutoData } from "../list_asset_counted/service/documentService";
 import { EbookFilterBar } from './components/EbookBar/Bar';
 
+interface Assets_Filter_Map{
+    code: string,
+    name: string,
+    owner: string,
+    group: string,
+    location: string,
+    search?: string,
+}
+
 export default function FAControlEbookPage() {
   const { data: session, status } = useSession();
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -190,9 +199,13 @@ export default function FAControlEbookPage() {
     };
   }, [pagination.hasNext, pagination.page, loading, initialLoading, loadAssets]);
 
-  const handleFilterChange = useCallback((filters: any) => {
-      setCurrentFilters(filters)
-      loadAssets(1, activeType, filters)
+  const handleFilterChange = useCallback((filters: Assets_Filter_Map) => {
+      const normalizedFilters = {
+            ...filters,
+            search: filters.search || ""
+        };
+      setCurrentFilters(normalizedFilters)
+      loadAssets(1, activeType, normalizedFilters)
   }, [loadAssets])
 
   if (status === "loading") {
