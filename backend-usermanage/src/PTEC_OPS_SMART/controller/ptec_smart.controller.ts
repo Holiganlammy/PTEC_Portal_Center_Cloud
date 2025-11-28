@@ -9,6 +9,7 @@ import {
   Res,
   Req,
   Query,
+  Request,
 } from '@nestjs/common';
 import { AppService } from '../service/ptec_smart.service';
 import {
@@ -160,9 +161,11 @@ export class AppController {
     @Query('car_category_id') car_category_id: number,
     @Query('status') status: string,
     @Query('search') search: string,
+    @Request() req: Request & { user?: { username: string } },
     @Res() res: Response,
   ) {
     try {
+      const currentUser = req.user?.username;
       const result = (await this.service.SmartBill_SelectHeaders({
         page: Number(page),
         limit: Number(limit),
@@ -172,19 +175,25 @@ export class AppController {
         car_category_id: car_category_id,
         status: status,
         search: search,
+        currentUser: currentUser || '',
       })) as SmartBillHeaderSearchDto[];
       if (result && result.length > 0) {
         const totalCount = result[0].TotalCount;
+        const currentUserRole = result[0].CurrentUserRole;
         const totalPages = Math.ceil(totalCount / limit);
         const data = result.map((item) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { TotalCount, ...rest } = item;
+          const { TotalCount, CurrentUserRole, ...rest } = item;
           return rest;
         });
         res.status(200).send({
           message: 'Success',
           code: 200,
           data: data,
+          user: {
+            role_id: currentUserRole,
+            is_admin: currentUserRole === 1,
+          },
           pagination: {
             page: page,
             limit: limit,
@@ -450,7 +459,6 @@ export class AppController {
     }
   }
 
-  @Public()
   @Get('SmartBill_Withdraw_List')
   @HttpCode(200)
   async SmartBill_Withdraw_List(
@@ -461,9 +469,12 @@ export class AppController {
     @Query('car_infocode') car_infocode: string,
     @Query('company') company: string,
     @Query('search') search: string,
+    @Request() req: Request & { user?: { username: string } },
     @Res() res: Response,
   ) {
     try {
+      const currentUser = req.user?.username;
+      console.log('currentUser', currentUser);
       const result = (await this.service.SmartBill_Withdraw_List({
         page: Number(page),
         limit: Number(limit),
@@ -472,19 +483,25 @@ export class AppController {
         car_infocode: car_infocode,
         company: company,
         search: search,
+        currentUser: currentUser,
       })) as SmartBill_Withdraw_ListEntity[];
       if (result && result.length > 0) {
         const totalCount = result[0].TotalCount;
+        const currentUserRole = result[0].CurrentUserRole;
         const totalPages = Math.ceil(totalCount / limit);
         const data = result.map((item) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { TotalCount, ...rest } = item;
+          const { TotalCount, CurrentUserRole, ...rest } = item;
           return rest;
         });
         res.status(200).send({
           message: 'Success',
           code: 200,
           data: data,
+          user: {
+            role_id: currentUserRole,
+            is_admin: currentUserRole === 1,
+          },
           pagination: {
             page: page,
             limit: limit,

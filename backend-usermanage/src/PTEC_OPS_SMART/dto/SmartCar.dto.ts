@@ -157,4 +157,7 @@ export class SmartBill_HeaderSearchInput {
 
   @IsString()
   status: string;
+
+  @IsString()
+  currentUser: string;
 }

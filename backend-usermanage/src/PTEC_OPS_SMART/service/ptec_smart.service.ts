@@ -187,6 +187,11 @@ export class AppService {
           value: req.car_category_id,
         },
         { name: 'status', type: sql.NVarChar(50), value: req.status },
+        {
+          name: 'current_user_code',
+          type: sql.NVarChar(50),
+          value: req.currentUser,
+        },
       ],
     );
   }
@@ -332,6 +337,11 @@ export class AppService {
         },
         { name: 'company', type: sql.NVarChar(100), value: req.company },
         { name: 'search', type: sql.NVarChar(100), value: req.search },
+        {
+          name: 'current_user_code',
+          type: sql.NVarChar(50),
+          value: req.currentUser,
+        },
       ],
     );
   }

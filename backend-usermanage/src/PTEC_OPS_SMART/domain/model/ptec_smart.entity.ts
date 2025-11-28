@@ -65,6 +65,7 @@ export class SmartBillHeaderSearchDto {
   car_categary_name?: number;
   car_categaryid?: number;
   TotalCount: number;
+  CurrentUserRole?: number;
 }
 
 export interface SmartCar_Fetch_FilterOptions_Entity {
@@ -116,6 +117,7 @@ export class SmartBill_Withdraw_ListEntity {
   statusid: number;
   typePay: string;
   TotalCount: number;
+  CurrentUserRole?: number;
 }
 
 export interface ESG_Report_Entity {

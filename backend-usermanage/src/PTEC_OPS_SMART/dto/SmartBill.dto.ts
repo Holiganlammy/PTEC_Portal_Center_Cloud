@@ -223,6 +223,10 @@ export class SmartBill_Withdraw_List {
   @IsString()
   @IsOptional()
   search?: string;
+
+  @IsString()
+  @IsOptional()
+  currentUser?: string;
 }
 
 export class ESG_Report {
