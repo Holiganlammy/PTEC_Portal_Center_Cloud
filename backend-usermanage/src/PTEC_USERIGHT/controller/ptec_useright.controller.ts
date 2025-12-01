@@ -91,9 +91,20 @@ export class AppController {
       }
 
       const cookies = req.cookies as Record<string, string> | undefined;
-      const trustedId = cookies?.trusted_device;
-
-      if (trustedId && trustedId.trim() !== '') {
+      let trustedDevices: Array<{ userCode: string; deviceId: string }> = [];
+      try {
+        const trustedDevicesCookie = cookies?.trusted_devices;
+        if (trustedDevicesCookie) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          trustedDevices = JSON.parse(decodeURIComponent(trustedDevicesCookie));
+        }
+      } catch (e) {
+        console.error('Failed to parse trusted_devices cookie:', e);
+      }
+      const userTrustedDevice = trustedDevices.find(
+        (device) => device.userCode === user.UserCode,
+      );
+      if (userTrustedDevice && userTrustedDevice.deviceId.trim() !== '') {
         const userAgent = req.headers['user-agent'] || 'unknown';
         const ipAddress =
           req.ip ||
@@ -104,7 +115,7 @@ export class AppController {
 
         const isTrusted = await this.appService.checkTrustedDevice({
           userCode: user.UserCode,
-          deviceId: trustedId,
+          deviceId: userTrustedDevice.deviceId,
           userAgent,
           ipAddress,
         });
@@ -274,11 +285,36 @@ export class AppController {
         browser: deviceInfo.browser,
         deviceType: deviceInfo.deviceType,
       });
-      res.cookie('trusted_device', trustedId, {
+      const cookies = req.cookies as Record<string, string> | undefined;
+      let trustedDevices: Array<{ userCode: string; deviceId: string }> = [];
+      try {
+        const trustedDevicesCookie = cookies?.trusted_devices;
+        if (trustedDevicesCookie) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          trustedDevices = JSON.parse(decodeURIComponent(trustedDevicesCookie));
+        }
+      } catch (e) {
+        console.error('Failed to parse trusted_devices cookie:', e);
+      }
+      trustedDevices = trustedDevices.filter(
+        (device) => device.userCode !== user.UserCode,
+      );
+
+      trustedDevices.push({
+        userCode: user.UserCode,
+        deviceId: trustedId,
+      });
+
+      if (trustedDevices.length > 15) {
+        trustedDevices = trustedDevices.slice(-15);
+      }
+
+      const cookieValue = encodeURIComponent(JSON.stringify(trustedDevices));
+      res.cookie('trusted_devices', cookieValue, {
         httpOnly: true,
         secure: true,
         sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 วัน
       });
     }
     return res.status(200).json({
