@@ -20,6 +20,9 @@ import {
   SmartBill_Withdraw_ListEntity,
   SmartBillHeaderSearchDto,
   SmartCar_Fetch_FilterOptions_Entity,
+  SmartCarOperationEntity,
+  SmartCarOperationFilesEntity,
+  SmartCarOperationSelectForm,
 } from '../domain/model/ptec_smart.entity';
 import {
   SmartBillAssociateInput,
@@ -83,12 +86,19 @@ export class AppController {
           HttpStatus.BAD_REQUEST,
         );
       }
+      const operationIds: number[] = [];
 
       for (const op of dataBody.smartBill_Operation) {
-        await this.service.SmartBill_CreateOperation(
+        const opResult = await this.service.SmartBill_CreateOperation(
           op as SmartBillOperationInput,
           sb_code,
         );
+        if (opResult.sb_operationid) {
+          operationIds.push(opResult.sb_operationid);
+          console.log('✅ Added operation ID:', opResult.sb_operationid);
+        } else {
+          console.warn('⚠️ Operation created but no ID returned');
+        }
       }
 
       if (Number(header.group_status) === 1) {
@@ -100,7 +110,10 @@ export class AppController {
         }
       }
 
-      res.status(200).send(sb_code);
+      res.status(200).send({
+        sb_code: sb_code,
+        sb_operationids: operationIds,
+      });
     } catch (error) {
       console.error('[SmartBill_CreateForms] Error:', error);
       throw new HttpException(
@@ -132,11 +145,29 @@ export class AppController {
     }
   }
 
-  @Post('SmartBill_files')
+  // @Post('SmartBill_files')
+  // @HttpCode(200)
+  // async uploadSmartBill(@Req() req: ExpressRequest, @Res() res: Response) {
+  //   try {
+  //     const result = await this.service.handleFileUpload(req);
+  //     res.status(HttpStatus.OK).json(result);
+  //   } catch (error: unknown) {
+  //     let errorMessage = 'Unexpected error';
+  //     if (error && typeof error === 'object' && 'message' in error) {
+  //       errorMessage =
+  //         String((error as { message?: unknown }).message) || errorMessage;
+  //     }
+  //     res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+  //       message: errorMessage,
+  //     });
+  //   }
+  // }
+
+  @Post('SmartCar_files_save_image')
   @HttpCode(200)
   async uploadSmartBill(@Req() req: ExpressRequest, @Res() res: Response) {
     try {
-      const result = await this.service.handleFileUpload(req);
+      const result = await this.service.handleFileUploadSmartCarImage(req);
       res.status(HttpStatus.OK).json(result);
     } catch (error: unknown) {
       let errorMessage = 'Unexpected error';
@@ -311,9 +342,25 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_SelectAllForms(body);
-      console.log('data', data);
       if (!data) {
         throw new HttpException('ไม่พบข้อมูลแบบฟอร์ม', HttpStatus.NOT_FOUND);
+      }
+      if (data[1] && Array.isArray(data[1])) {
+        data[1] = data[1].filter(
+          (op: SmartCarOperationEntity) =>
+            op.active === true || op.active === 1,
+        );
+      }
+      if (data[3] && Array.isArray(data[3])) {
+        data[3] = data[3]
+          .filter(
+            (img: SmartCarOperationFilesEntity) =>
+              img.active === true || img.active === 1,
+          )
+          .map((img: SmartCarOperationSelectForm) => ({
+            ...img,
+            image_url: `${process.env.BASE_URL || 'http://localhost:3001'}${img.image_url}`,
+          }));
       }
       res.status(200).send(data);
     } catch (error: unknown) {
@@ -474,7 +521,6 @@ export class AppController {
   ) {
     try {
       const currentUser = req.user?.username;
-      console.log('currentUser', currentUser);
       const result = (await this.service.SmartBill_Withdraw_List({
         page: Number(page),
         limit: Number(limit),
@@ -838,7 +884,6 @@ export class AppController {
   ) {
     try {
       const data = await this.service.SmartBill_WithdrawDtl_Delete(body);
-      console.log('data', data);
       if (!data) throw new HttpException('ไม่พบข้อมูล', HttpStatus.NOT_FOUND);
       res.status(200).send(data);
     } catch (error: unknown) {
@@ -923,6 +968,140 @@ export class AppController {
     } catch (error: unknown) {
       throw new HttpException(
         error instanceof Error ? error.message : 'Unknown error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('SmartBill_Operation_DeleteImage')
+  async deleteOperationImage(
+    @Body() body: { sb_image_id: number; usercode: string },
+    @Res() res: Response,
+  ) {
+    try {
+      if (!body.sb_image_id) {
+        throw new HttpException(
+          'กรุณาระบุ sb_image_id',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      const data = await this.service.SmartBill_Operation_DeleteImage(body);
+      console.log('Delete Image Result:', data);
+      res.status(200).send(data);
+    } catch (error: unknown) {
+      throw new HttpException(
+        error instanceof Error ? error.message : 'Unknown error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('SmartBill_UpdateForms')
+  @HttpCode(200)
+  async updateSmartBill(
+    @Body() dataBody: CreateSmartBillDto,
+    @Res() res: Response,
+  ) {
+    try {
+      const header = dataBody.smartBill_Header[0];
+      const car = dataBody.carInfo[0];
+
+      const headerInput: SmartBillHeaderInput = {
+        usercode: header.usercode || 'SYSTEM',
+        sb_code: dataBody.sb_code ?? '', // ✅ ต้องมี sb_code
+        sb_name: header.sb_name,
+        sb_fristName: header.sb_fristName,
+        sb_lastName: header.sb_lastName,
+        clean_status: Number(header.clean_status),
+        group_status: Number(header.group_status),
+        car_infocode: car.car_infocode,
+        reamarks: header.reamarks,
+        car_infostatus_companny: car.car_infostatus_companny as boolean,
+        car_categaryid: car.car_categaryid,
+        car_typeid: car.car_typeid,
+        car_band: car.car_band,
+        car_tier: car.car_tier,
+        car_color: car.car_color,
+        car_remarks: car.car_remarks,
+        car_milerate: car.car_milerate,
+      };
+
+      // ✅ Update Header
+      const headerResult =
+        await this.service.SmartBill_CreateForms(headerInput);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const sb_code = (headerResult[0]?.sb_code as string) || undefined;
+
+      if (!sb_code) {
+        throw new HttpException(
+          'ไม่สามารถอัปเดต SmartBill ได้',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const existingOps = await this.service.SmartBill_GetOperations(sb_code);
+      const existingOpIds = new Set(
+        existingOps.map((op: { sb_operationid: number }) => op.sb_operationid),
+      );
+
+      const operationIds: number[] = [];
+      const newOpIds = new Set<number>();
+
+      // ✅ Loop operations ที่ส่งมา
+      for (const op of dataBody.smartBill_Operation) {
+        if (op.sb_operationid) {
+          // ✅ UPDATE operation เดิม
+          await this.service.SmartBill_UpdateOperation(
+            op as SmartBillOperationInput,
+            sb_code,
+          );
+          operationIds.push(op.sb_operationid);
+          newOpIds.add(op.sb_operationid);
+        } else {
+          // ✅ CREATE operation ใหม่
+          const opResult = await this.service.SmartBill_CreateOperation(
+            op as SmartBillOperationInput,
+            sb_code,
+          );
+          if (opResult.sb_operationid) {
+            operationIds.push(opResult.sb_operationid);
+            newOpIds.add(opResult.sb_operationid);
+          }
+        }
+      }
+
+      // ✅ ลบ operations ที่ไม่มีในรายการใหม่
+      for (const oldOpId of existingOpIds) {
+        if (!newOpIds.has(oldOpId)) {
+          await this.service.SmartBill_DeleteOperation(
+            oldOpId,
+            dataBody.create_usercode,
+          );
+        }
+      }
+
+      // // ✅ Handle associates
+      // if (Number(header.group_status) === 1) {
+      //   // ลบ associates เดิม
+      //   await this.service.SmartBill_DeleteAssociates(sb_code);
+
+      //   // สร้างใหม่
+      //   for (const associate of dataBody.smartBill_Associate) {
+      //     await this.service.SmartBill_CreateAssociate(
+      //       associate as SmartBillAssociateInput,
+      //       sb_code,
+      //     );
+      //   }
+      // }
+
+      res.status(200).send({
+        sb_code: sb_code,
+        sb_operationids: operationIds,
+      });
+    } catch (error) {
+      console.error('[SmartBill_UpdateForms] Error:', error);
+      throw new HttpException(
+        'Internal Server Error: ' + error,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

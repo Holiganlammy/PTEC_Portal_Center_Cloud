@@ -24,6 +24,10 @@ import { Request } from 'express';
 import { UploadedFile } from 'express-fileupload';
 import * as path from 'path';
 import * as fs from 'fs';
+import {
+  SmartCarOperationEntityImage,
+  SmartCarOperationResponse,
+} from '../domain/model/ptec_smart.entity';
 @Injectable()
 export class AppService {
   private readonly uploadDir = 'D:/files/smartBill/';
@@ -68,7 +72,7 @@ export class AppService {
   async SmartBill_CreateOperation(
     data: SmartBillOperationInput,
     sb_code: string,
-  ) {
+  ): Promise<SmartCarOperationResponse> {
     const params = [
       { name: 'sb_code', type: sql.NVarChar(50), value: sb_code },
       {
@@ -113,10 +117,45 @@ export class AppService {
       },
     ];
 
-    return this.dbManager.executeStoredProcedure(
+    const result = await this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.SmartBill_CreateOperation`,
       params,
     );
+    let response: SmartCarOperationResponse;
+
+    try {
+      const resultWithRecordset = result as { recordset?: unknown[] };
+      if (
+        result &&
+        resultWithRecordset.recordset &&
+        Array.isArray(resultWithRecordset.recordset)
+      ) {
+        response = resultWithRecordset
+          .recordset[0] as SmartCarOperationResponse;
+      } else if (Array.isArray(result) && result.length > 0) {
+        response = result[0] as SmartCarOperationResponse;
+      } else {
+        response = {
+          status: 'FAILED',
+          message: 'ไม่สามารถแปลงผลลัพธ์ได้',
+        };
+      }
+    } catch (error) {
+      console.error('❌ Parse error:', error);
+      response = {
+        status: 'FAILED',
+        message: 'เกิดข้อผิดพลาดในการแปลงผลลัพธ์',
+      };
+    }
+
+    console.log('📦 Parsed response:', response);
+
+    // ✅ ตรวจสอบสถานะ
+    if (response.status === 'FAILED') {
+      throw new Error(response.message || 'บันทึก Operation ไม่สำเร็จ');
+    }
+
+    return response;
   }
 
   async SmartBill_CreateAssociate(
@@ -758,6 +797,7 @@ export class AppService {
       );
 
       const docno = result.output.docno as string;
+      console.log('RunningNo result:', docno);
 
       if (!docno) {
         throw new Error('Failed to generate running number');
@@ -772,32 +812,169 @@ export class AppService {
     }
   }
 
-  async NonPO_Attatch_Save(req: {
-    nonpocode: string;
-    url: string;
-    user: string;
-    description: string;
-  }) {
+  // async NonPO_Attatch_Save(req: {
+  //   nonpocode: string;
+  //   url: string;
+  //   user: string;
+  //   description: string;
+  // }) {
+  //   const params = [
+  //     { name: 'nonpocode', type: sql.NVarChar(255), value: req.nonpocode },
+  //     { name: 'url', type: sql.NVarChar(255), value: req.url },
+  //     { name: 'user', type: sql.NVarChar(255), value: req.user },
+  //     { name: 'description', type: sql.NVarChar(255), value: req.description },
+  //   ];
+
+  //   return this.dbManager.executeStoredProcedure(
+  //     `${databaseConfig.database}.dbo.NonPO_Attatch_Save`,
+  //     params,
+  //   );
+  // }
+
+  async SmartBill_Operation_SaveImage(data: {
+    sb_operationid: number;
+    image_name: string;
+    image_url: string;
+    usercode: string;
+  }): Promise<SmartCarOperationEntityImage> {
+    // ✅ กำหนด return type
+    console.log('🔧 Calling SmartBill_Operation_SaveImage with:', data);
+
     const params = [
-      { name: 'nonpocode', type: sql.NVarChar(255), value: req.nonpocode },
-      { name: 'url', type: sql.NVarChar(255), value: req.url },
-      { name: 'user', type: sql.NVarChar(255), value: req.user },
-      { name: 'description', type: sql.NVarChar(255), value: req.description },
+      { name: 'sb_operationid', type: sql.Int(), value: data.sb_operationid },
+      { name: 'image_name', type: sql.NVarChar(255), value: data.image_name },
+      { name: 'image_url', type: sql.NVarChar(sql.MAX), value: data.image_url },
+      { name: 'usercode', type: sql.NVarChar(50), value: data.usercode },
     ];
 
-    return this.dbManager.executeStoredProcedure(
-      `${databaseConfig.database}.dbo.NonPO_Attatch_Save`,
+    const result = await this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_Operation_SaveImage`,
       params,
     );
+
+    console.log('🔍 Raw result from SP:', JSON.stringify(result, null, 2));
+
+    // ✅ Parse ผลลัพธ์ให้เป็น interface
+    let response: SmartCarOperationEntityImage;
+
+    try {
+      // executeStoredProcedure จะ return recordset
+      const resultWithRecordset = result as { recordset?: unknown[] };
+      if (
+        resultWithRecordset.recordset &&
+        Array.isArray(resultWithRecordset.recordset)
+      ) {
+        response = resultWithRecordset
+          .recordset[0] as SmartCarOperationEntityImage;
+      }
+      // หรืออาจจะเป็น array โดยตรง
+      else if (Array.isArray(result) && result.length > 0) {
+        if (Array.isArray(result[0])) {
+          response = result[0][0] as SmartCarOperationEntityImage;
+        } else {
+          response = result[0] as SmartCarOperationEntityImage;
+        }
+      } else {
+        throw new Error('ไม่สามารถแปลงผลลัพธ์ได้');
+      }
+    } catch (error) {
+      console.error('❌ Parse error:', error);
+      throw new Error('ไม่สามารถแปลงผลลัพธ์จากฐานข้อมูล');
+    }
+
+    console.log('📦 Parsed response:', response);
+
+    // ✅ ตรวจสอบ status
+    if (!response || !response.status) {
+      throw new Error('ไม่พบผลลัพธ์จาก Stored Procedure');
+    }
+
+    // ✅ Return object ตาม interface
+    return response;
   }
 
-  async handleFileUpload(req: Request) {
-    const file = req.files?.file as UploadedFile;
-    const reqBody = req.body as { sb_code?: string; usercode?: string };
-    const usercode = reqBody.usercode;
-    const st_code = reqBody.sb_code;
+  // async handleFileUpload(req: Request) {
+  //   const file = req.files?.file as UploadedFile;
+  //   const reqBody = req.body as { sb_code?: string; usercode?: string };
+  //   const usercode = reqBody.usercode;
+  //   const st_code = reqBody.sb_code;
 
-    if (!file) throw new Error('No file uploaded');
+  //   if (!file) throw new Error('No file uploaded');
+
+  //   console.log('📦 req.files:', req.files);
+  //   console.log('📂 TEMP FILE PATH:', file.tempFilePath);
+
+  //   const filename = file.name;
+  //   const extension = path.extname(filename);
+  //   const attach = 'ATT';
+  //   const newPath = await this.FA_Control_Running_NO(attach);
+
+  //   if (!newPath) throw new Error('Cannot generate running number');
+
+  //   const newFileName = `${newPath}${extension}`;
+  //   const savePath = path.join(this.uploadDir, newFileName);
+  //   fs.mkdirSync(this.uploadDir, { recursive: true });
+
+  //   // Copy file
+  //   await fs.promises.copyFile(file.tempFilePath, savePath);
+  //   await fs.promises.unlink(file.tempFilePath);
+  //   const fileExists = fs.existsSync(savePath);
+  //   console.log('📄 File exists?', fileExists);
+
+  //   if (fileExists) {
+  //     const stats = fs.statSync(savePath);
+  //     console.log('📊 File size:', stats.size, 'bytes');
+  //   }
+
+  //   const fileUrl = `${this.baseUrl}${newFileName}`;
+
+  //   const attachBody = {
+  //     nonpocode: st_code ?? '',
+  //     url: fileUrl,
+  //     user: usercode ?? '',
+  //     description: st_code ?? '',
+  //   };
+
+  //   await this.NonPO_Attatch_Save(attachBody);
+
+  //   return {
+  //     message: 'successfully',
+  //     code: newPath,
+  //     url: fileUrl,
+  //     filePath: savePath, // เพิ่ม path จริง
+  //   };
+  // }
+  async handleFileUploadSmartCarImage(req: Request): Promise<{
+    message: string;
+    code: string;
+    url: string;
+    filePath: string;
+    sb_image_id?: number;
+  }> {
+    const file = req.files?.file as UploadedFile;
+    const reqBody = req.body as {
+      sb_operationid?: string | number;
+      usercode?: string;
+    };
+
+    // ✅ Parse sb_operationid
+    const sb_operationid = reqBody.sb_operationid
+      ? parseInt(reqBody.sb_operationid.toString())
+      : undefined;
+    const usercode = reqBody.usercode || 'SYSTEM';
+
+    console.log('📦 Received body:', reqBody);
+    console.log('🔑 sb_operationid:', sb_operationid);
+    console.log('👤 usercode:', usercode);
+
+    // ✅ Validate
+    if (!file) {
+      throw new Error('No file uploaded');
+    }
+
+    if (!sb_operationid) {
+      throw new Error('sb_operationid is required');
+    }
 
     console.log('📦 req.files:', req.files);
     console.log('📂 TEMP FILE PATH:', file.tempFilePath);
@@ -813,7 +990,6 @@ export class AppService {
     const savePath = path.join(this.uploadDir, newFileName);
     fs.mkdirSync(this.uploadDir, { recursive: true });
 
-    // Copy file
     await fs.promises.copyFile(file.tempFilePath, savePath);
     await fs.promises.unlink(file.tempFilePath);
     const fileExists = fs.existsSync(savePath);
@@ -824,22 +1000,119 @@ export class AppService {
       console.log('📊 File size:', stats.size, 'bytes');
     }
 
-    const fileUrl = `${this.baseUrl}${newFileName}`;
+    const fileUrl = `/images/${newFileName}`;
 
     const attachBody = {
-      nonpocode: st_code ?? '',
-      url: fileUrl,
-      user: usercode ?? '',
-      description: st_code ?? '',
+      sb_operationid: sb_operationid,
+      image_name: newFileName,
+      image_url: fileUrl,
+      usercode: usercode,
     };
 
-    await this.NonPO_Attatch_Save(attachBody);
+    console.log('💾 Saving to DB:', attachBody);
+
+    const response: SmartCarOperationEntityImage =
+      await this.SmartBill_Operation_SaveImage(attachBody);
+
+    console.log('📦 Response:', response);
+    if (response.status === 'FAILED') {
+      await fs.promises.unlink(savePath);
+      throw new Error(response.message || 'บันทึกรูปภาพไม่สำเร็จ');
+    }
+
+    console.log('✅ Saved with sb_image_id:', response.sb_image_id);
 
     return {
       message: 'successfully',
       code: newPath,
       url: fileUrl,
-      filePath: savePath, // เพิ่ม path จริง
+      filePath: savePath,
+      sb_image_id: response.sb_image_id,
     };
+  }
+
+  async SmartBill_Operation_DeleteImage(body: {
+    sb_image_id: number;
+    usercode: string;
+  }) {
+    const params = [
+      { name: 'sb_image_id', type: sql.Int(), value: body.sb_image_id },
+      { name: 'usercode', type: sql.NVarChar(50), value: body.usercode },
+    ];
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_Operation_DeleteImage`,
+      params,
+    );
+  }
+  async SmartBill_UpdateOperation(
+    op: SmartBillOperationInput,
+    sb_code: string,
+  ): Promise<any> {
+    const params = [
+      { name: 'sb_operationid', type: sql.Int(), value: op.sb_operationid },
+      { name: 'sb_code', type: sql.NVarChar(50), value: sb_code },
+      {
+        name: 'sb_operationid_startdate',
+        type: sql.NVarChar(20),
+        value: op.sb_operationid_startdate,
+      },
+      {
+        name: 'sb_operationid_startmile',
+        type: sql.Float(),
+        value: op.sb_operationid_startmile,
+      },
+      {
+        name: 'sb_operationid_startoil',
+        type: sql.Float(),
+        value: op.sb_operationid_startoil,
+      },
+      {
+        name: 'sb_operationid_enddate',
+        type: sql.NVarChar(20),
+        value: op.sb_operationid_enddate,
+      },
+      {
+        name: 'sb_operationid_endoil',
+        type: sql.Float(),
+        value: op.sb_operationid_endoil,
+      },
+      {
+        name: 'sb_operationid_endmile',
+        type: sql.Float(),
+        value: op.sb_operationid_endmile,
+      },
+      { name: 'sb_paystatus', type: sql.Int(), value: op.sb_paystatus },
+      {
+        name: 'sb_operationid_location',
+        type: sql.NVarChar(500),
+        value: op.sb_operationid_location,
+      },
+    ];
+
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_UpdateOperation`,
+      params,
+    );
+  }
+  async SmartBill_DeleteOperation(sb_operationid: number, usercode: string) {
+    const params = [
+      { name: 'sb_operationid', type: sql.Int(), value: sb_operationid },
+      { name: 'usercode', type: sql.NVarChar(50), value: usercode },
+    ];
+
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_DeleteOperation`,
+      params,
+    );
+  }
+  async SmartBill_GetOperations(sb_code: string) {
+    const params = [
+      { name: 'sb_code', type: sql.NVarChar(50), value: sb_code },
+    ];
+
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_GetOperations`,
+      params,
+    );
   }
 }

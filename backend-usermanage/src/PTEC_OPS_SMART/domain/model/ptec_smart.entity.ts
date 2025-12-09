@@ -23,7 +23,19 @@ export class CarInfoDto {
 }
 
 export class SmartBillOperationDto {
-  [key: string]: any;
+  sb_code: string;
+  sb_operationid?: number;
+  sb_operationid_startdate: string;
+  sb_operationid_startmile: number;
+  sb_operationid_startoil: number;
+  sb_operationid_enddate: string;
+  sb_operationid_endoil: number;
+  sb_operationid_endmile: number;
+  sb_paystatus: number;
+  sb_operationid_location: string;
+  image1?: string;
+  image2?: string;
+  image3?: string;
 }
 
 export class SmartBillAssociateDto {
@@ -33,6 +45,7 @@ export class SmartBillAssociateDto {
 
 export class CreateSmartBillDto {
   sb_code?: string;
+  create_usercode: string;
   smartBill_Header: SmartBillHeaderDto[];
   carInfo: CarInfoDto[];
   smartBill_Operation: SmartBillOperationDto[];
@@ -130,4 +143,49 @@ export interface ESG_Report_Entity {
   oil: number;
   rateoil: number;
   TotalCount: number;
+}
+
+export interface SmartCarOperationResponse {
+  status: 'SUCCESS' | 'FAILED';
+  message: string;
+  sb_operationid?: number;
+}
+
+export interface SmartCarOperationEntityImage {
+  status: 'SUCCESS' | 'FAILED';
+  message: string;
+  sb_image_id?: number;
+  image_url?: string;
+}
+
+export interface SmartCarOperationSelectForm {
+  created_at: string;
+  image_name: string;
+  image_url: string;
+  operation_index: number;
+  sb_image_id: number;
+  sb_operationid: number;
+}
+
+export interface SmartCarOperationFilesEntity {
+  sb_image_id: number;
+  sb_operationid: number;
+  image_name: string;
+  image_url: string;
+  created_at: string;
+  active: boolean | number;
+}
+
+export interface SmartCarOperationEntity {
+  sb_code: string;
+  sb_operationid: number;
+  sb_operationid_startdate: string;
+  sb_operationid_startmile: number;
+  sb_operationid_startoil: number;
+  sb_operationid_enddate: string;
+  sb_operationid_endoil: number;
+  sb_operationid_endmile: number;
+  sb_paystatus: number;
+  sb_operationid_location: string;
+  active: boolean | number;
 }

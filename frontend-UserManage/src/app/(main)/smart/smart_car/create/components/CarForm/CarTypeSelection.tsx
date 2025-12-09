@@ -9,12 +9,14 @@ interface CarTypeSelectionProps {
   typeCar: string;
   onTypeCarChange: (value: string) => void;
   onCarInfoDataChange: (companyData: CarInfo[], personalData: CarInfo[]) => void;
+  updateMode?: boolean;
 }
 
 export default function CarTypeSelection({ 
   typeCar, 
   onTypeCarChange, 
-  onCarInfoDataChange 
+  onCarInfoDataChange, 
+  updateMode = false
 }: CarTypeSelectionProps) {
   
   const handleTypeChange = async (value: string) => {
@@ -42,6 +44,7 @@ export default function CarTypeSelection({
       <RadioGroup 
         value={typeCar} 
         onValueChange={handleTypeChange}
+        disabled={updateMode}
         className="flex gap-6"
       >
         {[

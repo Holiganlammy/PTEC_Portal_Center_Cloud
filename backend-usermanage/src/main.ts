@@ -37,7 +37,7 @@ async function bootstrap(): Promise<void> {
     });
     app.useStaticAssets(join(__dirname, '..', 'public'));
     app.useStaticAssets('D:\\files\\smartBill', {
-      prefix: '/smartbill/', // URL prefix
+      prefix: '/smartbill/images/', // URL prefix
     });
 
     app.setBaseViewsDir(join(__dirname, '..', 'views'));

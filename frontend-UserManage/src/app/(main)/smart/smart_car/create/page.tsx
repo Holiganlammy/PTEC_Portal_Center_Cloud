@@ -32,8 +32,13 @@ import FileUpload from '@/app/(main)/smart/smart_car/create/components/FormSubmi
 
 // Import types
 import { UserData, CarInfo, Operation, SmartBillHeader } from '@/app/(main)/smart/smart_car/create/service/type/types';
-import { ro } from 'date-fns/locale';
-import { set } from 'date-fns';
+
+// Type for uploaded file data
+interface UploadedFile {
+  file: string;      // URL.createObjectURL result
+  fileData: File;    // Original File object
+  filename: string;  // File name
+}
 
 export default function FormsStart() {
   const router = useRouter();
@@ -89,7 +94,7 @@ export default function FormsStart() {
     sb_associate_enddate: ''
   }]);
 
-  const [dataFilesCount, setDataFilesCount] = useState<any>(null);
+  // const [dataFilesCount, setDataFilesCount] = useState<UploadedFile[] | null>(null);
 
   const handleCompanyChange = (value: string) => {
     setSmartBillHeader(prev => ({ ...prev, sb_name: value }));
@@ -104,13 +109,13 @@ export default function FormsStart() {
     setCarInfoData(personalData);
   };
 
-  const handleCarChange = (index: number, field: keyof CarInfo, value: any) => {
+  const handleCarChange = (index: number, field: keyof CarInfo, value: CarInfo[keyof CarInfo]) => {
     const newCars = [...cars];
     newCars[index] = { ...newCars[index], [field]: value };
     setCars(newCars);
   };
 
-  const handleOperationChange = (index: number, field: keyof Operation, value: any) => {
+  const handleOperationChange = (index: number, field: keyof Operation, value: Operation[keyof Operation]) => {
     const newOperations = [...operations];
     newOperations[index] = { ...newOperations[index], [field]: value };
     setOperations(newOperations);
@@ -141,19 +146,22 @@ export default function FormsStart() {
   const handleAddOperation = (carIndex: number) => {
     const carOperations = operations.filter(op => op.carIndex === carIndex);
     const lastOp = carOperations[carOperations.length - 1];
+    const today = dayjs();
 
     setOperations([...operations, {
       carIndex: carIndex,
-      sb_operationid_startdate: null,
-      sb_operationid_startmile: lastOp?.sb_operationid_endmile 
-        ? parseFloat(lastOp.sb_operationid_endmile) 
+      sb_operationid_startdate: today.hour(8).minute(0).second(0),
+      sb_operationid_startmile: lastOp?.sb_operationid_endmile
+        ? parseFloat(lastOp.sb_operationid_endmile)
         : cars[carIndex]?.car_milerate || 0,
       sb_operationid_startoil: '',
-      sb_operationid_enddate: null,
+      sb_operationid_enddate: today.hour(17).minute(0).second(0),
       sb_operationid_endoil: '',
       sb_operationid_endmile: '',
       sb_paystatus: '',
       sb_operationid_location: '',
+      files: [],
+      sb_operationid: 0,
     }]);
   };
 
@@ -175,30 +183,32 @@ export default function FormsStart() {
     setOperations(newOperations);
   };
 
-  const handleFileUpload = async (event: any) => {
-    event.preventDefault();
-    const file = event.target.files[0];
-    if (!file) return;
+  // const handleFileUpload = async (event: any) => {
+  //   event.preventDefault();
+  //   const file = event.target.files[0];
+  //   if (!file) return;
 
-    const fileBolb = URL.createObjectURL(file);
-    const newFile = {
-      file: fileBolb,
-      fileData: file,
-      filename: file.name,
-    };
+  //   const fileBolb = URL.createObjectURL(file);
+  //   const newFile = {
+  //     file: fileBolb,
+  //     fileData: file,
+  //     filename: file.name,
+  //   };
 
-    if (!dataFilesCount) {
-      setDataFilesCount([newFile]);
-    } else {
-      setDataFilesCount([...dataFilesCount, newFile]);
-    }
-  };
+  //   if (!dataFilesCount) {
+  //     setDataFilesCount([newFile]);
+  //   } else {
+  //     setDataFilesCount([...dataFilesCount, newFile]);
+  //   }
+  // };
 
-  const handleFileRemove = (index: number) => {
-    const list = [...dataFilesCount];
-    list.splice(index, 1);
-    setDataFilesCount(list.length > 0 ? list : null);
-  };
+  // const handleFileRemove = (index: number) => {
+  //   if (!dataFilesCount) return;
+    
+  //   const list = [...dataFilesCount];
+  //   list.splice(index, 1);
+  //   setDataFilesCount(list.length > 0 ? list : null);
+  // };
 
   const handleSubmit = async () => {
     if (typeCar === '') {
@@ -229,7 +239,6 @@ export default function FormsStart() {
         .some((existingCar) => existingCar.car_infocode === car.car_infocode)
     );
 
-    // ตรวจสอบว่าหากเลือก "รถบริษัท" แล้วมีการเพิ่มรถใหม่ ให้แจ้งเตือน
     if (typeCar === '1') {
       const hasNewCars = cars.some(car => 
         !carInfoDataCompanny.some((existingCar) => existingCar.car_infocode === car.car_infocode)
@@ -274,10 +283,53 @@ export default function FormsStart() {
       }
     }
 
-    // Validate operations (if any exist)
     for (let i = 0; i < operations.length; i++) {
       const op = operations[i];
-      console.log('Validating operation:', op);
+      
+      if (op.sb_operationid_startdate && op.sb_operationid_enddate) {
+        const startDateTime = dayjs(op.sb_operationid_startdate);
+        const endDateTime = dayjs(op.sb_operationid_enddate);
+        
+        if (startDateTime.isAfter(endDateTime)) {
+          const carOps = operations.filter(o => o.carIndex === op.carIndex);
+          const opIndexInCar = carOps.indexOf(op) + 1;
+          showAlert(
+            "แจ้งเตือน", 
+            `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: วันที่ออกเดินทางต้องไม่มากกว่าวันที่สิ้นสุด`
+          );
+          return;
+        }
+        if (!op.files || op.files.length === 0) {
+          const carOps = operations.filter(o => o.carIndex === op.carIndex);
+          const opIndexInCar = carOps.indexOf(op) + 1;
+          showAlert(
+            "แจ้งเตือน", 
+            `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: กรุณาอัพโหลดรูปภาพอย่างน้อย 1 รูป`
+          );
+          return;
+        }
+        
+        if (endDateTime.isBefore(startDateTime)) {
+          const carOps = operations.filter(o => o.carIndex === op.carIndex);
+          const opIndexInCar = carOps.indexOf(op) + 1;
+          showAlert(
+            "แจ้งเตือน", 
+            `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่ออกเดินทาง`
+          );
+          return;
+        }
+      }
+      
+      if (!op.sb_paystatus || op.sb_paystatus === '') {
+        const carOps = operations.filter(o => o.carIndex === op.carIndex);
+        const opIndexInCar = carOps.indexOf(op) + 1;
+        showAlert(
+          "แจ้งเตือน", 
+          `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: กรุณาเลือกสถานะการเบิก (เบิก/ไม่เบิก)`
+        );
+        return;
+      }
+      
       if (
         !op.sb_operationid_startdate ||
         op.sb_operationid_startmile === null ||
@@ -310,10 +362,10 @@ export default function FormsStart() {
       }
     }
 
-    if (!dataFilesCount) {
-      showAlert("แจ้งเตือน", 'อัปโหลดรูปภาพอย่างน้อย 1 รูป');
-      return;
-    }
+    // if (!dataFilesCount) {
+    //   showAlert("แจ้งเตือน", 'อัปโหลดรูปภาพอย่างน้อย 1 รูป');
+    //   return;
+    // }
 
     const body = {
       smartBill_Header: [smartBillHeader],
@@ -321,7 +373,7 @@ export default function FormsStart() {
         ...car,
         car_infostatus_companny: parseInt(typeCar)
       })),
-      smartBill_Operation: operations.map(({ carIndex, ...rest }) => ({
+      smartBill_Operation: operations.map(({ carIndex, files, ...rest }) => ({
         ...rest,
         sb_operationid_startdate: rest.sb_operationid_startdate 
           ? dayjs(rest.sb_operationid_startdate).format('YYYY-MM-DD HH:mm:ss') 
@@ -335,34 +387,73 @@ export default function FormsStart() {
 
     console.log('Submitting data:', JSON.stringify(body, null, 2));
 
-    await client.post('/SmartBill_CreateForms', body)
-      .then(async (response) => {
-        for (let i = 0; i < dataFilesCount.length; i++) {
-          let formData_1 = new FormData();
-          formData_1.append('file', dataFilesCount[i].fileData);
-          formData_1.append('sb_code', response.data);
-          formData_1.append('usercode', session?.user?.UserCode || '');
+    try {
+      const response = await client.post('/SmartBill_CreateForms', body);
+      
+      console.log('✅ Response:', response.data);
+      
+      const { sb_code, sb_operationids } = response.data;
 
-          await client.post('/SmartBill_files', formData_1, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          })
-            .then((res) => {
-              if (i === dataFilesCount.length - 1) {
-                showAlert("สำเร็จ", 'บันทึกรายการแล้ว', 'success');
-              }
-            })
-            .catch((error) => {
-              console.error('Upload error:', error);
-              showAlert("เกิดข้อผิดพลาด", `ไม่สามารถอัพโหลดไฟล์ได้: ${error.message}`);
+      if (!sb_operationids) {
+        throw new Error('ไม่ได้รับ sb_code หรือ operation_ids จาก server');
+      }
+
+      for (let opIndex = 0; opIndex < operations.length; opIndex++) {
+        const op = operations[opIndex];
+        
+        // ข้ามถ้าไม่มีไฟล์
+        if (!op.files || op.files.length === 0) {
+          console.log(`⚠️ Operation ${opIndex} ไม่มีไฟล์`);
+          continue;
+        }
+
+        const sb_operationid = sb_operationids[opIndex];
+
+        if (!sb_operationid) {
+          console.error(`❌ Operation ${opIndex} ไม่มี ID`);
+          continue;
+        }
+
+        console.log(`📤 Uploading files for operation ${opIndex} (ID: ${sb_operationid})`);
+        for (let fileIndex = 0; fileIndex < op.files.length; fileIndex++) {
+          const file = op.files[fileIndex];
+          
+          if (!file.fileData) {
+            console.warn(`⚠️ File ${fileIndex} ไม่มี fileData`);
+            continue;
+          }
+
+          let formData = new FormData();
+          formData.append('file', file.fileData, file.filename);
+          formData.append('sb_operationid', sb_operationid.toString());
+          formData.append('usercode', session?.user?.UserCode || '');
+
+          console.log(`📤 Uploading file ${fileIndex + 1}/${op.files.length} for operation ${opIndex}`);
+
+          try {
+            const uploadRes = await client.post('/SmartCar_files_save_image', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
             });
-          if (!dataFilesCount[i].fileData || !(dataFilesCount[i].fileData instanceof File)) {
-            showAlert("เกิดข้อผิดพลาด", `ไฟล์ที่ ${i + 1} ไม่ถูกต้อง กรุณาเลือกไฟล์ใหม่`);
-            return;
+
+            console.log(`✅ Upload success:`, uploadRes.data);
+          } catch (uploadErr: any) {
+            console.error(`❌ Upload error for operation ${opIndex}, file ${fileIndex}:`, uploadErr);
+            throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${fileIndex + 1} ของกิจกรรมที่ ${opIndex + 1}: ${uploadErr.message}`);
           }
         }
-      });
+      }
+
+      showAlert("สำเร็จ", 'บันทึกรายการแล้ว', 'success');
+
+    } catch (error: any) {
+      console.error('❌ Submit error:', error);
+      showAlert(
+        "เกิดข้อผิดพลาด", 
+        error.response?.data?.message || error.message || 'ไม่สามารถบันทึกข้อมูลได้'
+      );
+    }
   };
 
   const gettingUsers = async () => {
@@ -430,6 +521,7 @@ export default function FormsStart() {
                   onRemoveOperation={handleRemoveOperation}
                   onCarUpdate={handleCarUpdate}
                   onUpdateOperationMileRates={updateOperationMileRates}
+                  onShowAlert={showAlert}
                 />
               ))}
             </div>
@@ -480,11 +572,11 @@ export default function FormsStart() {
             <div className="h-px bg-gray-200"></div>
 
             {/* File Upload */}
-            <FileUpload 
+            {/* <FileUpload 
               dataFilesCount={dataFilesCount}
               onFileUpload={handleFileUpload}
               onFileRemove={handleFileRemove}
-            />
+            /> */}
 
             {/* Submit Button */}
             <div className="flex justify-end pt-6 border-t border-gray-200">

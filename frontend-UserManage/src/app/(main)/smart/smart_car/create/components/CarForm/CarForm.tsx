@@ -23,6 +23,7 @@ import client from '@/lib/axios/interceptors';
 import { CarInfo, Operation } from '../../service/type/types';
 import OperationForm from './OperationForm';
 import { useState, useEffect } from 'react';
+import { Label } from '@/components/ui/label';
 
 interface CarFormProps {
   car: CarInfo;
@@ -32,15 +33,16 @@ interface CarFormProps {
   carInfoData: CarInfo[];
   operations: Operation[];
   totalCars: number;
-  onCarChange: (index: number, field: keyof CarInfo, value: any) => void;
+  onCarChange: (index: number, field: keyof CarInfo, value: CarInfo[keyof CarInfo]) => void;
   onCarUpdate: (index: number, updatedCarData: Partial<CarInfo>) => void;
   onRemoveCar: (index: number) => void;
   onAddOperation: (carIndex: number) => void;
-  onOperationChange: (index: number, field: keyof Operation, value: any) => void;
+  onOperationChange: (index: number, field: keyof Operation, value: Operation[keyof Operation]) => void;
   onRemoveOperation: (index: number) => void;
   onUpdateOperationMileRates: (carIndex: number, mileRate: number) => void;
   onTypeCarChange?: (value: string) => void;
   isUpdateMode?: boolean;
+  onShowAlert?: (title: string, message: string, type?: 'error' | 'success') => void;
 }
 
 export default function CarForm({ 
@@ -59,15 +61,31 @@ export default function CarForm({
   onRemoveOperation,
   onUpdateOperationMileRates,
   onTypeCarChange,
-  isUpdateMode = false
+  isUpdateMode = false,
+  onShowAlert
 }: CarFormProps) {
   
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [activeTab, setActiveTab] = useState<string>("select");
   const [previousTypeCar, setPreviousTypeCar] = useState(typeCar);
+  const [operationValidationStatus, setOperationValidationStatus] = useState<Record<number, boolean>>({});
   
   const carOperations = operations.filter(op => op.carIndex === carIndex);
+  
+  // ✅ Handle validation status change
+  const handleValidationChange = (operationIndex: number, isValid: boolean) => {
+    setOperationValidationStatus(prev => ({
+      ...prev,
+      [operationIndex]: isValid
+    }));
+  };
+
+  // ✅ Check if all operations are valid
+  const areAllOperationsValid = () => {
+    const carOperationIndexes = carOperations.map(op => operations.indexOf(op));
+    return carOperationIndexes.every(opIndex => operationValidationStatus[opIndex] !== false);
+  };
   
   useEffect(() => {
     if (previousTypeCar && previousTypeCar !== typeCar) {
@@ -188,13 +206,20 @@ export default function CarForm({
 
   const handleEndMileChange = (opIndex: number, value: string, carOps: Operation[]) => {
     onOperationChange(opIndex, 'sb_operationid_endmile', value);
+    const currentOp = operations[opIndex];
+    const currentCarIndex = currentOp.carIndex;
     
-    const currentOpCarIndex = carOps.findIndex(op => operations.indexOf(op) === opIndex);
-    const nextOp = carOps[currentOpCarIndex + 1];
-    
-    if (nextOp) {
-      const nextOpIndex = operations.indexOf(nextOp);
-      onOperationChange(nextOpIndex, 'sb_operationid_startmile', parseFloat(value));
+    const sameCarOps = operations
+      .map((op, idx) => ({ op, idx }))
+      .filter(({ op }) => op.carIndex === currentCarIndex)
+      .sort((a, b) => a.idx - b.idx);
+      
+    const currentPosInCar = sameCarOps.findIndex(({ idx }) => idx === opIndex);
+    if (currentPosInCar !== -1 && currentPosInCar < sameCarOps.length - 1) {
+      const nextOpIndex = sameCarOps[currentPosInCar + 1].idx;
+      const parsedValue = parseFloat(value) || 0;
+      
+      onOperationChange(nextOpIndex, 'sb_operationid_startmile', parsedValue);
     }
   };
 
@@ -203,16 +228,9 @@ export default function CarForm({
       {/* Car Header */}
       <div className="flex items-center justify-between border-b border-gray-200 pb-4">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          {isUpdateMode ? 'แก้รายการรถยนต์' : 'เพิ่มรายการรถยนต์'}
+          {isUpdateMode ? 'รายการรถยนต์' : 'เพิ่มรายการรถยนต์'}
         </h3>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onAddOperation(carIndex)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-all"
-          >
-            <Calendar className="w-4 h-4" />
-            เพิ่มกิจกรรม
-          </button>
           {totalCars > 1 && (
             <button
               onClick={() => onRemoveCar(carIndex)}
@@ -228,30 +246,18 @@ export default function CarForm({
       <div className="space-y-6">
         {/* ทะเบียนรถ Section with Tabs */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-900">
-              ทะเบียนรถ <span className="text-red-500">*</span>
-            </label>
-            {car.car_infocode && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearCar}
-                className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="w-3 h-3 mr-1" />
-                ล้าง
-              </Button>
-            )}
-          </div>
-
           {/* แสดง Tabs ทั้งในโหมด Create และ Update */}
+          {!isUpdateMode &&
+          <Label className="text-sm font-medium text-gray-900">
+            เลือกหมวดหมู่ที่ต้องการทำรายการ
+          </Label>
+          }
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             {!isUpdateMode &&
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="select" className="flex items-center gap-2">
                 <Search className="w-4 h-4" />
-                เลือกรถที่มีอยู่
+                เลือกทะเบียนที่มีอยู่ในระบบ
               </TabsTrigger>
               <TabsTrigger 
                 value="new" 
@@ -259,14 +265,30 @@ export default function CarForm({
                 disabled={typeCar === '1'} // ปิดการใช้งานถ้าเป็นรถบริษัท
               >
                 <Plus className="w-4 h-4" />
-                {isUpdateMode ? 'แก้ไขทะเบียน' : 'เพิ่มรถใหม่'}
+                {isUpdateMode ? 'แก้ไขทะเบียน' : 'เพิ่มทะเบียนรถใหม่ในระบบ'}
               </TabsTrigger>
             </TabsList>
             }
             {/* Tab: เลือกรถที่มีอยู่ */}
             <TabsContent value="select" className="space-y-3 mt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-gray-900">
+                  ทะเบียนรถ <span className="text-red-500">*</span>
+                </Label>
+                {car.car_infocode && !isUpdateMode && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearCar}
+                    className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    ล้าง
+                  </Button>
+                )}
+              </div>
               <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
+                <PopoverTrigger disabled={isUpdateMode} asChild>
                   <Button
                     variant="outline"
                     role="combobox"
@@ -339,6 +361,9 @@ export default function CarForm({
             {/* Tab: เพิ่มรถใหม่ / แก้ไขทะเบียน */}
             <TabsContent value="new" className="space-y-3 mt-4">
               <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-900">
+                  เพิ่มทะเบียนรถ <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   type="text"
                   value={car.car_infocode}
@@ -359,6 +384,9 @@ export default function CarForm({
               </div>
             </TabsContent>
           </Tabs>
+          { (!typeCar) &&
+            <Label className='text-red-600'>หมายเหตุ: เลือกประเภทการใช้งานรถยนต์ก่อนเลือกทะเบียนรถ</Label>
+          }
         </div>
 
         {/* ข้อมูลรถส่วนอื่นๆ */}
@@ -370,8 +398,12 @@ export default function CarForm({
             <Select
               value={car.car_typeid && car.car_typeid > 0 ? car.car_typeid.toString() : ''}
               onValueChange={(value) => onCarChange(carIndex, 'car_typeid', parseInt(value))}
+              disabled={activeTab === 'select'}
             >
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <SelectTrigger className={cn(
+                "w-full px-3 py-2 border border-gray-300 rounded-lg",
+                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+              )}>
                 <SelectValue placeholder="เลือกประเภท" />
               </SelectTrigger>
               <SelectContent>
@@ -390,7 +422,11 @@ export default function CarForm({
               type="text"
               value={car.car_band || ''}
               onChange={(e) => onCarChange(carIndex, 'car_band', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              disabled={activeTab === 'select'}
+              className={cn(
+                "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
+                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+              )}
               placeholder="ยี่ห้อ"
             />
           </div>
@@ -403,7 +439,11 @@ export default function CarForm({
               type="text"
               value={car.car_tier || ''}
               onChange={(e) => onCarChange(carIndex, 'car_tier', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              disabled={activeTab === 'select'}
+              className={cn(
+                "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
+                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+              )}
               placeholder="รุ่น"
             />
           </div>
@@ -416,7 +456,11 @@ export default function CarForm({
               type="text"
               value={car.car_color || ''}
               onChange={(e) => onCarChange(carIndex, 'car_color', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              disabled={activeTab === 'select'}
+              className={cn(
+                "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
+                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+              )}
               placeholder="สี"
             />
           </div>
@@ -430,7 +474,7 @@ export default function CarForm({
               inputMode="numeric"
               pattern="[0-9]*"
               value={car.car_milerate || ''}
-              disabled={isExistingCar}
+              disabled={activeTab === 'select'}
               onInput={(e) => {
                 // อนุญาตเฉพาะตัวเลข
                 const target = e.target as HTMLInputElement;
@@ -444,7 +488,7 @@ export default function CarForm({
               }}
               className={cn(
                 "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
-                isExistingCar && "bg-gray-100 cursor-not-allowed"
+                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
               )}
               placeholder={isExistingCar ? "ข้อมูลจากระบบ" : "กรอกเลขไมล์ปัจจุบัน"}
             />
@@ -457,7 +501,11 @@ export default function CarForm({
             value={car.car_remarks || ''}
             onChange={(e) => onCarChange(carIndex, 'car_remarks', e.target.value)}
             placeholder="หมายเหตุเพิ่มเติม"
-            className="min-h-[80px]"
+            disabled={activeTab === 'select'}
+            className={cn(
+              "min-h-[80px]",
+              activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+            )}
           />
         </div>
       </div>
@@ -480,6 +528,9 @@ export default function CarForm({
                 onRemoveOperation={onRemoveOperation}
                 onEndMileChange={handleEndMileChange}
                 carOperations={carOperations}
+                onValidationChange={handleValidationChange}
+                isUpdateMode={isUpdateMode}
+                onShowAlert={onShowAlert}
               />
             );
           })}
@@ -491,6 +542,24 @@ export default function CarForm({
           ยังไม่มีกิจกรรม - กดปุ่ม "เพิ่มกิจกรรม" เพื่อเพิ่มกิจกรรมสำหรับรถคันนี้
         </div>
       )}
+
+      {/* Add Operation Button - อยู่ด้านล่างส่วน Operations */}
+      <div className="flex justify-center pt-4 border-t border-gray-200">
+        <button
+          onClick={() => onAddOperation(carIndex)}
+          disabled={activeTab === 'select' && !car.car_infocode}
+          className={cn(
+            "inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm",
+            activeTab === 'select' && !car.car_infocode
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-gray-900 text-white hover:bg-gray-800"
+          )}
+        >
+          <Plus className="w-4 h-4" />
+          เพิ่มกิจกรรม
+        </button>
+      </div>
+      <Label className='text-red-600'>หมายเหตุ: ถ้ายังไม่เลือกทะเบียนรถ จะไม่สามารถเพิ่มกิจกรรมได้</Label>
     </div>
   );
 }

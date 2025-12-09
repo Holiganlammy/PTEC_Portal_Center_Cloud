@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber } from 'class-validator'; // ใช้ class-validator เพื่อตรวจสอบความถูกต้องของข้อมูล
+import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator'; // ใช้ class-validator เพื่อตรวจสอบความถูกต้องของข้อมูล
 
 export class SmartBillHeaderInput {
   @IsString()
@@ -66,6 +66,10 @@ export class SmartBillHeaderInput {
 }
 
 export class SmartBillOperationInput {
+  @IsOptional() // ✅ เปลี่ยนเป็น Optional เพราะจะได้จาก SP
+  @IsNumber()
+  sb_operationid?: number;
+
   @IsString()
   @IsNotEmpty()
   sb_code: string;
@@ -105,6 +109,15 @@ export class SmartBillOperationInput {
   @IsString()
   @IsNotEmpty()
   car_milerate: number;
+
+  @IsString()
+  image1: string;
+
+  @IsString()
+  image2: string;
+
+  @IsString()
+  image3: string;
 }
 
 export class SmartBillAssociateInput {

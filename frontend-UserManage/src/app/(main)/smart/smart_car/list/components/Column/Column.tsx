@@ -20,12 +20,11 @@ import {
   UserCheck, 
   CheckCircle2, 
   Clock,
-  Crown,
-  Briefcase,
-  Building2,
-  Users,
-  User
 } from "lucide-react"
+import Image from "next/image"
+import Picture1 from "@/image/Picture1.png"
+import Picture2 from "@/image/Picture2.png"
+import LogoSMPlus from "@/image/LogoSMPlus.png"
 import { Checkbox } from "@/components/ui/checkbox"
 import Link from "next/link"
 
@@ -75,6 +74,41 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
         {row.getValue("sb_code")}
       </div>
     ),
+  },
+    {
+    accessorKey: "sb_name",
+    header: "Company",
+    cell: ({ row }) => {
+      const company = row.getValue("sb_name") as string
+      
+      // เลือกโลโก้ตามบริษัท
+      const getCompanyLogo = () => {
+        if (company === "PTEC") return Picture1
+        if (company === "SCT") return Picture2
+        if (company === "SMPlus") return LogoSMPlus
+        return null
+      }
+
+      const logo = getCompanyLogo()
+
+      return (
+        <div className="flex items-center gap-2 w-[100px] justify-center">
+          {logo && (
+            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <Image
+                src={logo}
+                alt={company}
+                fill
+                className="object-contain p-1"
+              />
+            </div>
+          )}
+          <span className="font-medium text-sm">
+            {company || "-"}
+          </span>
+        </div>
+      )
+    },
   },
   {
     accessorKey: "usercode",
@@ -248,16 +282,18 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               Copy Smart Car Code
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <Link href={`/smart/smart_car/updateform?code=${smartCar.sb_code}`}>
-              <DropdownMenuItem>
+            {/* <Link href={`/smart/smart_car/updateform?code=${smartCar.sb_code}`}> */}
+              <DropdownMenuItem disabled>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-            </Link>
-            <DropdownMenuItem disabled>
+            {/* </Link> */}
+            <Link href={`/smart/smart_car/updateform?code=${smartCar.sb_code}`}>
+            <DropdownMenuItem>
               <Edit className="mr-2 h-4 w-4" />
               Edit Asset
             </DropdownMenuItem>
+            </Link>
             <DropdownMenuItem disabled className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Asset

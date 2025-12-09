@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import client from '@/lib/axios/interceptors';
+import { SmartBillFile } from '../create/service/type/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,10 +29,11 @@ import CompanyHeader from '@/app/(main)/smart/smart_car/create/components/FormSu
 import UserInformation from '@/app/(main)/smart/smart_car/create/components/FormSubmit/UserInformation';
 import CarTypeSelection from '@/app/(main)/smart/smart_car/create/components/CarForm/CarTypeSelection';
 import CarForm from '@/app/(main)/smart/smart_car/create/components/CarForm/CarForm';
-import FileUpload from '@/app/(main)/smart/smart_car/create/components/FormSubmit/FileUpload';
+// import FileUpload from '@/app/(main)/smart/smart_car/create/components/FormSubmit/FileUpload';
 
 // Import types
 import { UserData, CarInfo, Operation, SmartBillHeader } from '@/app/(main)/smart/smart_car/create/service/type/types';
+import { create } from 'domain';
 
 export default function FormsUpdate() {
   const { data: session } = useSession();
@@ -100,13 +102,14 @@ export default function FormsUpdate() {
         sb_Code: code
       });
 
-      console.log('Fetched data:', response.data);
+      console.log('📥 Fetched data:', response.data);
 
       if (!response.data || response.data.length === 0) {
         showAlert('ไม่พบข้อมูล', 'ไม่พบข้อมูลที่ต้องการแก้ไข');
         setIsLoading(false);
         return;
       }
+
       const headerAndCarData = response.data[0];
       
       if (headerAndCarData && headerAndCarData.length > 0) {
@@ -123,11 +126,11 @@ export default function FormsUpdate() {
           reamarks: firstRecord.reamarks || '',
         });
 
-        // ตั้งค่า Cars จาก header data (แต่ละ record คือ 1 รถ)
+        // ตั้งค่า Cars
         const carsData = headerAndCarData.map((record: any) => ({
           car_infocode: record.car_infocode || '',
           car_infostatus_companny: record.car_infostatus_companny || false,
-          car_categaryid: 5, // ใช้ค่า default หรือดึงจาก record ถ้ามี
+          car_categaryid: 5,
           car_typeid: parseInt(record.car_typeid) || 0,
           car_band: record.car_band || '',
           car_tier: record.car_tier || '',
@@ -138,49 +141,18 @@ export default function FormsUpdate() {
         
         setCars(carsData);
         
-        // ตั้งค่าประเภทรถตาม car_infostatus_companny
+        // ตั้งค่าประเภทรถ
         if (carsData[0]?.car_infostatus_companny === true) {
-          setTypeCar('1'); // รถบริษัท
+          setTypeCar('1');
         } else {
-          setTypeCar('0'); // รถส่วนตัว (car_infostatus_companny = false)
+          setTypeCar('0');
         }
       }
 
       // Index 1: Operations
       const operationsData = response.data[1];
       
-      if (operationsData && operationsData.length > 0) {
-        const opsData = operationsData.map((op: any, index: number) => ({
-          carIndex: 0, // ถ้ามีหลายรถ ต้องจับคู่กับรถที่ถูกต้อง
-          sb_operationid_startdate: op.sb_operationid_startdate 
-            ? dayjs(op.sb_operationid_startdate).toDate() 
-            : null,
-          sb_operationid_startmile: parseFloat(op.sb_operationid_startmile) || 0,
-          sb_operationid_startoil: op.sb_operationid_startoil?.toString() || '',
-          sb_operationid_enddate: op.sb_operationid_enddate 
-            ? dayjs(op.sb_operationid_enddate).toDate() 
-            : null,
-          sb_operationid_endoil: op.sb_operationid_endoil?.toString() || '',
-          sb_operationid_endmile: op.sb_operationid_endmile?.toString() || '',
-          sb_paystatus: op.sb_paystatus ? '1' : '0',
-          sb_operationid_location: op.sb_operationid_location || '',
-        }));
-        
-        setOperations(opsData);
-
-        // อัปเดต car_milerate จาก operation แรก
-        if (opsData.length > 0) {
-          setCars(prevCars => {
-            const newCars = [...prevCars];
-            if (newCars[0]) {
-              newCars[0].car_milerate = opsData[0].sb_operationid_startmile;
-            }
-            return newCars;
-          });
-        }
-      }
-
-      // Index 2: Associate (ถ้ามี)
+      // Index 2: Associate
       const associateData = response.data[2];
       if (associateData && associateData.length > 0) {
         setSmartBill_Associate(associateData.map((assoc: any) => ({
@@ -193,25 +165,85 @@ export default function FormsUpdate() {
       // Index 3: Files
       const filesData = response.data[3];
       
-      if (filesData && filesData.length > 0) {
-        const files = filesData.map((file: any) => ({
-          file: file.url, // URL ของรูปภาพ
-          fileData: null, // ไม่มี fileData สำหรับไฟล์ที่มีอยู่แล้ว
-          filename: file.description || `File_${file.NonPO_attatchid}`,
-          isExisting: true, // flag สำหรับไฟล์ที่มีอยู่แล้ว
-          fileId: file.NonPO_attatchid, // เก็บ ID ไว้สำหรับการลบ (ถ้าต้องการ)
-        }));
-        setDataFilesCount(files);
+      // ประมวลผล operations พร้อม files ครั้งเดียว
+      if (operationsData && operationsData.length > 0) {
+        // สร้าง map: sb_operationid → array index
+        const operationIdToIndex = new Map<number, number>();
+        operationsData.forEach((op: any, index: number) => {
+          operationIdToIndex.set(parseInt(op.sb_operationid), index);
+        });
+
+        // จัดกลุ่มไฟล์ตาม sb_operationid
+        const filesByOperationId: { [key: number]: SmartBillFile[] } = {};
+        
+        if (filesData && filesData.length > 0) {
+          filesData.forEach((file: any) => {
+            const opId = parseInt(file.sb_operationid);
+            
+            if (!filesByOperationId[opId]) {
+              filesByOperationId[opId] = [];
+            }
+            
+            filesByOperationId[opId].push({
+              image_url: file.image_url,
+              sb_operationid: file.sb_operationid,
+              image_name: file.image_name,
+              sb_image_id: file.sb_image_id,
+              operation_index: operationIdToIndex.get(opId) || 0,
+              created_at: file.created_at,
+              isExisting: true,
+              fileData: null,
+            });
+          });
+        }
+
+        // console.log('📁 Files grouped by Operation ID:');
+        // Object.entries(filesByOperationId).forEach(([opId, files]) => {
+        //   console.log(`  Operation ID ${opId}:`, files.map(f => f.image_name));
+        // });
+
+        const opsData = operationsData.map((op: Operation, index: number) => {
+          const opId = op.sb_operationid;
+          const opFiles = filesByOperationId[opId] || [];
+          return {
+            carIndex: 0,
+            sb_operationid: op.sb_operationid, // ✅ เก็บ sb_operationid
+            sb_operationid_startdate: op.sb_operationid_startdate 
+              ? dayjs(op.sb_operationid_startdate).toDate() 
+              : null,
+            sb_operationid_startmile: parseFloat(op.sb_operationid_startmile?.toString() || '0') || 0,
+            sb_operationid_startoil: op.sb_operationid_startoil?.toString() || '',
+            sb_operationid_enddate: op.sb_operationid_enddate 
+              ? dayjs(op.sb_operationid_enddate).toDate() 
+              : null,
+            sb_operationid_endoil: op.sb_operationid_endoil?.toString() || '',
+            sb_operationid_endmile: op.sb_operationid_endmile?.toString() || '',
+            sb_paystatus: op.sb_paystatus ? '1' : '0',
+            sb_operationid_location: op.sb_operationid_location || '',
+            files: opFiles, // ✅ ใส่ไฟล์ที่จับคู่ถูกต้อง
+          };
+        });
+        setOperations(opsData);
+
+        // อัปเดต car_milerate
+        if (opsData.length > 0) {
+          setCars(prevCars => {
+            const newCars = [...prevCars];
+            if (newCars[0]) {
+              newCars[0].car_milerate = opsData[0].sb_operationid_startmile;
+            }
+            return newCars;
+          });
+        }
       }
 
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching data:', error);
       showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsLoading(false);
     }
   };
-
   // เรียกใช้ fetchSmartBillData เมื่อมี sbCode
   useEffect(() => {
     if (sbCode) {
@@ -307,6 +339,7 @@ export default function FormsUpdate() {
       sb_operationid_endmile: '',
       sb_paystatus: '',
       sb_operationid_location: '',
+      sb_operationid: 0,
     }]);
   };
 
@@ -356,7 +389,7 @@ export default function FormsUpdate() {
     if (fileToRemove.isExisting && fileToRemove.fileId) {
       try {
         // เรียก API ลบไฟล์จาก backend
-        const response = await client.post('/NonPO_Delete_Attach_By_attachid', {
+        const response = await client.post('/SmartBill_Operation_DeleteImage', {
           attachid: fileToRemove.fileId
         });
         
@@ -482,13 +515,14 @@ export default function FormsUpdate() {
       }
     }
 
-    if (!dataFilesCount || dataFilesCount.length === 0) {
-      showAlert("แจ้งเตือน", 'อัปโหลดรูปภาพอย่างน้อย 1 รูป');
-      return;
-    }
+    // if (!dataFilesCount || dataFilesCount.length === 0) {
+    //   showAlert("แจ้งเตือน", 'อัปโหลดรูปภาพอย่างน้อย 1 รูป');
+    //   return;
+    // }
 
     const body = {
       sb_code: sbCode,
+      create_usercode: session?.user?.UserCode || '',
       smartBill_Header: [smartBillHeader],
       carInfo: cars.map(car => ({
         ...car,
@@ -510,22 +544,53 @@ export default function FormsUpdate() {
 
     try {
       // ใช้ POST สำหรับ update (ตาม API ของคุณ)
-      const response = await client.post('/SmartBill_CreateForms', body);
-      
-      // อัปโหลดไฟล์ใหม่ (ถ้ามี)
-      const newFiles = dataFilesCount.filter((file: any) => !file.isExisting);
-      
-      for (let i = 0; i < newFiles.length; i++) {
-        let formData_1 = new FormData();
-        formData_1.append('file', newFiles[i].fileData);
-        formData_1.append('sb_code', sbCode || '');
-        formData_1.append('usercode', session?.user?.UserCode || '');
+      const response = await client.post('/SmartBill_UpdateForms', body);
+      const { sb_code, sb_operationids } = response.data;
+     for (let opIndex = 0; opIndex < operations.length; opIndex++) {
+        const op = operations[opIndex];
+        
+        // ข้ามถ้าไม่มีไฟล์
+        if (!op.files || op.files.length === 0) {
+          console.log(`⚠️ Operation ${opIndex} ไม่มีไฟล์`);
+          continue;
+        }
 
-        await client.post('/SmartBill_files', formData_1, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+        const sb_operationid = sb_operationids[opIndex];
+
+        if (!sb_operationid) {
+          console.error(`❌ Operation ${opIndex} ไม่มี ID`);
+          continue;
+        }
+
+        console.log(`📤 Uploading files for operation ${opIndex} (ID: ${sb_operationid})`);
+        for (let fileIndex = 0; fileIndex < op.files.length; fileIndex++) {
+          const file = op.files[fileIndex];
+          
+          if (!file.fileData) {
+            console.warn(`⚠️ File ${fileIndex} ไม่มี fileData`);
+            continue;
+          }
+
+          let formData = new FormData();
+          formData.append('file', file.fileData, file.filename);
+          formData.append('sb_operationid', sb_operationid.toString());
+          formData.append('usercode', session?.user?.UserCode || '');
+
+          console.log(`📤 Uploading file ${fileIndex + 1}/${op.files.length} for operation ${opIndex}`);
+
+          try {
+            const uploadRes = await client.post('/SmartCar_files_save_image', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+
+            console.log(`✅ Upload success:`, uploadRes.data);
+          } catch (uploadErr: any) {
+            console.error(`❌ Upload error for operation ${opIndex}, file ${fileIndex}:`, uploadErr);
+            throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${fileIndex + 1} ของกิจกรรมที่ ${opIndex + 1}: ${uploadErr.message}`);
+          }
+        }
       }
 
       showAlert("สำเร็จ", 'อัปเดตรายการแล้ว', 'success');
@@ -602,6 +667,7 @@ export default function FormsUpdate() {
               typeCar={typeCar}
               onTypeCarChange={setTypeCar}
               onCarInfoDataChange={handleCarInfoDataChange}
+              updateMode={true}
             />
             <div className="h-px bg-gray-200"></div>
 
@@ -629,7 +695,7 @@ export default function FormsUpdate() {
                   onRemoveOperation={handleRemoveOperation}
                   onCarUpdate={handleCarUpdate}
                   onUpdateOperationMileRates={updateOperationMileRates}
-                  isUpdateMode={true} // เพิ่ม prop เพื่อบอกว่าเป็นหน้า update
+                  isUpdateMode={true}
                 />
               ))}
             </div>
@@ -680,11 +746,11 @@ export default function FormsUpdate() {
             <div className="h-px bg-gray-200"></div>
 
             {/* File Upload */}
-            <FileUpload 
+            {/* <FileUpload 
               dataFilesCount={dataFilesCount}
               onFileUpload={handleFileUpload}
               onFileRemove={handleFileRemove}
-            />
+            /> */}
 
             {/* Submit Button */}
             <div className="flex justify-end pt-6 border-t border-gray-200">
@@ -704,11 +770,6 @@ export default function FormsUpdate() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              {alertType === 'error' ? (
-                <AlertCircle className="h-5 w-5 text-red-600" />
-              ) : (
-                <Check className="h-5 w-5 text-green-600" />
-              )}
               {alertTitle}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base">
@@ -716,14 +777,7 @@ export default function FormsUpdate() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction
-              className={cn(
-                "min-w-[100px]",
-                alertType === 'success' 
-                  ? "bg-green-600 hover:bg-green-700" 
-                  : "bg-gray-900 hover:bg-gray-800"
-              )}
-            >
+            <AlertDialogAction>
               ตรวจสอบ
             </AlertDialogAction>
           </AlertDialogFooter>
