@@ -18,6 +18,9 @@ import {
   SmartBill_Fetch_FilterOptions_Entity,
   SmartBill_Withdraw_AddrowDtlResponseDto,
   SmartBill_Withdraw_ListEntity,
+  SmartBillAcceptErrorResponse,
+  SmartBillAcceptResult,
+  SmartBillAcceptSuccessResponse,
   SmartBillHeaderSearchDto,
   SmartCar_Fetch_FilterOptions_Entity,
   SmartCarOperationEntity,
@@ -29,6 +32,7 @@ import {
   SmartBillOperationInput,
   SmartBillHeaderInput,
   SmartBill_CarInfoSearchInput,
+  SmartBillAcceptHeaderDto,
 } from '../dto/SmartCar.dto';
 import { Response, Request as ExpressRequest } from 'express';
 import {
@@ -1008,7 +1012,7 @@ export class AppController {
 
       const headerInput: SmartBillHeaderInput = {
         usercode: header.usercode || 'SYSTEM',
-        sb_code: dataBody.sb_code ?? '', // ✅ ต้องมี sb_code
+        sb_code: dataBody.sb_code ?? '',
         sb_name: header.sb_name,
         sb_fristName: header.sb_fristName,
         sb_lastName: header.sb_lastName,
@@ -1026,7 +1030,6 @@ export class AppController {
         car_milerate: car.car_milerate,
       };
 
-      // ✅ Update Header
       const headerResult =
         await this.service.SmartBill_CreateForms(headerInput);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -1047,10 +1050,8 @@ export class AppController {
       const operationIds: number[] = [];
       const newOpIds = new Set<number>();
 
-      // ✅ Loop operations ที่ส่งมา
       for (const op of dataBody.smartBill_Operation) {
         if (op.sb_operationid) {
-          // ✅ UPDATE operation เดิม
           await this.service.SmartBill_UpdateOperation(
             op as SmartBillOperationInput,
             sb_code,
@@ -1058,7 +1059,6 @@ export class AppController {
           operationIds.push(op.sb_operationid);
           newOpIds.add(op.sb_operationid);
         } else {
-          // ✅ CREATE operation ใหม่
           const opResult = await this.service.SmartBill_CreateOperation(
             op as SmartBillOperationInput,
             sb_code,
@@ -1070,7 +1070,6 @@ export class AppController {
         }
       }
 
-      // ✅ ลบ operations ที่ไม่มีในรายการใหม่
       for (const oldOpId of existingOpIds) {
         if (!newOpIds.has(oldOpId)) {
           await this.service.SmartBill_DeleteOperation(
@@ -1080,7 +1079,6 @@ export class AppController {
         }
       }
 
-      // // ✅ Handle associates
       // if (Number(header.group_status) === 1) {
       //   // ลบ associates เดิม
       //   await this.service.SmartBill_DeleteAssociates(sb_code);
@@ -1104,6 +1102,92 @@ export class AppController {
         'Internal Server Error: ' + error,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  @Post('SmartBill_AcceptHeader')
+  @HttpCode(200)
+  async smartBillAcceptHeader(
+    @Body() body: SmartBillAcceptHeaderDto,
+    @Res() res: Response,
+  ): Promise<
+    Response<SmartBillAcceptSuccessResponse | SmartBillAcceptErrorResponse>
+  > {
+    try {
+      const sb_code = body.sb_code.trim();
+      const usercode = body.usercode.trim();
+
+      if (sb_code.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'กรุณาระบุรหัสเอกสาร (sb_code)',
+          error: 'MISSING_SB_CODE',
+        } as SmartBillAcceptErrorResponse);
+      }
+
+      if (usercode.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'กรุณาระบุรหัสผู้ใช้ (usercode)',
+          error: 'MISSING_USERCODE',
+        } as SmartBillAcceptErrorResponse);
+      }
+
+      const data = await this.service.SmartBill_Accept_Header(
+        sb_code,
+        usercode,
+      );
+
+      // ✅ ตรวจสอบผลลัพธ์จาก Stored Procedure
+      if (!data || data.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: `ไม่พบเอกสาร ${sb_code}`,
+          error: 'DOCUMENT_NOT_FOUND',
+          sb_code: sb_code,
+        } as SmartBillAcceptErrorResponse);
+      }
+
+      const resultSet: SmartBillAcceptResult[] = Array.isArray(data[0])
+        ? (data[0] as SmartBillAcceptResult[])
+        : [data[0] as SmartBillAcceptResult];
+      const result: SmartBillAcceptResult = resultSet[0];
+      if (result.success === 0) {
+        return res.status(400).json({
+          success: false,
+          message: result.message || 'ไม่สามารถอนุมัติเอกสารได้',
+          error: 'APPROVAL_FAILED',
+          sb_code: sb_code,
+        } as SmartBillAcceptErrorResponse);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'อนุมัติเอกสารสำเร็จ',
+        data: {
+          sb_code: result.sb_code,
+          sb_id: result.sb_id!,
+          sb_status: result.sb_status!,
+          sb_status_name: result.sb_status_name!,
+          admin_approve: result.admin_approve!,
+          admin_approveDate: result.admin_approveDate!,
+          car_infoid: result.car_infoid!,
+          car_infocode: result.car_infocode!,
+          updated_mile: result.updated_mile!,
+          usercode: result.usercode!,
+          sb_name: result.sb_name!,
+          sb_fristName: result.sb_fristName!,
+          sb_lastName: result.sb_lastName!,
+        },
+      } as SmartBillAcceptSuccessResponse);
+    } catch (error: unknown) {
+      console.error('❌ SmartBill_Accept_Header Error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'เกิดข้อผิดพลาดในการอนุมัติเอกสาร',
+        error: error instanceof Error ? error.message : 'INTERNAL_SERVER_ERROR',
+        sb_code: body.sb_code || null,
+      } as SmartBillAcceptErrorResponse);
     }
   }
 }

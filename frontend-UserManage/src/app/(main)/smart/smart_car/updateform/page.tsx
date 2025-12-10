@@ -4,10 +4,10 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { AlertCircle, Check } from 'lucide-react';
+import { AlertCircle, Check, Lock } from 'lucide-react'; // ✅ เพิ่ม Lock icon
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation'; // ✅ เพิ่ม useRouter
 import client from '@/lib/axios/interceptors';
 import { SmartBillFile } from '../create/service/type/types';
 import {
@@ -29,21 +29,26 @@ import CompanyHeader from '@/app/(main)/smart/smart_car/create/components/FormSu
 import UserInformation from '@/app/(main)/smart/smart_car/create/components/FormSubmit/UserInformation';
 import CarTypeSelection from '@/app/(main)/smart/smart_car/create/components/CarForm/CarTypeSelection';
 import CarForm from '@/app/(main)/smart/smart_car/create/components/CarForm/CarForm';
-// import FileUpload from '@/app/(main)/smart/smart_car/create/components/FormSubmit/FileUpload';
 
 // Import types
 import { UserData, CarInfo, Operation, SmartBillHeader } from '@/app/(main)/smart/smart_car/create/service/type/types';
-import { create } from 'domain';
+import { Button } from '@/components/ui/button';
 
 export default function FormsUpdate() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const router = useRouter(); // ✅ เพิ่ม router
   const sbCode = searchParams.get('code');
   
   dayjs.extend(utc);
   dayjs.extend(timezone);
   
   const [isLoading, setIsLoading] = useState(true);
+  
+  // ✅ เพิ่ม state สำหรับตรวจสอบสิทธิ์
+  const [hasAccess, setHasAccess] = useState(false);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  
   const [typeCar, setTypeCar] = useState<string>('');
   const [carInfoDataCompanny, setCarInfoDataCompanny] = useState<CarInfo[]>([]);
   const [carInfoData, setCarInfoData] = useState<CarInfo[]>([]);
@@ -94,19 +99,29 @@ export default function FormsUpdate() {
 
   const [dataFilesCount, setDataFilesCount] = useState<any>(null);
 
+  const checkAccess = (ownerUserCode: string) => {
+    const currentUserCode = session?.user?.UserCode;
+    const currentRoleId = session?.user?.role_id;
+    
+    // ตรวจสอบ: เป็นเจ้าของ หรือ เป็น Admin
+    const canAccess = currentUserCode === ownerUserCode || currentRoleId === 1;
+    
+    return canAccess;
+  };
+
   const fetchSmartBillData = async (code: string) => {
     try {
       setIsLoading(true);
+      setIsCheckingAccess(true);
       
       const response = await client.post('/SmartBill_SelectAllForms', {
         sb_Code: code
       });
 
-      console.log('📥 Fetched data:', response.data);
-
       if (!response.data || response.data.length === 0) {
         showAlert('ไม่พบข้อมูล', 'ไม่พบข้อมูลที่ต้องการแก้ไข');
         setIsLoading(false);
+        setIsCheckingAccess(false);
         return;
       }
 
@@ -114,6 +129,15 @@ export default function FormsUpdate() {
       
       if (headerAndCarData && headerAndCarData.length > 0) {
         const firstRecord = headerAndCarData[0];
+        
+        const canAccess = checkAccess(firstRecord.usercode);
+        setHasAccess(canAccess);
+        
+        if (!canAccess) {
+          setIsCheckingAccess(false);
+          setIsLoading(false);
+          return; // ออกจากฟังก์ชัน ไม่โหลดข้อมูล
+        }
         
         // ตั้งค่า Header
         setSmartBillHeader({
@@ -165,15 +189,13 @@ export default function FormsUpdate() {
       // Index 3: Files
       const filesData = response.data[3];
       
-      // ประมวลผล operations พร้อม files ครั้งเดียว
+      // ประมวลผล operations พร้อม files
       if (operationsData && operationsData.length > 0) {
-        // สร้าง map: sb_operationid → array index
         const operationIdToIndex = new Map<number, number>();
         operationsData.forEach((op: any, index: number) => {
           operationIdToIndex.set(parseInt(op.sb_operationid), index);
         });
 
-        // จัดกลุ่มไฟล์ตาม sb_operationid
         const filesByOperationId: { [key: number]: SmartBillFile[] } = {};
         
         if (filesData && filesData.length > 0) {
@@ -197,17 +219,12 @@ export default function FormsUpdate() {
           });
         }
 
-        // console.log('📁 Files grouped by Operation ID:');
-        // Object.entries(filesByOperationId).forEach(([opId, files]) => {
-        //   console.log(`  Operation ID ${opId}:`, files.map(f => f.image_name));
-        // });
-
         const opsData = operationsData.map((op: Operation, index: number) => {
           const opId = op.sb_operationid;
           const opFiles = filesByOperationId[opId] || [];
           return {
             carIndex: 0,
-            sb_operationid: op.sb_operationid, // ✅ เก็บ sb_operationid
+            sb_operationid: op.sb_operationid,
             sb_operationid_startdate: op.sb_operationid_startdate 
               ? dayjs(op.sb_operationid_startdate).toDate() 
               : null,
@@ -220,12 +237,11 @@ export default function FormsUpdate() {
             sb_operationid_endmile: op.sb_operationid_endmile?.toString() || '',
             sb_paystatus: op.sb_paystatus ? '1' : '0',
             sb_operationid_location: op.sb_operationid_location || '',
-            files: opFiles, // ✅ ใส่ไฟล์ที่จับคู่ถูกต้อง
+            files: opFiles,
           };
         });
         setOperations(opsData);
 
-        // อัปเดต car_milerate
         if (opsData.length > 0) {
           setCars(prevCars => {
             const newCars = [...prevCars];
@@ -242,18 +258,19 @@ export default function FormsUpdate() {
       showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsLoading(false);
+      setIsCheckingAccess(false);
     }
   };
-  // เรียกใช้ fetchSmartBillData เมื่อมี sbCode
+
   useEffect(() => {
     if (sbCode) {
       fetchSmartBillData(sbCode);
     } else {
       setIsLoading(false);
+      setIsCheckingAccess(false);
     }
   }, [sbCode]);
 
-  // โหลดข้อมูลรถเมื่อ typeCar มีค่า (สำหรับหน้า update)
   useEffect(() => {
     const loadCarData = async () => {
       if (typeCar && (typeCar === '0' || typeCar === '1')) {
@@ -385,15 +402,12 @@ export default function FormsUpdate() {
     const list = [...dataFilesCount];
     const fileToRemove = list[index];
     
-    // ถ้าเป็นไฟล์ที่มีอยู่แล้วในระบบ ต้องลบจาก backend ด้วย
     if (fileToRemove.isExisting && fileToRemove.fileId) {
       try {
-        // เรียก API ลบไฟล์จาก backend
         const response = await client.post('/SmartBill_Operation_DeleteImage', {
           attachid: fileToRemove.fileId
         });
         
-        // แสดงผลสำเร็จ
         showAlert(
           "ลบไฟล์สำเร็จ", 
           `ไฟล์ ${fileToRemove.filename} ถูกลบออกจากระบบแล้ว`, 
@@ -406,15 +420,13 @@ export default function FormsUpdate() {
           "เกิดข้อผิดพลาด", 
           `ไม่สามารถลบไฟล์ ${fileToRemove.filename} จากระบบได้: ${error.message || 'กรุณาลองใหม่อีกครั้ง'}`
         );
-        return; // ไม่ลบจาก UI หากลบจาก backend ไม่สำเร็จ
+        return;
       }
     }
     
-    // ลบออกจาก state
     list.splice(index, 1);
     setDataFilesCount(list.length > 0 ? list : null);
     
-    // ถ้าเป็นไฟล์ใหม่ที่ยังไม่ได้บันทึก แสดงข้อความธรรมดา
     if (!fileToRemove.isExisting) {
       showAlert(
         "ลบไฟล์สำเร็จ", 
@@ -515,11 +527,6 @@ export default function FormsUpdate() {
       }
     }
 
-    // if (!dataFilesCount || dataFilesCount.length === 0) {
-    //   showAlert("แจ้งเตือน", 'อัปโหลดรูปภาพอย่างน้อย 1 รูป');
-    //   return;
-    // }
-
     const body = {
       sb_code: sbCode,
       create_usercode: session?.user?.UserCode || '',
@@ -543,13 +550,12 @@ export default function FormsUpdate() {
     console.log('Updating data:', JSON.stringify(body, null, 2));
 
     try {
-      // ใช้ POST สำหรับ update (ตาม API ของคุณ)
       const response = await client.post('/SmartBill_UpdateForms', body);
       const { sb_code, sb_operationids } = response.data;
-     for (let opIndex = 0; opIndex < operations.length; opIndex++) {
+      
+      for (let opIndex = 0; opIndex < operations.length; opIndex++) {
         const op = operations[opIndex];
         
-        // ข้ามถ้าไม่มีไฟล์
         if (!op.files || op.files.length === 0) {
           console.log(`⚠️ Operation ${opIndex} ไม่มีไฟล์`);
           continue;
@@ -562,7 +568,7 @@ export default function FormsUpdate() {
           continue;
         }
 
-        console.log(`📤 Uploading files for operation ${opIndex} (ID: ${sb_operationid})`);
+     
         for (let fileIndex = 0; fileIndex < op.files.length; fileIndex++) {
           const file = op.files[fileIndex];
           
@@ -595,7 +601,6 @@ export default function FormsUpdate() {
 
       showAlert("สำเร็จ", 'อัปเดตรายการแล้ว', 'success');
       
-      // รีเฟรชข้อมูล
       setTimeout(() => {
         fetchSmartBillData(sbCode || '');
       }, 1500);
@@ -617,17 +622,73 @@ export default function FormsUpdate() {
     gettingUsers();
   }, []);
 
-  // แสดง Loading
-  if (isLoading) {
+  // Loading State
+  if (isLoading || isCheckingAccess) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
+          <p className="text-gray-600">
+            {isCheckingAccess ? 'กำลังตรวจสอบสิทธิ์...' : 'กำลังโหลดข้อมูล...'}
+          </p>
         </div>
       </div>
     );
   }
+
+  // No Access Screen
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full mx-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              ไม่มีสิทธิ์เข้าถึง
+            </h2>
+            <p className="text-gray-600 mb-6">
+              คุณไม่มีสิทธิ์ในการแก้ไขเอกสารนี้
+              <br />
+              <span className="text-sm text-gray-500 mt-2 block">
+                เอกสาร: {sbCode}
+              </span>
+            </p>
+            <div className="space-y-3">
+              <Button
+                onClick={() => router.push('/smart/smart_car')}
+                className="w-full bg-black text-white hover:bg-gray-800"
+              >
+                กลับไปหน้ารายการ
+              </Button>
+              <Button
+                onClick={() => router.back()}
+                variant="outline"
+                className="w-full"
+              >
+                ย้อนกลับ
+              </Button>
+            </div>
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-600 text-left">
+              <p className="font-medium mb-2">เงื่อนไขการเข้าถึง:</p>
+              <ul className="space-y-1 text-xs">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+                  ต้องเป็นเจ้าของเอกสาร
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+                  หรือเป็น Admin
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!sbCode) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -663,12 +724,13 @@ export default function FormsUpdate() {
 
             {/* Car Type Selection */}
             <CarTypeSelection 
-              key={`car-type-${typeCar}-${Date.now()}`} // Force re-render with key
+              key={`car-type-${typeCar}-${Date.now()}`}
               typeCar={typeCar}
               onTypeCarChange={setTypeCar}
               onCarInfoDataChange={handleCarInfoDataChange}
               updateMode={true}
             />
+            
             <div className="h-px bg-gray-200"></div>
 
             {/* Cars Section */}
@@ -744,13 +806,6 @@ export default function FormsUpdate() {
             </div>
 
             <div className="h-px bg-gray-200"></div>
-
-            {/* File Upload */}
-            {/* <FileUpload 
-              dataFilesCount={dataFilesCount}
-              onFileUpload={handleFileUpload}
-              onFileRemove={handleFileRemove}
-            /> */}
 
             {/* Submit Button */}
             <div className="flex justify-end pt-6 border-t border-gray-200">

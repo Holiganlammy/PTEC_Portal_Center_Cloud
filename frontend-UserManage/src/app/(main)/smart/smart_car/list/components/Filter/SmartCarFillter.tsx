@@ -84,9 +84,9 @@ export default function SmartCarFilter({
         <Form {...form}>
             <form
                 onSubmit={form.handleSubmit(form.getValues)}
-                className="grid grid-cols-2 gap-x-5 sm:flex sm:gap-x-0 mt-4 space-x-4 justify-end"
+                className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mt-4"
             >
-                <div className="w-full max-w-[200px]">
+                <div className="w-full">
                     <FormField 
                         name="sb_code" 
                         control={form.control} 
@@ -101,7 +101,7 @@ export default function SmartCarFilter({
                         )} />
                 </div>
 
-                <div className="w-full max-w-[200px]">
+                <div className="w-full">
                     <FormField 
                         name="usercode" 
                         control={form.control} 
@@ -115,7 +115,7 @@ export default function SmartCarFilter({
                     )} />
                 </div>
 
-                <div className="w-full max-w-[200px]">
+                <div className="w-full">
                     <FormField 
                         name="car_infocode" 
                         control={form.control} 
@@ -129,7 +129,7 @@ export default function SmartCarFilter({
                     )} />
                 </div>
 
-                <div className="w-full max-w-[200px]">
+                <div className="w-full">
                     <FormField 
                         name="car_category" 
                         control={form.control} 
@@ -143,7 +143,7 @@ export default function SmartCarFilter({
                     )} />
                 </div>
 
-                <div className="w-full max-w-[200px]">
+                <div className="w-full">
                     <FormField 
                         name="sb_status" 
                         control={form.control} 

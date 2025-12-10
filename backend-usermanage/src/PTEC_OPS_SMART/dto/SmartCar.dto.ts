@@ -174,3 +174,13 @@ export class SmartBill_HeaderSearchInput {
   @IsString()
   currentUser: string;
 }
+
+export class SmartBillAcceptHeaderDto {
+  @IsNotEmpty({ message: 'กรุณาระบุรหัสเอกสาร (sb_code)' })
+  @IsString({ message: 'sb_code ต้องเป็น string' })
+  sb_code: string;
+
+  @IsNotEmpty({ message: 'กรุณาระบุรหัสผู้ใช้ (usercode)' })
+  @IsString({ message: 'usercode ต้องเป็น string' })
+  usercode: string;
+}

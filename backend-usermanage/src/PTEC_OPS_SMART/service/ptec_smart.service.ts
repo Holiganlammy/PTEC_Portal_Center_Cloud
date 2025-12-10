@@ -225,7 +225,7 @@ export class AppService {
           type: sql.Int(),
           value: req.car_category_id,
         },
-        { name: 'status', type: sql.NVarChar(50), value: req.status },
+        { name: 'status', type: sql.NVarChar(), value: req.status },
         {
           name: 'current_user_code',
           type: sql.NVarChar(50),
@@ -1112,6 +1112,17 @@ export class AppService {
 
     return this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.SmartBill_GetOperations`,
+      params,
+    );
+  }
+  async SmartBill_Accept_Header(sb_code: string, usercode: string) {
+    const params = [
+      { name: 'sb_code', type: sql.NVarChar(50), value: sb_code },
+      { name: 'usercode', type: sql.NVarChar(50), value: usercode },
+    ];
+
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_AcceptHeader`,
       params,
     );
   }

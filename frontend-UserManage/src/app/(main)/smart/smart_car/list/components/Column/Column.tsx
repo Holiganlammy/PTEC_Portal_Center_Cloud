@@ -10,16 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  ArrowUpDown, 
-  ShieldCheck, 
-  UserCheck, 
-  CheckCircle2, 
+import {
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+  ArrowUpDown,
+  ShieldCheck,
+  UserCheck,
+  CheckCircle2,
   Clock,
+  Check,
 } from "lucide-react"
 import Image from "next/image"
 import Picture1 from "@/image/Picture1.png"
@@ -27,35 +28,36 @@ import Picture2 from "@/image/Picture2.png"
 import LogoSMPlus from "@/image/LogoSMPlus.png"
 import { Checkbox } from "@/components/ui/checkbox"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 
 export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
-    {
-        id: "select",
-        header: ({ table }) => (
-            <div className="flex justify-center items-center w-8">
-                <Checkbox
-                    checked={
-                        table.getIsAllPageRowsSelected() ||
-                        (table.getIsSomePageRowsSelected() && "indeterminate")
-                    }
-                    onCheckedChange={(value: boolean) => table.toggleAllPageRowsSelected(!!value)}
-                    aria-label="Select all"
-                />
-            </div>
-        ),
-        cell: ({ row }) => (
-            <div className="flex justify-center items-center w-8">
-                <Checkbox
-                    checked={row.getIsSelected()}
-                    onCheckedChange={(value: boolean) => row.toggleSelected(!!value)}
-                    aria-label="Select row"
-                />
-            </div>
-        ),
-        enableSorting: false,
-        enableHiding: false,
-        size: 40,
-    },
+  {
+    id: "select",
+    header: ({ table }) => (
+      <div className="flex justify-center items-center w-8">
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value: boolean) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="flex justify-center items-center w-8">
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value: boolean) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      </div>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+    size: 40,
+  },
   {
     accessorKey: "sb_code",
     header: ({ column }) => {
@@ -64,7 +66,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-            เลขที่ดำเนินการ
+          เลขที่ดำเนินการ
           <ArrowUpDown />
         </Button>
       )
@@ -75,36 +77,39 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
       </div>
     ),
   },
-    {
+  {
     accessorKey: "sb_name",
     header: "Company",
     cell: ({ row }) => {
-      const company = row.getValue("sb_name") as string
+      const originalCompany = row.getValue("sb_name") as string
       
+      // ถ้าไม่ใช่ PTEC, SMPlus หรือ SCT ให้แสดง PTEC เป็นค่าเริ่มต้น
+      const company = ["PTEC", "SMPlus", "SCT"].includes(originalCompany) 
+        ? originalCompany 
+        : "PTEC"
+
       // เลือกโลโก้ตามบริษัท
       const getCompanyLogo = () => {
         if (company === "PTEC") return Picture1
         if (company === "SCT") return Picture2
         if (company === "SMPlus") return LogoSMPlus
-        return null
+        return Picture1 // ค่าเริ่มต้นเป็น PTEC logo
       }
 
       const logo = getCompanyLogo()
 
       return (
         <div className="flex items-center gap-2 w-[100px] justify-center">
-          {logo && (
-            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Image
-                src={logo}
-                alt={company}
-                fill
-                className="object-contain p-1"
-              />
-            </div>
-          )}
+          <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <Image
+              src={logo}
+              alt={company}
+              fill
+              className="object-contain p-1"
+            />
+          </div>
           <span className="font-medium text-sm">
-            {company || "-"}
+            {company}
           </span>
         </div>
       )
@@ -127,7 +132,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-            วันที่ทำรายการ
+          วันที่ทำรายการ
           <ArrowUpDown />
         </Button>
       )
@@ -163,7 +168,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
     ),
     cell: ({ row }) => {
       const category = row.getValue("car_categary_name") as string
-      
+
       return (
         <div className="flex justify-center">
           {category === "รถยนต์ประจำตำแหน่ง" ? (
@@ -195,23 +200,23 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
       )
     },
   },
-  { 
+  {
     accessorKey: "sb_status_name",
     header: ({ column }) => (
       <div className="text-center">สถานะ</div>
     ),
     cell: ({ row }) => {
       const status = row.getValue("sb_status_name") as string
-      
+
       // ตรวจสอบประเภทสถานะ
       const isAdminApproved = status?.includes('[') && status?.includes('] ตรวจสอบแล้ว')
       const isUserChecked = status?.includes('ตรวจสอบแล้ว')
       const isCompleted = status === 'ดำเนินการเสร็จสิ้น'
       const isWaiting = status === 'รอ Admin ตรวจสอบ'
-      
+
       // แยก username ออกจาก status (ถ้ามี)
       const username = status?.match(/\[(.*?)\]/)?.[1]
-      
+
       return (
         <div className="flex justify-center">
           {isAdminApproved ? (
@@ -249,7 +254,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-xs transition-all duration-200 border-2 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50">
               <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
               <Clock className="h-3.5 w-3.5" />
-              <span>รอตรวจสอบ</span>
+              <span>{status}</span>
             </div>
           ) : (
             <div className="text-sm text-gray-500">
@@ -265,7 +270,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
     header: "Actions",
     cell: ({ row }) => {
       const smartCar = row.original
-
+      const { data: session } = useSession()
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -282,18 +287,29 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               Copy Smart Car Code
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+          {((!smartCar.admin_approve || smartCar.admin_approve === null || smartCar.admin_approve === '') 
+            && (session?.user?.depid === 19 || session?.user?.depid === 23)) && (
+              <Link href={`/smart/smart_car/checklist?code=${smartCar.sb_code}`}>
+                <DropdownMenuItem>
+                  <Check className="mr-2 h-4 w-4" />
+                  ตรวจสอบเอกสาร
+                </DropdownMenuItem>
+              </Link>
+            )}
             {/* <Link href={`/smart/smart_car/updateform?code=${smartCar.sb_code}`}> */}
-              <DropdownMenuItem disabled>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
+            {/* <DropdownMenuItem disabled>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem> */}
             {/* </Link> */}
-            <Link href={`/smart/smart_car/updateform?code=${smartCar.sb_code}`}>
-            <DropdownMenuItem>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Asset
-            </DropdownMenuItem>
-            </Link>
+            {(session?.user?.UserCode === smartCar.usercode || session?.user?.role_id === 1) && (
+              <Link href={`/smart/smart_car/updateform?code=${smartCar.sb_code}`}>
+                <DropdownMenuItem>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Asset
+                </DropdownMenuItem>
+              </Link>
+            )}
             <DropdownMenuItem disabled className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Asset

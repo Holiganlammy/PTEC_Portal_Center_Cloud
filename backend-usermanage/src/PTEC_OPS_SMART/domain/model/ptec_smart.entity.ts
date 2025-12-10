@@ -189,3 +189,46 @@ export interface SmartCarOperationEntity {
   sb_operationid_location: string;
   active: boolean | number;
 }
+
+export interface SmartBillAcceptResult {
+  success: number;
+  message: string;
+  sb_code: string;
+  sb_id: number | null;
+  admin_approve: string | null;
+  admin_approveDate: Date | null;
+  sb_status: number | null;
+  car_infoid: number | null;
+  updated_mile: number | null;
+  car_infocode: string | null;
+  usercode: string | null;
+  sb_name: string | null;
+  sb_fristName: string | null;
+  sb_lastName: string | null;
+  sb_status_name: string | null;
+}
+export interface SmartBillAcceptSuccessResponse {
+  success: true;
+  message: string;
+  data: {
+    sb_code: string;
+    sb_id: number;
+    sb_status: number;
+    sb_status_name: string;
+    admin_approve: string;
+    admin_approveDate: Date;
+    car_infoid: number;
+    car_infocode: string;
+    updated_mile: number;
+    usercode: string;
+    sb_name: string;
+    sb_fristName: string;
+    sb_lastName: string;
+  };
+}
+export interface SmartBillAcceptErrorResponse {
+  success: false;
+  message: string;
+  error: string;
+  sb_code?: string | null;
+}

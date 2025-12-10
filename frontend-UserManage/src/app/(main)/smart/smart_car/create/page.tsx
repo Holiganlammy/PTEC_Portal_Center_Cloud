@@ -469,8 +469,8 @@ export default function FormsStart() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Header Section */}
           <CompanyHeader 
             companyName={smartBillHeader.sb_name}
@@ -478,7 +478,7 @@ export default function FormsStart() {
           />
 
           {/* Form Content */}
-          <div className="p-8 space-y-8">
+          <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
             {/* User Information */}
             <UserInformation 
               users={users}
@@ -498,9 +498,9 @@ export default function FormsStart() {
             <div className="h-px bg-gray-200"></div>
 
             {/* Cars Section */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">รายการรถยนต์</h2>
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">รายการรถยนต์</h2>
               </div>
 
               {/* Cars List */}
@@ -537,7 +537,7 @@ export default function FormsStart() {
                 type="text"
                 value={smartBillHeader.reamarks}
                 onChange={(e) => setSmartBillHeader(prev => ({ ...prev, reamarks: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
                 placeholder="ระบุสถานที่จอดรถ"
               />
             </div>
@@ -546,7 +546,7 @@ export default function FormsStart() {
             <div className="space-y-3">
               <label className="text-sm font-medium text-gray-900">สถานะการล้างรถ</label>
               <RadioGroup
-                className="flex gap-6"
+                className="flex flex-col sm:flex-row gap-4 sm:gap-6"
                 value={smartBillHeader.clean_status.toString()}
                 onValueChange={(value) => setSmartBillHeader(prev => ({
                   ...prev,
@@ -579,10 +579,10 @@ export default function FormsStart() {
             /> */}
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-6 border-t border-gray-200">
+            <div className="flex justify-center sm:justify-end pt-6 border-t border-gray-200">
               <button
                 onClick={() => handleSubmit()}
-                className="px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-all"
+                className="w-full sm:w-auto px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-all text-sm sm:text-base"
               >
                 {(() => {
                   // Check if all cars are existing cars (not new ones)
