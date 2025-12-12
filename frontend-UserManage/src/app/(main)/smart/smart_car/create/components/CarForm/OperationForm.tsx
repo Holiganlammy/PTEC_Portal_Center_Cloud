@@ -321,27 +321,27 @@ export default function OperationForm({
   return (
     <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-6">
       <div className="flex items-center justify-between">
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-700">
+        <Label className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border border-gray-300 bg-white text-gray-700">
           กิจกรรมที่ {carOperationIndex + 1}
-        </span>
+        </Label>
         <button
           onClick={() => onRemoveOperation(operationIndex)}
           className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-          disabled={isFirstOperation}
+          // disabled={isFirstOperation}
         >
-          <X className={cn("w-4 h-4", isFirstOperation && "opacity-50 cursor-not-allowed")} />
+          <X className={cn("w-4 h-4")} />
         </button>
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium text-gray-900">
+        <Label className="text-sm font-medium text-gray-900">
           เบิก/ไม่เบิก <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <div className="space-y-2">
           <RadioGroup 
             value={operation.sb_paystatus}
             onValueChange={(value) => onOperationChange(operationIndex, 'sb_paystatus', value)}
-            className="flex gap-6"
+            className="flex gap-6 bg-white"
           >
             {[
               { value: '1', label: 'เบิก' },
@@ -366,10 +366,11 @@ export default function OperationForm({
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-900">
+        <Label className="text-sm font-medium text-gray-900">
           บันทึกกิจกรรมการใช้งาน <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <Textarea
+          className='bg-white'
           value={operation.sb_operationid_location}
           onChange={(e) => onOperationChange(operationIndex, 'sb_operationid_location', e.target.value)}
           placeholder="ระบุกิจกรรมที่ทำ..."
@@ -379,9 +380,9 @@ export default function OperationForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* วันที่ออกเดินทาง */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-900">
+          <Label className="text-sm font-medium text-gray-900">
             วันที่ออกเดินทาง <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
               <Input
@@ -402,7 +403,7 @@ export default function OperationForm({
                   }
                 }}
                 placeholder="วว/ดด/ปปปป"
-                className="w-full pr-10"
+                className="w-full pr-10 bg-white"
                 maxLength={10}
               />
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
@@ -454,7 +455,7 @@ export default function OperationForm({
                 }}
                 placeholder="HH:mm"
                 maxLength={5}
-                className="w-full pr-16"
+                className="w-full pr-16 bg-white"
               />
               <span className="absolute left-13 top-1/2 transform -translate-y-1/2 text-md text-gray-600 pointer-events-none">
                 น.
@@ -475,8 +476,8 @@ export default function OperationForm({
                     <h4 className="font-medium text-sm">เลือกเวลา</h4>
                     <div className="flex items-center gap-4">
                       <div className="space-y-2">
-                        <label className="text-xs text-gray-600">ชั่วโมง</label>
-                        <div className="h-40 w-20 border rounded overflow-auto">
+                        <Label className="text-xs text-gray-600">ชั่วโมง</Label>
+                        <div className="h-40 w-20 border rounded overflow-auto bg-white">
                           <div className="space-y-1 p-1">
                             {hourOptions.map((hour) => (
                               <button
@@ -503,8 +504,8 @@ export default function OperationForm({
                       </div>
                       <div className="text-lg font-bold">:</div>
                       <div className="space-y-2">
-                        <label className="text-xs text-gray-600">นาที</label>
-                        <div className="h-40 w-20 border rounded overflow-auto">
+                        <Label className="text-xs text-gray-600">นาที</Label>
+                        <div className="h-40 w-20 border rounded overflow-auto bg-white">
                           <div className="space-y-1 p-1">
                             {minuteOptions.map((minute) => (
                               <button
@@ -544,9 +545,9 @@ export default function OperationForm({
 
         {/* วันที่สิ้นสุด */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-900">
+          <Label className="text-sm font-medium text-gray-900">
             วันที่สิ้นสุด <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
               <Input
@@ -567,7 +568,7 @@ export default function OperationForm({
                   }
                 }}
                 placeholder="วว/ดด/ปปปป"
-                className="w-full pr-10"
+                className="w-full pr-10 bg-white"
                 maxLength={10}
               />
               <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
@@ -619,7 +620,7 @@ export default function OperationForm({
                 }}
                 placeholder="HH:mm"
                 maxLength={5}
-                className="w-full pr-16"
+                className="w-full pr-16 bg-white"
               />
               <span className="absolute left-13 top-1/2 transform -translate-y-1/2 text-md text-gray-600 pointer-events-none">
                 น.
@@ -668,8 +669,8 @@ export default function OperationForm({
                       </div>
                       <div className="text-lg font-bold">:</div>
                       <div className="space-y-2">
-                        <label className="text-xs text-gray-600">นาที</label>
-                        <div className="h-40 w-20 border rounded overflow-auto">
+                        <Label className="text-xs text-gray-600">นาที</Label>
+                        <div className="h-40 w-20 border rounded overflow-auto bg-white">
                           <div className="space-y-1 p-1">
                             {minuteOptions.map((minute) => (
                               <button
@@ -737,7 +738,7 @@ export default function OperationForm({
                 }
               }}
               className={cn(
-                "w-full px-3 py-2 border rounded-lg transition-all",
+                "w-full px-3 py-2 border rounded-lg transition-all bg-white",
                 isFirstOperation 
                   ? "bg-gray-100 cursor-not-allowed" 
                   : "focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent",
@@ -768,7 +769,7 @@ export default function OperationForm({
             value={operation.sb_operationid_startoil}
             onValueChange={(value) => onOperationChange(operationIndex, 'sb_operationid_startoil', value)}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
               <SelectValue placeholder="เลือก" />
             </SelectTrigger>
             <SelectContent>
@@ -807,7 +808,7 @@ export default function OperationForm({
                 validateEndMile(value);
               }}
               className={cn(
-                "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
+                "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all bg-white",
                 endMileError && "border-red-500"
               )}
               placeholder="0"
@@ -830,7 +831,7 @@ export default function OperationForm({
             value={operation.sb_operationid_endoil}
             onValueChange={(value) => onOperationChange(operationIndex, 'sb_operationid_endoil', value)}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
               <SelectValue placeholder="เลือก" />
             </SelectTrigger>
             <SelectContent>

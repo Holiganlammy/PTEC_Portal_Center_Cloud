@@ -97,7 +97,7 @@ export default function CarForm({
         car_color: '',
         car_milerate: 0,
         car_remarks: '',
-        car_categaryid: 0,
+        car_categaryid: 5, // ✅ คงค่า 5 แทนที่จะรีเซ็ตเป็น 0
       });
       setSearchValue("");
       setActiveTab("select");
@@ -171,6 +171,7 @@ export default function CarForm({
       car_color: '',
       car_milerate: 0,
       car_remarks: '', 
+      car_categaryid: 5, // ✅ คงค่า 5 แทนที่จะรีเซ็ตเป็น 0
     });
     
     setSearchValue("");
@@ -194,7 +195,7 @@ export default function CarForm({
         car_color: '',
         car_milerate: 0,
         car_remarks: '',
-        car_categaryid: 0,
+        car_categaryid: 5,
       });
       setSearchValue("");
       if (open) {
@@ -359,18 +360,69 @@ export default function CarForm({
             </TabsContent>
 
             {/* Tab: เพิ่มรถใหม่ / แก้ไขทะเบียน */}
-            <TabsContent value="new" className="space-y-3 mt-4">
-              <div className="space-y-2">
+            <TabsContent value="new" className="space-y-4 mt-4">
+              <div className="space-y-3">
                 <Label className="text-sm font-medium text-gray-900">
                   เพิ่มทะเบียนรถ <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  type="text"
-                  value={car.car_infocode}
-                  onChange={(e) => onCarChange(carIndex, 'car_infocode', e.target.value)}
-                  placeholder={isUpdateMode ? "แก้ไขทะเบียนรถ" : "กรอกทะเบียนรถใหม่ เช่น กก-1234"}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:outline-none"
-                />
+                
+                {/* กรอบทะเบียน */}
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex gap-3 items-center justify-center">
+                    <div className="flex flex-col items-center">
+                      <Label className="text-xs text-gray-600 mb-1">ตัวอักษร</Label>
+                      <Input
+                        type="text"
+                        value={car.car_infocode ? car.car_infocode.split('-')[0] || '' : ''}
+                        onChange={(e) => {
+                          const letters = e.target.value;
+                          const numbers = car.car_infocode ? car.car_infocode.split('-')[1] || '' : '';
+                          const fullPlate = letters && numbers ? `${letters}-${numbers}` : letters || numbers || '';
+                          onCarChange(carIndex, 'car_infocode', fullPlate);
+                        }}
+                        placeholder="กข"
+                        maxLength={10}
+                        className="w-28 px-3 py-2 bg-white text-center text-sm font-medium border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:outline-none"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center pt-5">
+                      <span className="text-gray-400 font-bold text-lg">-</span>
+                    </div>
+                    
+                    <div className="flex flex-col items-center">
+                      <Label className="text-xs text-gray-600 mb-1">ตัวเลข</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={car.car_infocode ? car.car_infocode.split('-')[1] || '' : ''}
+                        onInput={(e) => {
+                          const target = e.target as HTMLInputElement;
+                          target.value = target.value.replace(/[^0-9]/g, '');
+                        }}
+                        onChange={(e) => {
+                          const numbers = e.target.value.replace(/[^0-9]/g, '');
+                          const letters = car.car_infocode ? car.car_infocode.split('-')[0] || '' : '';
+                          const fullPlate = letters && numbers ? `${letters}-${numbers}` : letters || numbers || '';
+                          onCarChange(carIndex, 'car_infocode', fullPlate);
+                        }}
+                        placeholder="1234"
+                        maxLength={4}
+                        className="w-20 px-3 py-2 bg-white text-center text-sm font-medium border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="text-center mt-3">
+                    <div className="text-xs text-gray-500">
+                      รูปแบบ: อักษรไม่เกิน 10 ตัว + ตัวเลข 1-4 ตัว
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      ตัวอย่าง: "กข-123" หรือ "สมชาย-1234"
+                    </div>
+                  </div>
+                </div>
                 {car.car_infocode && !isExistingCar && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-xs text-blue-700 font-medium">
@@ -390,113 +442,119 @@ export default function CarForm({
         </div>
 
         {/* ข้อมูลรถส่วนอื่นๆ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-900">
-              ประเภทของรถ <span className="text-red-500">*</span>
-            </label>
-            <Select
-              value={car.car_typeid && car.car_typeid > 0 ? car.car_typeid.toString() : ''}
-              onValueChange={(value) => onCarChange(carIndex, 'car_typeid', parseInt(value))}
-              disabled={activeTab === 'select'}
-            >
-              <SelectTrigger className={cn(
-                "w-full px-3 py-2 border border-gray-300 rounded-lg",
-                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
-              )}>
-                <SelectValue placeholder="เลือกประเภท" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2">รถมอเตอร์ไซค์</SelectItem>
-                <SelectItem value="3">รถยนต์</SelectItem>
-                <SelectItem value="4">รถยนต์กระบะ</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="space-y-4">
+          {/* แถวที่ 1: ประเภทรถ, ยี่ห้อ, รุ่น */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-900">
+                ประเภทรถ <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={car.car_typeid && car.car_typeid > 0 ? car.car_typeid.toString() : ''}
+                onValueChange={(value) => onCarChange(carIndex, 'car_typeid', parseInt(value))}
+                disabled={activeTab === 'select'}
+              >
+                <SelectTrigger className={cn(
+                  "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm",
+                  activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+                )}>
+                  <SelectValue placeholder="เลือก" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">มอเตอร์ไซค์</SelectItem>
+                  <SelectItem value="3">รถยนต์</SelectItem>
+                  <SelectItem value="4">รถกระบะ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-900">
+                ยี่ห้อ <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="text"
+                value={car.car_band || ''}
+                onChange={(e) => onCarChange(carIndex, 'car_band', e.target.value)}
+                disabled={activeTab === 'select'}
+                className={cn(
+                  "w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
+                  activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+                )}
+                placeholder="ยี่ห้อ"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-900">
+                รุ่น <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="text"
+                value={car.car_tier || ''}
+                onChange={(e) => onCarChange(carIndex, 'car_tier', e.target.value)}
+                disabled={activeTab === 'select'}
+                className={cn(
+                  "w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
+                  activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+                )}
+                placeholder="รุ่น"
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-900">
-              ยี่ห้อของรถ <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              value={car.car_band || ''}
-              onChange={(e) => onCarChange(carIndex, 'car_band', e.target.value)}
-              disabled={activeTab === 'select'}
-              className={cn(
-                "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
-                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
-              )}
-              placeholder="ยี่ห้อ"
-            />
-          </div>
+          {/* แถวที่ 2: สีรถ, เลขไมล์ */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-900">
+                สีรถ <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="text"
+                value={car.car_color || ''}
+                onChange={(e) => onCarChange(carIndex, 'car_color', e.target.value)}
+                disabled={activeTab === 'select'}
+                className={cn(
+                  "w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
+                  activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+                )}
+                placeholder="สี"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-900">
-              รุ่น <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              value={car.car_tier || ''}
-              onChange={(e) => onCarChange(carIndex, 'car_tier', e.target.value)}
-              disabled={activeTab === 'select'}
-              className={cn(
-                "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
-                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
-              )}
-              placeholder="รุ่น"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-900">
-              สีรถ <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              value={car.car_color || ''}
-              onChange={(e) => onCarChange(carIndex, 'car_color', e.target.value)}
-              disabled={activeTab === 'select'}
-              className={cn(
-                "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
-                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
-              )}
-              placeholder="สี"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-900">
-              เลขไมล์ปัจจุบัน <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={car.car_milerate || ''}
-              disabled={activeTab === 'select'}
-              onInput={(e) => {
-                // อนุญาตเฉพาะตัวเลข
-                const target = e.target as HTMLInputElement;
-                target.value = target.value.replace(/[^0-9]/g, '');
-              }}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9]/g, '');
-                const mileRate = parseFloat(value) || 0;
-                onCarChange(carIndex, 'car_milerate', mileRate);
-                onUpdateOperationMileRates(carIndex, mileRate);
-              }}
-              className={cn(
-                "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
-                activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
-              )}
-              placeholder={isExistingCar ? "ข้อมูลจากระบบ" : "กรอกเลขไมล์ปัจจุบัน"}
-            />
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-900">
+                เลขไมล์ปัจจุบัน <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={car.car_milerate || ''}
+                disabled={activeTab === 'select'}
+                onInput={(e) => {
+                  // อนุญาตเฉพาะตัวเลข
+                  const target = e.target as HTMLInputElement;
+                  target.value = target.value.replace(/[^0-9]/g, '');
+                }}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  const mileRate = parseFloat(value) || 0;
+                  onCarChange(carIndex, 'car_milerate', mileRate);
+                  onUpdateOperationMileRates(carIndex, mileRate);
+                }}
+                className={cn(
+                  "w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all",
+                  activeTab === 'select' && "bg-gray-100 cursor-not-allowed"
+                )}
+                placeholder={isExistingCar ? "ข้อมูลจากระบบ" : "กรอกเลขไมล์ปัจจุบัน"}
+              />
+            </div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-900">หมายเหตุ</label>
+          <Label className="text-sm font-medium text-gray-900">หมายเหตุ</Label>
           <Textarea
             value={car.car_remarks || ''}
             onChange={(e) => onCarChange(carIndex, 'car_remarks', e.target.value)}
@@ -560,6 +618,7 @@ export default function CarForm({
         </button>
       </div>
       <Label className='text-red-600'>หมายเหตุ: ถ้ายังไม่เลือกทะเบียนรถ จะไม่สามารถเพิ่มกิจกรรมได้</Label>
+      <Label className='text-red-600'>หมายเหตุที่ 2: สามารถเพิ่มทะเบียนรถใหม่ได้โดยไม่ต้องเพิ่มกิจกรรม</Label>
     </div>
   );
 }

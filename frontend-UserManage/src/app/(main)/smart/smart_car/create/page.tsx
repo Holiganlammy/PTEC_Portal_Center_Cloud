@@ -569,7 +569,7 @@ export default function FormsStart() {
               </RadioGroup>
             </div>
 
-            <div className="h-px bg-gray-200"></div>
+            {/* <div className="h-px bg-gray-200"></div> */}
 
             {/* File Upload */}
             {/* <FileUpload 
