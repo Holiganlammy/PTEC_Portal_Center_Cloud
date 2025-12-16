@@ -33,9 +33,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { 
   Trash2, 
-  Calendar, 
+  Calendar as CalendarIcon, 
   MapPin, 
   FileText,
   Plus,
@@ -91,12 +92,103 @@ export default function ExpenseTable({
   const [openGuestCombobox, setOpenGuestCombobox] = useState<{[key: number]: boolean}>({})
   const [selectedRemark, setSelectedRemark] = useState<string | null>(null)
   
+  // State สำหรับ allowance date/time inputs
+  const [allowanceStartDateOpen, setAllowanceStartDateOpen] = useState(false)
+  const [allowanceEndDateOpen, setAllowanceEndDateOpen] = useState(false)
+  const [allowanceStartTimeOpen, setAllowanceStartTimeOpen] = useState(false)
+  const [allowanceEndTimeOpen, setAllowanceEndTimeOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  ///////////////////////////////////////////////////////////////////////////
+  const [allowanceStartDateInput, setAllowanceStartDateInput] = useState('')
+  const [allowanceEndDateInput, setAllowanceEndDateInput] = useState('')
+  const [allowanceStartTimeInput, setAllowanceStartTimeInput] = useState('08:00')
+  const [allowanceEndTimeInput, setAllowanceEndTimeInput] = useState('17:00')
+  
   // Options from API
   const [options, setOptions] = useState<{
     users?: UserHotelWelfare[]
     provinces?: Provinces[]
     costOther?: CostOther[]
   }>({})
+
+  // ฟังก์ชันสำหรับจัดการ date/time
+  const generateHourOptions = () => {
+    const options = []
+    for (let hour = 0; hour < 24; hour++) {
+      options.push(hour.toString().padStart(2, '0'))
+    }
+    return options
+  }
+  
+  const generateMinuteOptions = () => {
+    const options = []
+    for (let minute = 0; minute < 60; minute++) {
+      options.push(minute.toString().padStart(2, '0'))
+    }
+    return options
+  }
+  
+  const formatTimeInput = (timeStr: string) => {
+    let cleaned = timeStr.replace(/[^0-9]/g, '')
+    if (cleaned.length > 4) cleaned = cleaned.substr(0, 4)
+    if (cleaned.length >= 2) {
+      cleaned = cleaned.substr(0, 2) + ':' + cleaned.substr(2)
+    }
+    return cleaned
+  }
+  
+  const validateAndFixTime = (input: string) => {
+    if (!input || input.length < 5) return input
+    
+    const parts = input.split(':')
+    if (parts.length !== 2) return input
+    
+    let hour = parseInt(parts[0], 10)
+    let minute = parseInt(parts[1], 10)
+    
+    if (hour > 23) hour = 23
+    if (hour < 0) hour = 0
+    if (minute > 59) minute = 59
+    if (minute < 0) minute = 0
+    
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+  }
+  
+  const formatDateInput = (dateStr: string) => {
+    let cleaned = dateStr.replace(/[^0-9]/g, '')
+    if (cleaned.length > 8) cleaned = cleaned.substr(0, 8)
+    
+    if (cleaned.length >= 2) {
+      cleaned = cleaned.substr(0, 2) + '/' + cleaned.substr(2)
+    }
+    if (cleaned.length >= 5) {
+      cleaned = cleaned.substr(0, 5) + '/' + cleaned.substr(5)
+    }
+    
+    return cleaned
+  }
+  
+  const parseDateInput = (input: string) => {
+    if (!input || input.length < 8) return null
+    
+    const parts = input.split('/')
+    if (parts.length !== 3) return null
+    
+    const day = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10) - 1
+    const year = parseInt(parts[2], 10)
+    
+    const date = new Date(year, month, day)
+    
+    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+      return null
+    }
+    
+    return date
+  }
+
+  const hourOptions = generateHourOptions()
+  const minuteOptions = generateMinuteOptions()
 
   const handleDelete = async (index: number) => {
     if (smartBill_Withdraw.lock_status) {
@@ -272,7 +364,21 @@ export default function ExpenseTable({
         }] 
       })
     } else if (expandedCategory?.type === 'allowance') {
-      setAllowanceItem({ foodStatus: false })
+      const today = dayjs()
+      const startDateTime = today.hour(8).minute(0).second(0) // 08:00
+      const endDateTime = today.hour(17).minute(0).second(0)   // 17:00
+      
+      setAllowanceItem({ 
+        foodStatus: false,
+        startdate: startDateTime.format('YYYY-MM-DDTHH:mm:ss'),
+        enddate: endDateTime.format('YYYY-MM-DDTHH:mm:ss')
+      })
+      
+      // ตั้งค่า Input fields
+      setAllowanceStartDateInput(today.format('DD/MM/YYYY'))
+      setAllowanceEndDateInput(today.format('DD/MM/YYYY'))
+      setAllowanceStartTimeInput('08:00')
+      setAllowanceEndTimeInput('17:00')
     } else if (expandedCategory?.type === 'fuel') {
       setFuelItem({})
     } else if (expandedCategory?.type === 'toll') {
@@ -358,6 +464,11 @@ export default function ExpenseTable({
     setHotelItem({})
     setOtherItem({})
     setWelfareData({})
+    // Reset allowance date/time inputs
+    setAllowanceStartDateInput('')
+    setAllowanceEndDateInput('')
+    setAllowanceStartTimeInput('08:00')
+    setAllowanceEndTimeInput('17:00')
   }
 
   // ========== ALLOWANCE (เบี้ยเลี้ยง) ==========
@@ -418,20 +529,51 @@ export default function ExpenseTable({
     
     const start = dayjs(allowanceItem.startdate)
     const end = dayjs(allowanceItem.enddate)
-    const diffInHours = end.diff(start, 'hour')
+    const totalHours = end.diff(start, 'hour')
     
     console.log('📊 Time Calculation:', {
-      startdate: allowanceItem.startdate,
-      enddate: allowanceItem.enddate,
-      diffInHours,
-      calculatedDays: diffInHours < 12 ? 0 : Math.ceil(diffInHours / 12) / 2
+      startdate: start.format('DD/MM/YYYY HH:mm'),
+      enddate: end.format('DD/MM/YYYY HH:mm'),
+      totalHours
     })
     
-    // ถ้า < 12 ชม. = ไม่มีสิทธิ์
-    if (diffInHours < 12) return 0
+    // ✅ น้อยกว่า 12 ชม. = 0 วัน
+    if (totalHours < 12) {
+      console.log('❌ น้อยกว่า 12 ชม. = 0 วัน')
+      return 0
+    }
     
-    // คำนวณวัน: 12 ชม. = 0.5 วัน, 24 ชม. = 1 วัน, 36 ชม. = 1.5 วัน
-    return Math.ceil(diffInHours / 12) / 2
+    // ✅ 12-23 ชม. = 1 วัน
+    if (totalHours < 24) {
+      console.log('✅ 12-23 ชม. = 1 วัน')
+      return 1
+    }
+    
+    // ✅ 24-35 ชม. = 1 วัน (ยังไม่ถึง 36)
+    if (totalHours < 36) {
+      console.log('✅ 24-35 ชม. = 1 วัน')
+      return 1
+    }
+    
+    // ✅ 36+ ชม. = คำนวณจำนวนวัน
+    // ทุกๆ 24 ชม. = 1 วัน
+    const fullDays = Math.floor(totalHours / 24)
+    const remainingHours = totalHours % 24
+    
+    let days = fullDays
+    
+    // ถ้าชม.ที่เหลือ >= 12 ชม. ให้เพิ่มอีก 1 วัน
+    if (remainingHours >= 12) {
+      days += 1
+    }
+    
+    console.log('📊 Result:', {
+      fullDays,
+      remainingHours,
+      totalDays: days
+    })
+    
+    return days
   }
 
   // ========== HOTEL (โรงแรม) ==========
@@ -534,6 +676,7 @@ export default function ExpenseTable({
 
   const handleSaveNew = async () => {
     if (!expandedCategory) return
+    if (isSaving) return // ป้องกันการกดซ้ำ
     
     if (smartBill_Withdraw.lock_status) {
       Swal.fire({
@@ -545,6 +688,20 @@ export default function ExpenseTable({
       return
     }
 
+    // Validation สำหรับเบี้ยเลี้ยง
+    if (expandedCategory.type === 'allowance') {
+      if (!allowanceItem.usercode) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาเลือกผู้เดินทาง',
+          text: 'กรุณาเลือกผู้เดินทางก่อนบันทึก',
+          confirmButtonText: 'รับทราบ'
+        })
+        return
+      }
+    }
+
+    setIsSaving(true) // เริ่ม loading
     try {
       const sbwdtl_id = smartBill_WithdrawDtl[expandedCategory.index].sbwdtl_id
       let categoryId: number | null = null
@@ -695,6 +852,8 @@ export default function ExpenseTable({
         error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้', 
         'error'
       )
+    } finally {
+      setIsSaving(false) // หยุด loading
     }
   }
 
@@ -884,11 +1043,11 @@ export default function ExpenseTable({
                       <TableCell>
                         <div className="space-y-1">
                           <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
+                            <CalendarIcon className="h-3 w-3" />
                             {item.startdate ? dayjs(item.startdate.toString()).format('DD/MM/YY HH:mm') : '-'}
                           </div>
                           <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
+                            <CalendarIcon className="h-3 w-3" />
                             {item.enddate ? dayjs(item.enddate.toString()).format('DD/MM/YY HH:mm') : '-'}
                           </div>
                         </div>
@@ -1095,32 +1254,333 @@ export default function ExpenseTable({
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* วันที่เริ่มต้น */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">วันที่เริ่มต้น</Label>
-                          <Input
-                            type="datetime-local"
-                            value={allowanceItem.startdate || ''}
-                            onChange={(e) => setAllowanceItem({ ...allowanceItem, startdate: e.target.value })}
-                          />
+                          <Label className="text-sm font-medium text-gray-900">
+                            วันที่เริ่มต้น <span className="text-red-500">*</span>
+                          </Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                value={allowanceStartDateInput}
+                                onChange={(e) => {
+                                  const formatted = formatDateInput(e.target.value)
+                                  setAllowanceStartDateInput(formatted)
+                                  
+                                  if (formatted.length === 10) {
+                                    const date = parseDateInput(formatted)
+                                    if (date) {
+                                      const newDateTime = dayjs(`${dayjs(date).format('YYYY-MM-DD')} ${allowanceStartTimeInput}`)
+                                      setAllowanceItem({ ...allowanceItem, startdate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                    }
+                                  }
+                                }}
+                                placeholder="วว/ดด/ปปปป"
+                                className="w-full pr-10 bg-white"
+                                maxLength={10}
+                              />
+                              <Popover open={allowanceStartDateOpen} onOpenChange={setAllowanceStartDateOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                    onClick={() => setAllowanceStartDateOpen(true)}
+                                  >
+                                    <CalendarIcon className="h-4 w-4 text-gray-500" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    mode="single"
+                                    selected={allowanceItem.startdate ? new Date(allowanceItem.startdate) : undefined}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        const newDateTime = dayjs(`${dayjs(date).format('YYYY-MM-DD')} ${allowanceStartTimeInput}`)
+                                        setAllowanceItem({ ...allowanceItem, startdate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                        setAllowanceStartDateInput(dayjs(date).format('DD/MM/YYYY'))
+                                        setAllowanceStartDateOpen(false)
+                                      }
+                                    }}
+                                    captionLayout="dropdown"
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                value={allowanceStartTimeInput}
+                                onChange={(e) => {
+                                  const formatted = formatTimeInput(e.target.value)
+                                  const validated = validateAndFixTime(formatted)
+                                  setAllowanceStartTimeInput(validated)
+                                  
+                                  if (validated.length === 5) {
+                                    const currentDate = allowanceItem.startdate ? dayjs(allowanceItem.startdate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD')
+                                    const newDateTime = dayjs(`${currentDate} ${validated}`)
+                                    setAllowanceItem({ ...allowanceItem, startdate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                  }
+                                }}
+                                placeholder="HH:mm"
+                                maxLength={5}
+                                className="w-full pr-16 bg-white"
+                              />
+                              <span className="absolute left-13 top-1/2 transform -translate-y-1/2 text-md text-gray-600 pointer-events-none">
+                                น.
+                              </span>
+                              <Popover open={allowanceStartTimeOpen} onOpenChange={setAllowanceStartTimeOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                    onClick={() => setAllowanceStartTimeOpen(true)}
+                                  >
+                                    <Clock className="h-4 w-4 text-gray-500" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-4" align="start">
+                                  <div className="space-y-4">
+                                    <h4 className="font-medium text-sm">เลือกเวลา</h4>
+                                    <div className="flex items-center gap-4">
+                                      <div className="space-y-2">
+                                        <Label className="text-xs text-gray-600">ชั่วโมง</Label>
+                                        <div className="h-40 w-20 border rounded overflow-auto bg-white">
+                                          <div className="space-y-1 p-1">
+                                            {hourOptions.map((hour) => (
+                                              <button
+                                                key={hour}
+                                                className={`w-full text-center py-1 rounded text-sm hover:bg-gray-100 ${
+                                                  allowanceStartTimeInput.split(':')[0] === hour ? 'bg-blue-500 text-white' : ''
+                                                }`}
+                                                onClick={() => {
+                                                  const newTime = `${hour}:${allowanceStartTimeInput.split(':')[1] || '00'}`
+                                                  setAllowanceStartTimeInput(newTime)
+                                                  const currentDate = allowanceItem.startdate ? dayjs(allowanceItem.startdate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD')
+                                                  const newDateTime = dayjs(`${currentDate} ${newTime}`)
+                                                  setAllowanceItem({ ...allowanceItem, startdate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                                }}
+                                              >
+                                                {hour}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-lg font-bold">:</div>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs text-gray-600">นาที</Label>
+                                        <div className="h-40 w-20 border rounded overflow-auto bg-white">
+                                          <div className="space-y-1 p-1">
+                                            {minuteOptions.map((minute) => (
+                                              <button
+                                                key={minute}
+                                                className={`w-full text-center py-1 rounded text-sm hover:bg-gray-100 ${
+                                                  allowanceStartTimeInput.split(':')[1] === minute ? 'bg-blue-500 text-white' : ''
+                                                }`}
+                                                onClick={() => {
+                                                  const newTime = `${allowanceStartTimeInput.split(':')[0] || '00'}:${minute}`
+                                                  setAllowanceStartTimeInput(newTime)
+                                                  const currentDate = allowanceItem.startdate ? dayjs(allowanceItem.startdate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD')
+                                                  const newDateTime = dayjs(`${currentDate} ${newTime}`)
+                                                  setAllowanceItem({ ...allowanceItem, startdate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                                }}
+                                              >
+                                                {minute}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-end">
+                                      <Button size="sm" onClick={() => setAllowanceStartTimeOpen(false)}>
+                                        ตกลง
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
                         </div>
+
+                        {/* วันที่สิ้นสุด */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium">วันที่สิ้นสุด</Label>
-                          <Input
-                            type="datetime-local"
-                            value={allowanceItem.enddate || ''}
-                            onChange={(e) => setAllowanceItem({ ...allowanceItem, enddate: e.target.value })}
-                          />
+                          <Label className="text-sm font-medium text-gray-900">
+                            วันที่สิ้นสุด <span className="text-red-500">*</span>
+                          </Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                value={allowanceEndDateInput}
+                                onChange={(e) => {
+                                  const formatted = formatDateInput(e.target.value)
+                                  setAllowanceEndDateInput(formatted)
+                                  
+                                  if (formatted.length === 10) {
+                                    const date = parseDateInput(formatted)
+                                    if (date) {
+                                      const newDateTime = dayjs(`${dayjs(date).format('YYYY-MM-DD')} ${allowanceEndTimeInput}`)
+                                      setAllowanceItem({ ...allowanceItem, enddate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                    }
+                                  }
+                                }}
+                                placeholder="วว/ดด/ปปปป"
+                                className="w-full pr-10 bg-white"
+                                maxLength={10}
+                              />
+                              <Popover open={allowanceEndDateOpen} onOpenChange={setAllowanceEndDateOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                    onClick={() => setAllowanceEndDateOpen(true)}
+                                  >
+                                    <CalendarIcon className="h-4 w-4 text-gray-500" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    mode="single"
+                                    selected={allowanceItem.enddate ? new Date(allowanceItem.enddate) : undefined}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        const newDateTime = dayjs(`${dayjs(date).format('YYYY-MM-DD')} ${allowanceEndTimeInput}`)
+                                        setAllowanceItem({ ...allowanceItem, enddate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                        setAllowanceEndDateInput(dayjs(date).format('DD/MM/YYYY'))
+                                        setAllowanceEndDateOpen(false)
+                                      }
+                                    }}
+                                    captionLayout="dropdown"
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                value={allowanceEndTimeInput}
+                                onChange={(e) => {
+                                  const formatted = formatTimeInput(e.target.value)
+                                  const validated = validateAndFixTime(formatted)
+                                  setAllowanceEndTimeInput(validated)
+                                  
+                                  if (validated.length === 5) {
+                                    const currentDate = allowanceItem.enddate ? dayjs(allowanceItem.enddate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD')
+                                    const newDateTime = dayjs(`${currentDate} ${validated}`)
+                                    setAllowanceItem({ ...allowanceItem, enddate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                  }
+                                }}
+                                placeholder="HH:mm"
+                                maxLength={5}
+                                className="w-full pr-16 bg-white"
+                              />
+                              <span className="absolute left-13 top-1/2 transform -translate-y-1/2 text-md text-gray-600 pointer-events-none">
+                                น.
+                              </span>
+                              <Popover open={allowanceEndTimeOpen} onOpenChange={setAllowanceEndTimeOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                    onClick={() => setAllowanceEndTimeOpen(true)}
+                                  >
+                                    <Clock className="h-4 w-4 text-gray-500" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-4" align="start">
+                                  <div className="space-y-4">
+                                    <h4 className="font-medium text-sm">เลือกเวลา</h4>
+                                    <div className="flex items-center gap-4">
+                                      <div className="space-y-2">
+                                        <label className="text-xs text-gray-600">ชั่วโมง</label>
+                                        <div className="h-40 w-20 border rounded overflow-auto">
+                                          <div className="space-y-1 p-1">
+                                            {hourOptions.map((hour) => (
+                                              <button
+                                                key={hour}
+                                                className={`w-full text-center py-1 rounded text-sm hover:bg-gray-100 ${
+                                                  allowanceEndTimeInput.split(':')[0] === hour ? 'bg-blue-500 text-white' : ''
+                                                }`}
+                                                onClick={() => {
+                                                  const newTime = `${hour}:${allowanceEndTimeInput.split(':')[1] || '00'}`
+                                                  setAllowanceEndTimeInput(newTime)
+                                                  const currentDate = allowanceItem.enddate ? dayjs(allowanceItem.enddate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD')
+                                                  const newDateTime = dayjs(`${currentDate} ${newTime}`)
+                                                  setAllowanceItem({ ...allowanceItem, enddate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                                }}
+                                              >
+                                                {hour}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-lg font-bold">:</div>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs text-gray-600">นาที</Label>
+                                        <div className="h-40 w-20 border rounded overflow-auto bg-white">
+                                          <div className="space-y-1 p-1">
+                                            {minuteOptions.map((minute) => (
+                                              <button
+                                                key={minute}
+                                                className={`w-full text-center py-1 rounded text-sm hover:bg-gray-100 ${
+                                                  allowanceEndTimeInput.split(':')[1] === minute ? 'bg-blue-500 text-white' : ''
+                                                }`}
+                                                onClick={() => {
+                                                  const newTime = `${allowanceEndTimeInput.split(':')[0] || '00'}:${minute}`
+                                                  setAllowanceEndTimeInput(newTime)
+                                                  const currentDate = allowanceItem.enddate ? dayjs(allowanceItem.enddate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD')
+                                                  const newDateTime = dayjs(`${currentDate} ${newTime}`)
+                                                  setAllowanceItem({ ...allowanceItem, enddate: newDateTime.format('YYYY-MM-DDTHH:mm:ss') })
+                                                }}
+                                              >
+                                                {minute}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-end">
+                                      <Button size="sm" onClick={() => setAllowanceEndTimeOpen(false)}>
+                                        ตกลง
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
                       {/* ✅ แสดงข้อมูลระยะเวลา */}
                       {allowanceItem.startdate && allowanceItem.enddate && (
-                        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mx-auto max-w-md">
                           <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
                             <Clock className="h-4 w-4" />
                             <span>
-                              ระยะเวลา: {dayjs(allowanceItem.enddate).diff(dayjs(allowanceItem.startdate), 'hour')} ชั่วโมง
+                              ระยะเวลา: {(() => {
+                                const totalHours = dayjs(allowanceItem.enddate).diff(dayjs(allowanceItem.startdate), 'hour')
+                                const days = Math.floor(totalHours / 24)
+                                const hours = totalHours % 24
+                                
+                                if (days === 0) {
+                                  return `${hours} ชั่วโมง`
+                                } else if (hours === 0) {
+                                  return `${days} วัน`
+                                } else {
+                                  return `${days} วัน ${hours} ชั่วโมง`
+                                }
+                              })()}
                               {calculateDays() === 0 && (
                                 <span className="ml-2 text-orange-600 dark:text-orange-400 font-semibold">
                                   (ไม่ถึงเกณฑ์ 12 ชม.)
@@ -1156,16 +1616,16 @@ export default function ExpenseTable({
 
                       <div className="space-y-3 pt-4 border-t">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600 dark:text-slate-400">อัตราต่อวัน:</span>
-                          <Badge variant="outline" className="font-mono text-base">
+                          <span className="text-sm text-slate-600 dark:text-slate-400">อัตราค่าเบี้ยเลี้ยงที่ได้รับต่อวัน ({allowanceItem.usercode}):</span>
+                          {/* <Badge variant="outline" className="font-mono text-base"> */}
                             {(parseFloat(allowanceItem.rate?.toString() || '0') || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
-                          </Badge>
+                          {/* </Badge> */}
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-600 dark:text-slate-400">ยอดก่อนหัก:</span>
-                          <span className="font-mono">
+                          <span className="text-sm text-slate-600 dark:text-slate-400">ยอดค่าเบี้ยเลี้ยงทั้งหมดที่ได้รับ:</span>
+                          <Badge variant="outline" className="font-mono text-base">
                             {(calculateDays() * (parseFloat(allowanceItem.rate?.toString() || '0') || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท
-                          </span>
+                          </Badge>
                         </div>
                         {allowanceItem.foodStatus === true && (
                           <div className="flex justify-between items-center">
@@ -1195,10 +1655,19 @@ export default function ExpenseTable({
                           onClick={handleSaveNew} 
                           className="bg-green-600 hover:bg-green-700" 
                           size="lg"
-                          disabled={calculateDays() === 0}
+                          disabled={calculateDays() === 0 || !allowanceItem.usercode || isSaving}
                         >
-                          <Save className="h-4 w-4 mr-2" />
-                          บันทึก
+                          {isSaving ? (
+                            <div className="flex items-center gap-2">
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              กำลังบันทึก...
+                            </div>
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4 mr-2" />
+                              บันทึก
+                            </>
+                          )}
                         </Button>
                       </div>
                     </Card>
@@ -1444,9 +1913,23 @@ export default function ExpenseTable({
                         <Button variant="outline" onClick={handleCancelNew} size="lg">
                           ยกเลิก
                         </Button>
-                        <Button onClick={handleSaveNew} className="bg-green-600 hover:bg-green-700" size="lg">
-                          <Save className="h-4 w-4 mr-2" />
-                          บันทึก
+                        <Button 
+                          onClick={handleSaveNew} 
+                          className="bg-green-600 hover:bg-green-700" 
+                          size="lg"
+                          disabled={isSaving}
+                        >
+                          {isSaving ? (
+                            <div className="flex items-center gap-2">
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              กำลังบันทึก...
+                            </div>
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4 mr-2" />
+                              บันทึก
+                            </>
+                          )}
                         </Button>
                       </div>
                     </Card>
@@ -1508,8 +1991,17 @@ export default function ExpenseTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button size="icon" onClick={handleSaveNew} className="h-8 w-8 bg-green-600 hover:bg-green-700">
-                        <Save className="h-4 w-4" />
+                      <Button 
+                        size="icon" 
+                        onClick={handleSaveNew} 
+                        className="h-8 w-8 bg-green-600 hover:bg-green-700"
+                        disabled={isSaving}
+                      >
+                        {isSaving ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button variant="ghost" size="icon" onClick={handleCancelNew} className="h-8 w-8">
                         <X className="h-4 w-4" />
@@ -1543,8 +2035,17 @@ export default function ExpenseTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button size="icon" onClick={handleSaveNew} className="h-8 w-8 bg-green-600 hover:bg-green-700">
-                        <Save className="h-4 w-4" />
+                      <Button 
+                        size="icon" 
+                        onClick={handleSaveNew} 
+                        className="h-8 w-8 bg-green-600 hover:bg-green-700"
+                        disabled={isSaving}
+                      >
+                        {isSaving ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button variant="ghost" size="icon" onClick={handleCancelNew} className="h-8 w-8">
                         <X className="h-4 w-4" />
@@ -1616,14 +2117,14 @@ export default function ExpenseTable({
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-600 dark:bg-slate-700 border-b border-slate-500 dark:border-slate-600">
-                <TableHead className="font-semibold text-white w-40">ช่วงเวลาเดินทาง</TableHead>
-                <TableHead className="font-semibold text-white min-w-[200px]">กิจกรรม</TableHead>
-                <TableHead className="text-center font-semibold text-white w-28">เริ่มต้น (กม.)</TableHead>
-                <TableHead className="text-center font-semibold text-white w-28">สิ้นสุด (กม.)</TableHead>
-                <TableHead className="text-center font-semibold text-white w-28">ระยะทาง</TableHead>
-                <TableHead className="text-center font-semibold text-white w-24">อัตราชดเชย</TableHead>
-                <TableHead className="text-right font-semibold text-white w-32">เบิกตามไมล์เรท</TableHead>
-                <TableHead className="text-right font-semibold text-white w-32 group relative">
+                <TableHead className="font-semibold text-white w-40 text-xs">ช่วงเวลาเดินทาง</TableHead>
+                <TableHead className="font-semibold text-white min-w-[110px] text-xs">กิจกรรม</TableHead>
+                <TableHead className="text-center font-semibold text-white w-28 text-xs">เริ่มต้น (กม.)</TableHead>
+                <TableHead className="text-center font-semibold text-white w-28 text-xs">สิ้นสุด (กม.)</TableHead>
+                <TableHead className="text-center font-semibold text-white w-28 text-xs">ระยะทาง</TableHead>
+                <TableHead className="text-center font-semibold text-white w-24 text-xs">อัตราชดเชย</TableHead>
+                <TableHead className="text-right font-semibold text-white w-32 text-xs">เบิกตามไมล์เรท</TableHead>
+                <TableHead className="text-right font-semibold text-white w-32 group relative text-xs">
                   <div className="flex items-center justify-end gap-1">
                     <span>เบิกตามบิล</span>
                     <Fuel className="h-3 w-3 opacity-50 group-hover:opacity-100" />
@@ -1633,7 +2134,7 @@ export default function ExpenseTable({
                   </div>
                 </TableHead>
                 
-                <TableHead className="text-right font-semibold text-white w-32 group relative">
+                <TableHead className="text-right font-semibold text-white w-32 group relative text-xs">
                   <div className="flex items-center justify-end gap-1">
                     <span>เบี้ยเลี้ยง</span>
                     <Utensils className="h-3 w-3 opacity-50 group-hover:opacity-100" />
@@ -1643,7 +2144,7 @@ export default function ExpenseTable({
                   </div>
                 </TableHead>
                 
-                <TableHead className="text-right font-semibold text-white w-32 group relative">
+                <TableHead className="text-right font-semibold text-white w-32 group relative text-xs">
                   <div className="flex items-center justify-end gap-1">
                     <span>ที่พัก</span>
                     <Hotel className="h-3 w-3 opacity-50 group-hover:opacity-100" />
@@ -1653,7 +2154,7 @@ export default function ExpenseTable({
                   </div>
                 </TableHead>
                 
-                <TableHead className="text-right font-semibold text-white w-32 group relative">
+                <TableHead className="text-right font-semibold text-white w-32 group relative text-xs">
                   <div className="flex items-center justify-end gap-1">
                     <span>ทางด่วน</span>
                     <Car className="h-3 w-3 opacity-50 group-hover:opacity-100" />
@@ -1663,7 +2164,7 @@ export default function ExpenseTable({
                   </div>
                 </TableHead>
                 
-                <TableHead className="text-right font-semibold text-white w-32 group relative">
+                <TableHead className="text-right font-semibold text-white w-32 group relative text-xs">
                   <div className="flex items-center justify-end gap-1">
                     <span>อื่นๆ</span>
                     <MoreHorizontal className="h-3 w-3 opacity-50 group-hover:opacity-100" />
@@ -1672,7 +2173,7 @@ export default function ExpenseTable({
                     คลิกเพื่อจัดการค่าใช้จ่ายอื่นๆ
                   </div>
                 </TableHead>
-                <TableHead className="text-right font-semibold text-white w-36">ยอดรวม</TableHead>
+                <TableHead className="text-right font-semibold text-white w-36 text-xs">ยอดรวม</TableHead>
                 <TableHead className="w-14"></TableHead>
               </TableRow>
             </TableHeader>
@@ -1681,16 +2182,29 @@ export default function ExpenseTable({
                 <React.Fragment key={item.sbwdtl_id}>
                   <TableRow className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <TableCell className="text-xs">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span className="font-medium">{dayjs(item.sbwdtl_operationid_startdate).format('DD/MM/YY')}</span>
+                      {/* <div>
+                        <div className="text-slate-600 dark:text-slate-400 text-center">
+                         <Label>วันที่เริ่มต้น</Label> 
+                         <span className="font-medium">{dayjs(item.sbwdtl_operationid_startdate).format('DD/MM/YY')}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
+                        <div className="border-l border-slate-300 dark:border-slate-700"></div>
+                        <div className="text-slate-600 dark:text-slate-400 text-center">
+                          <Label>วันที่สิ้นสุด</Label> 
                           <span className="font-medium">{dayjs(item.sbwdtl_operationid_enddate).format('DD/MM/YY')}</span>
                         </div>
-                      </div>
+                      </div> */}
+                        <div className="space-y-1">
+                          <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            เริ่มต้น:
+                            {dayjs(item.sbwdtl_operationid_startdate).format('DD/MM/YY')}
+                          </div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            สิ้นสุด:
+                            {dayjs(item.sbwdtl_operationid_enddate).format('DD/MM/YY')}
+                          </div>
+                        </div>
                     </TableCell>
                     <>
                     <TableCell className="max-w-[200px]">

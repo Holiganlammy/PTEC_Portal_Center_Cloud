@@ -222,8 +222,8 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
             <DropdownMenuSeparator />
             <Link href={`/smart/smart_bill/create?code=${smartCar.sbw_code}`}>
               <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Smart Bill
               </DropdownMenuItem>
             </Link>
             <DropdownMenuItem disabled className="text-red-600">

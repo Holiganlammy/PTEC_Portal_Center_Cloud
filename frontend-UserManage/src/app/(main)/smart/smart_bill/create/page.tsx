@@ -23,10 +23,10 @@ import ExpenseTable from './components/payment/ExpenseTable'
 import SummarySection from './components/payment/SummarySection'
 import AddExpenseDialog from './components/dialog/AddExpenseDialog'
 
-// Import dialogs
 import client from '@/lib/axios/interceptors'
 import { CarInfo } from '../../smart_car/create/service/type/types'
 import { useSession } from 'next-auth/react'
+import Swal from 'sweetalert2'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -103,53 +103,100 @@ export default function PaymentPage() {
       title,
       message
     })
-    // Auto hide after 5 seconds
     setTimeout(() => {
       setAlert(prev => ({ ...prev, show: false }))
     }, 5000)
   }
 
+  //  ฟังก์ชันล้างรายการค่าใช้จ่าย
+  const handleClearExpenses = async () => {
+    if (smartBill_WithdrawDtl.length === 0) {
+      return true
+    }
+
+    try {
+      const deletePromises = smartBill_WithdrawDtl.map(item => 
+        client.post('/SmartBill_WithdrawDtl_Delete', { 
+          sbwdtl_id: item.sbwdtl_id 
+        })
+      )
+      
+      await Promise.all(deletePromises)
+      setSmartBill_WithdrawDtl([])
+      
+      return true
+    } catch (error) {
+      console.error('❌ Error clearing expenses:', error)
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ไม่สามารถลบรายการค่าใช้จ่ายได้'
+      })
+      return false
+    }
+  }
+
+  //  ฟังก์ชันตรวจสอบก่อนเพิ่มรายการ
+  const handleAddExpenseClick = () => {
+    // ตรวจสอบว่าเลือกประเภทรถแล้วหรือยัง
+    if (smartBill_Withdraw.condition === null || smartBill_Withdraw.condition === undefined) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาเลือกประเภทรถ',
+        text: 'กรุณาเลือกประเภทการเดินทางก่อนเพิ่มรายการค่าใช้จ่าย',
+        confirmButtonText: 'ตรวจสอบ'
+      })
+      return
+    }
+
+    //  ถ้าเป็นรถบริษัท (0) หรือรถส่วนตัว (1) ต้องมีทะเบียนรถ
+    if ([0, 1].includes(smartBill_Withdraw.condition)) {
+      if (!smartBill_Withdraw.car_infocode || smartBill_Withdraw.car_infocode.trim() === '') {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาเลือกทะเบียนรถ',
+          text: 'กรุณาเลือกหมายเลขทะเบียนรถก่อนเพิ่มรายการค่าใช้จ่าย',
+          confirmButtonText: 'ตรวจสอบ'
+        })
+        return
+      }
+    }
+
+    //  ผ่านการตรวจสอบแล้ว เปิด dialog
+    setOpenAddExpense(true)
+  }
+
   const fetchData = async () => {
     try {
       setLoading(true)
-      // Fetch users, car info, provinces, etc.
-      // Replace with your actual API endpoints
       const response = await client.get('/getsUserForAssetsControl')
       setUsers(response.data.data || [])
       setCarInfoData([])
       setCarInfoDataCompany([])
+      
       if (sbw_code) {
         const billRes = await client.post('/SmartBill_Withdraw_SelectAllForms', { sbw_code })
-        // console.log('aaaaa:', billRes.data[0])
-        // console.log('Full API Response:', billRes.data)
+        
         if (billRes.data[0] && billRes.data[0].length > 0) {
           const headerData = billRes.data[0][0]
-          // console.log('Header Data:', headerData)
-          // console.log('car_infocode:', headerData.car_infocode)
-          // console.log('condition:', headerData.condition)
           
           setSmartBill_Withdraw(headerData)
           setSmartBill_WithdrawDtl(billRes.data[1] || [])
           
           if (headerData.car_infocode) {
-            // console.log('Found car_infocode, fetching car data...')
             try {
               const carRes = await client.post('/SmartBill_CarInfoSearch', { 
                 car_infocode: headerData.car_infocode 
               })
-              // console.log('Car API Response:', carRes.data)
               
               if (carRes.data && carRes.data.length > 0) {
                 if (headerData.condition === 0) {
-                  // console.log('Setting company car data')
                   setCarInfoDataCompany(carRes.data)
                 } else if (headerData.condition === 1) {
-                  // console.log('Setting personal car data')
                   setCarInfoData(carRes.data)
                 }
                 
                 const selectedCar = carRes.data.find((car: CarInfo) => car.car_infocode === headerData.car_infocode)
-                // console.log('Selected Car:', selectedCar)
                 if (selectedCar) {
                   setCarInfo(selectedCar)
                 }
@@ -159,8 +206,6 @@ export default function PaymentPage() {
             } catch (carError) {
               showAlert('error', 'Error', 'Failed to fetch car data')
             }
-          } else {
-            
           }
         }
       }
@@ -207,7 +252,6 @@ export default function PaymentPage() {
 
   const handleSubmitUpdate = async (lockAction?: 'lock' | 'unlock') => {
     try {
-      
       const payload: {
         car_infocode: string;
         condition: number | null | undefined;
@@ -265,7 +309,6 @@ export default function PaymentPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-        {/* Alert Component for Loading */}
         {alert.show && (
           <div className="fixed top-4 right-4 z-50 w-96">
             <Alert className={`
@@ -298,7 +341,6 @@ export default function PaymentPage() {
   if (!sbw_code) {
     return (
       <div className="container mx-auto py-8 px-4">
-        {/* Alert Component for No Code */}
         {alert.show && (
           <div className="fixed top-4 right-4 z-50 w-96">
             <Alert className={`
@@ -339,6 +381,7 @@ export default function PaymentPage() {
             carInfoDataCompany={carInfoDataCompany}
             setCarInfoDataCompany={setCarInfoDataCompany}
             users={users}
+            onClearExpenses={handleClearExpenses}
           />
           
           <Separator className="my-6" />
@@ -360,7 +403,6 @@ export default function PaymentPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      {/* Alert Component */}
       {alert.show && (
         <div className="fixed top-4 right-4 z-50 w-96">
           <Alert className={`
@@ -383,7 +425,6 @@ export default function PaymentPage() {
       )}
       
       <div className="container mx-auto py-8 px-4">
-        {/* Action Buttons */}
         <div className="flex gap-3 mb-6">
           <Button 
             variant="outline"
@@ -408,7 +449,6 @@ export default function PaymentPage() {
           </Button>
         </div>
 
-        {/* Main Card */}
         <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xl">
           <PaymentHeader 
             smartBill_Withdraw={smartBill_Withdraw}
@@ -428,14 +468,15 @@ export default function PaymentPage() {
             carInfoDataCompany={carInfoDataCompany}
             setCarInfoDataCompany={setCarInfoDataCompany}
             users={users}
+            onClearExpenses={handleClearExpenses}
           />
           
           <Separator className="my-6" />
           
-          {/* Add Expense Button */}
+          {/* ✅ ปุ่มเพิ่มรายการ - มี validation */}
           {!smartBill_Withdraw.lock_status && (
             <Button 
-              onClick={() => setOpenAddExpense(true)}
+              onClick={handleAddExpenseClick} // ✅ เปลี่ยนจาก setOpenAddExpense(true)
               variant="outline"
               className="w-full mb-4"
             >
@@ -458,7 +499,6 @@ export default function PaymentPage() {
           />
         </Card>
 
-        {/* Dialogs */}
         <AddExpenseDialog 
           open={openAddExpense}
           onOpenChange={setOpenAddExpense}
@@ -466,7 +506,6 @@ export default function PaymentPage() {
           fetchData={fetchData}
           sbw_code={sbw_code || ''}
         />
-        
       </div>
     </div>
   )

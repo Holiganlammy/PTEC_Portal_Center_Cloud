@@ -802,10 +802,16 @@ export default function OperationForm({
               onBlur={(e) => {
                 const value = e.target.value.replace(/[^0-9.]/g, '');
                 
-                //  Cancel debounce และอัปเดตทันที
                 debouncedEndMileChange.cancel();
                 onEndMileChange(operationIndex, value, carOperations);
                 validateEndMile(value);
+                
+                // เพิ่ม log เพื่อ debug
+                console.log('💾 End Mile saved:', {
+                  operationIndex,
+                  value,
+                  carOperationIndex
+                });
               }}
               className={cn(
                 "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all bg-white",

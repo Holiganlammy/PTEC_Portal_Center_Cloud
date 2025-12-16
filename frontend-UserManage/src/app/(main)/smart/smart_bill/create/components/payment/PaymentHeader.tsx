@@ -207,7 +207,7 @@ export default function PaymentHeader({
                   variant={smartBill_Withdraw.lock_status ? "default" : "secondary"}
                   className="font-medium"
                 >
-                  {smartBill_Withdraw.lock_status ? 'Locked' : 'Draft'}
+                  {smartBill_Withdraw.lock_status ? 'ล็อคเอกสาร' : 'ร่างเอกสาร'}
                 </Badge>
               </div>
             </div>

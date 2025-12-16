@@ -103,24 +103,43 @@ export default function AddExpenseDialog({
     setSearchValue("")
   }
 
+const [isLoading, setIsLoading] = useState(false)
+
   const handleSave = async () => {
     // Validation
     if (!formData.remark) {
-      Swal.fire('Warning', 'Please enter activity description', 'warning')
+      Swal.fire('แจ้งเตือน', 'กรุณากรอกรายละเอียดกิจกรรม', 'warning')
       return
     }
 
     if (!formData.sbwdtl_operationid_startmile || !formData.sbwdtl_operationid_endmile) {
-      Swal.fire('Warning', 'Please enter start and end mileage', 'warning')
+      Swal.fire('แจ้งเตือน', 'กรุณากรอกระยะทางเริ่มต้นและสิ้นสุด', 'warning')
       return
     }
 
-    console.log('Current smartBill_Withdraw data:', smartBill_Withdraw)
-    console.log('car_infoid:', smartBill_Withdraw.car_infoid)
-    console.log('car_infocode:', smartBill_Withdraw.car_infocode)
-
     try {
-      const body = {
+      setIsLoading(true)
+      
+      console.log('🚗 Updating vehicle info...')
+      
+      await client.post('/SmartBill_Withdraw_updateSBW', {
+        car_infocode: smartBill_Withdraw.car_infocode || '',
+        condition: smartBill_Withdraw.condition,
+        purecard: smartBill_Withdraw.pure_card || null,
+        sbw_code: sbw_code,
+        typePay: smartBill_Withdraw.typePay || '',
+        usercode: smartBill_Withdraw.ownercode || smartBill_Withdraw.UserCode
+      })
+      
+      console.log('✅ Vehicle updated')
+      
+      // Small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // ✅ 2. Add Detail (Activity)
+      console.log('📝 Adding activity...')
+      
+      await client.post('/SmartBill_Withdraw_AddrowDtl', {
         sbw_code: sbw_code,
         sb_operationid: mode === 'smartcar' ? formData.sb_operationid : '',
         ownercode: smartBill_Withdraw.ownercode,
@@ -131,18 +150,33 @@ export default function AddExpenseDialog({
         sbwdtl_operationid_enddate: dayjs(formData.sbwdtl_operationid_enddate).format('YYYY-MM-DD HH:mm:ss'),
         sbwdtl_operationid_startmile: parseFloat(formData.sbwdtl_operationid_startmile),
         sbwdtl_operationid_endmile: parseFloat(formData.sbwdtl_operationid_endmile)
-      }
-
-      console.log('Sending body to API:', body)
-      await client.post('/SmartBill_Withdraw_AddrowDtl', body)
+      })
       
-      Swal.fire('Success', 'Activity added successfully', 'success')
+      console.log('✅ Activity added')
+      
+      // ✅ 3. Success
+      await Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ',
+        text: 'เพิ่มกิจกรรมเรียบร้อย',
+        timer: 1500,
+        showConfirmButton: false
+      })
+      
       onOpenChange(false)
       resetForm()
-      fetchData()
-    } catch (error) {
-      console.error('Error saving:', error)
-      Swal.fire('Error', 'Unable to add activity', 'error')
+      await fetchData()
+      
+    } catch (error: any) {
+      console.error('❌ Error:', error)
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: error.response?.data?.message || 'ไม่สามารถเพิ่มกิจกรรมได้'
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -496,14 +530,25 @@ export default function AddExpenseDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
+            ยกเลิก
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={mode === 'smartcar' && !selectedOperation}
+            disabled={(mode === 'smartcar' && !selectedOperation) || isLoading}
           >
-            เพิ่มรายการ
+            {isLoading ? (
+              <>
+                <span className="mr-2">กำลังบันทึก</span>
+                <span className="animate-spin">⏳</span>
+              </>
+            ) : (
+              'เพิ่มรายการ'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

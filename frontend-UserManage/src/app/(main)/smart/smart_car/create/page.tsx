@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -45,12 +46,12 @@ export default function FormsStart() {
   const { data: session } = useSession();
   dayjs.extend(utc);
   dayjs.extend(timezone);
-  
+
   const [typeCar, setTypeCar] = useState<string>('');
   const [carInfoDataCompanny, setCarInfoDataCompanny] = useState<CarInfo[]>([]);
   const [carInfoData, setCarInfoData] = useState<CarInfo[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
-  
+
   // Alert Dialog states
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
@@ -144,27 +145,141 @@ export default function FormsStart() {
   };
 
   const handleAddOperation = (carIndex: number) => {
-    const carOperations = operations.filter(op => op.carIndex === carIndex);
-    const lastOp = carOperations[carOperations.length - 1];
-    const today = dayjs();
+    // ✅ ใช้ functional update เพื่อดึงค่าล่าสุด
+    setOperations(prevOperations => {
+      const carOperations = prevOperations.filter(op => op.carIndex === carIndex);
 
-    setOperations([...operations, {
-      carIndex: carIndex,
-      sb_operationid_startdate: today.hour(8).minute(0).second(0),
-      sb_operationid_startmile: lastOp?.sb_operationid_endmile
-        ? parseFloat(lastOp.sb_operationid_endmile)
-        : cars[carIndex]?.car_milerate || 0,
-      sb_operationid_startoil: '',
-      sb_operationid_enddate: today.hour(17).minute(0).second(0),
-      sb_operationid_endoil: '',
-      sb_operationid_endmile: '',
-      sb_paystatus: '',
-      sb_operationid_location: '',
-      files: [],
-      sb_operationid: 0,
-    }]);
+      // ถ้าไม่มีกิจกรรมเลย ให้เพิ่มได้เลย
+      if (carOperations.length === 0) {
+        const today = dayjs();
+        return [...prevOperations, {
+          carIndex: carIndex,
+          sb_operationid_startdate: today.hour(8).minute(0).second(0),
+          sb_operationid_startmile: cars[carIndex]?.car_milerate || 0,
+          sb_operationid_startoil: '',
+          sb_operationid_enddate: today.hour(17).minute(0).second(0),
+          sb_operationid_endoil: '',
+          sb_operationid_endmile: '',
+          sb_paystatus: '',
+          sb_operationid_location: '',
+          files: [],
+          sb_operationid: 0,
+        }];
+      }
+
+      const lastOp = carOperations[carOperations.length - 1];
+
+      // ✅ Validate กิจกรรมล่าสุดก่อนเพิ่มใหม่
+      const lastEndMile = parseFloat(lastOp.sb_operationid_endmile || '0');
+      const lastStartMile = parseFloat(lastOp.sb_operationid_startmile?.toString() || '0');
+
+      // เช็คว่ากรอกไมล์สิ้นสุดหรือยัง
+      if (!lastOp.sb_operationid_endmile || lastEndMile <= 0) {
+        showAlert(
+          'กรุณากรอกข้อมูลให้ครบ',
+          'กรุณากรอกไมล์สิ้นสุดของกิจกรรมปัจจุบันก่อนเพิ่มกิจกรรมใหม่',
+          'error'
+        );
+        return prevOperations; // ไม่เพิ่มกิจกรรมใหม่
+      }
+
+      // เช็คว่าไมล์สิ้นสุดมากกว่าไมล์เริ่มต้นหรือไม่
+      if (lastEndMile < lastStartMile) {
+        showAlert(
+          'ข้อมูลไมล์ไม่ถูกต้อง',
+          'ไมล์สิ้นสุดต้องมากกว่าหรือเท่ากับไมล์เริ่มต้น กรุณาตรวจสอบกิจกรรมปัจจุบัน',
+          'error'
+        );
+        return prevOperations;
+      }
+
+      // เช็คว่ากรอกข้อมูลอื่นๆ ครบหรือยัง
+      if (!lastOp.sb_paystatus || lastOp.sb_paystatus === '') {
+        showAlert(
+          'กรุณาเลือกสถานะการเบิก',
+          'กรุณาเลือกสถานะ เบิก/ไม่เบิก ของกิจกรรมปัจจุบันก่อนเพิ่มกิจกรรมใหม่',
+          'error'
+        );
+        return prevOperations;
+      }
+
+      if (!lastOp.sb_operationid_location || lastOp.sb_operationid_location.trim() === '') {
+        showAlert(
+          'กรุณากรอกรายละเอียดกิจกรรม',
+          'กรุณาบันทึกกิจกรรมการใช้งานของกิจกรรมปัจจุบันก่อนเพิ่มกิจกรรมใหม่',
+          'error'
+        );
+        return prevOperations;
+      }
+
+      if (!lastOp.sb_operationid_startoil || lastOp.sb_operationid_startoil === '') {
+        showAlert(
+          'กรุณาเลือกน้ำมันเริ่มต้น',
+          'กรุณาเลือกปริมาณน้ำมันเริ่มต้นของกิจกรรมปัจจุบันก่อนเพิ่มกิจกรรมใหม่',
+          'error'
+        );
+        return prevOperations;
+      }
+
+      if (!lastOp.sb_operationid_endoil || lastOp.sb_operationid_endoil === '') {
+        showAlert(
+          'กรุณาเลือกน้ำมันสิ้นสุด',
+          'กรุณาเลือกปริมาณน้ำมันสิ้นสุดของกิจกรรมปัจจุบันก่อนเพิ่มกิจกรรมใหม่',
+          'error'
+        );
+        return prevOperations;
+      }
+
+      // เช็ครูปภาพ
+      if (!lastOp.files || lastOp.files.length === 0) {
+        showAlert(
+          'กรุณาอัพโหลดรูปภาพ',
+          'กรุณาอัพโหลดรูปภาพอย่างน้อย 1 รูปสำหรับกิจกรรมปัจจุบันก่อนเพิ่มกิจกรรมใหม่',
+          'error'
+        );
+        return prevOperations;
+      }
+
+      // เช็ควันที่และเวลา
+      if (lastOp.sb_operationid_startdate && lastOp.sb_operationid_enddate) {
+        const startDateTime = dayjs(lastOp.sb_operationid_startdate);
+        const endDateTime = dayjs(lastOp.sb_operationid_enddate);
+
+        if (startDateTime.isAfter(endDateTime)) {
+          showAlert(
+            'วันที่และเวลาไม่ถูกต้อง',
+            'วันที่ออกเดินทางต้องไม่มากกว่าวันที่สิ้นสุด กรุณาตรวจสอบกิจกรรมปัจจุบัน',
+            'error'
+          );
+          return prevOperations;
+        }
+      }
+
+      // ✅ ทุกอย่างผ่าน -> เพิ่มกิจกรรมใหม่
+      const today = dayjs();
+      const newOperation = {
+        carIndex: carIndex,
+        sb_operationid_startdate: lastOp.sb_operationid_enddate || today.hour(8).minute(0).second(0),
+        sb_operationid_startmile: lastEndMile, // ใช้ไมล์สิ้นสุดจากกิจกรรมก่อนหน้า
+        sb_operationid_startoil: lastOp.sb_operationid_endoil || '',
+        sb_operationid_enddate: today.hour(17).minute(0).second(0),
+        sb_operationid_endoil: '',
+        sb_operationid_endmile: '',
+        sb_paystatus: '',
+        sb_operationid_location: '',
+        files: [],
+        sb_operationid: 0,
+      };
+
+      console.log('✅ Adding new operation:', {
+        carIndex,
+        lastEndMile,
+        newStartMile: newOperation.sb_operationid_startmile
+      });
+
+      return [...prevOperations, newOperation];
+    });
   };
-
   const updateOperationMileRates = (carIndex: number, mileRate: number) => {
     const carOperations = operations.filter(op => op.carIndex === carIndex);
     if (carOperations.length > 0) {
@@ -204,7 +319,7 @@ export default function FormsStart() {
 
   // const handleFileRemove = (index: number) => {
   //   if (!dataFilesCount) return;
-    
+
   //   const list = [...dataFilesCount];
   //   list.splice(index, 1);
   //   setDataFilesCount(list.length > 0 ? list : null);
@@ -234,16 +349,16 @@ export default function FormsStart() {
       return;
     }
 
-    const allCarsAreExisting = cars.every(car => 
+    const allCarsAreExisting = cars.every(car =>
       (typeCar === '1' ? carInfoDataCompanny : carInfoData)
         .some((existingCar) => existingCar.car_infocode === car.car_infocode)
     );
 
     if (typeCar === '1') {
-      const hasNewCars = cars.some(car => 
+      const hasNewCars = cars.some(car =>
         !carInfoDataCompanny.some((existingCar) => existingCar.car_infocode === car.car_infocode)
       );
-      
+
       if (hasNewCars) {
         showAlert(
           "แจ้งเตือน",
@@ -274,10 +389,10 @@ export default function FormsStart() {
         showAlert(
           "แจ้งเตือน",
           `รถคันที่ ${i + 1}: ${car.car_infocode === '' ? 'ระบุเลขทะเบียน' :
-          car.car_typeid === 0 ? 'ระบุประเภท' :
-            car.car_band === '' ? 'ระบุแบรนด์' :
-              car.car_tier === '' ? 'ระบุรุ่น' :
-                car.car_color === '' ? 'ระบุสี' : 'Error Code #54878584'}`
+            car.car_typeid === 0 ? 'ระบุประเภท' :
+              car.car_band === '' ? 'ระบุแบรนด์' :
+                car.car_tier === '' ? 'ระบุรุ่น' :
+                  car.car_color === '' ? 'ระบุสี' : 'Error Code #54878584'}`
         );
         return;
       }
@@ -285,16 +400,16 @@ export default function FormsStart() {
 
     for (let i = 0; i < operations.length; i++) {
       const op = operations[i];
-      
+
       if (op.sb_operationid_startdate && op.sb_operationid_enddate) {
         const startDateTime = dayjs(op.sb_operationid_startdate);
         const endDateTime = dayjs(op.sb_operationid_enddate);
-        
+
         if (startDateTime.isAfter(endDateTime)) {
           const carOps = operations.filter(o => o.carIndex === op.carIndex);
           const opIndexInCar = carOps.indexOf(op) + 1;
           showAlert(
-            "แจ้งเตือน", 
+            "แจ้งเตือน",
             `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: วันที่ออกเดินทางต้องไม่มากกว่าวันที่สิ้นสุด`
           );
           return;
@@ -303,33 +418,33 @@ export default function FormsStart() {
           const carOps = operations.filter(o => o.carIndex === op.carIndex);
           const opIndexInCar = carOps.indexOf(op) + 1;
           showAlert(
-            "แจ้งเตือน", 
+            "แจ้งเตือน",
             `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: กรุณาอัพโหลดรูปภาพอย่างน้อย 1 รูป`
           );
           return;
         }
-        
+
         if (endDateTime.isBefore(startDateTime)) {
           const carOps = operations.filter(o => o.carIndex === op.carIndex);
           const opIndexInCar = carOps.indexOf(op) + 1;
           showAlert(
-            "แจ้งเตือน", 
+            "แจ้งเตือน",
             `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่ออกเดินทาง`
           );
           return;
         }
       }
-      
+
       if (!op.sb_paystatus || op.sb_paystatus === '') {
         const carOps = operations.filter(o => o.carIndex === op.carIndex);
         const opIndexInCar = carOps.indexOf(op) + 1;
         showAlert(
-          "แจ้งเตือน", 
+          "แจ้งเตือน",
           `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: กรุณาเลือกสถานะการเบิก (เบิก/ไม่เบิก)`
         );
         return;
       }
-      
+
       if (
         !op.sb_operationid_startdate ||
         op.sb_operationid_startmile === null ||
@@ -343,12 +458,11 @@ export default function FormsStart() {
       ) {
         const carOps = operations.filter(o => o.carIndex === op.carIndex);
         const opIndexInCar = carOps.indexOf(op) + 1;
-        showAlert("แจ้งเตือน", 
-          `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: ${
-            !op.sb_operationid_startdate || !op.sb_operationid_enddate ? 'ระบุวันที่เดินทาง' :
+        showAlert("แจ้งเตือน",
+          `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: ${!op.sb_operationid_startdate || !op.sb_operationid_enddate ? 'ระบุวันที่เดินทาง' :
             !op.sb_operationid_startmile || !op.sb_operationid_endmile ? 'ระบุเลขไมลล์เดินทาง' :
-            op.sb_operationid_startoil === '' || op.sb_operationid_endoil === '' ? 'ระบุปริมาณน้ำมัน' :
-            op.sb_operationid_location === '' ? 'ระบุกิจกรรมที่ทำ' : 'ระบุข้อมูล Pay (เบิก/ไม่เบิก)'
+              op.sb_operationid_startoil === '' || op.sb_operationid_endoil === '' ? 'ระบุปริมาณน้ำมัน' :
+                op.sb_operationid_location === '' ? 'ระบุกิจกรรมที่ทำ' : 'ระบุข้อมูล Pay (เบิก/ไม่เบิก)'
           }`);
         return;
       }
@@ -375,11 +489,11 @@ export default function FormsStart() {
       })),
       smartBill_Operation: operations.map(({ carIndex, files, ...rest }) => ({
         ...rest,
-        sb_operationid_startdate: rest.sb_operationid_startdate 
-          ? dayjs(rest.sb_operationid_startdate).format('YYYY-MM-DD HH:mm:ss') 
+        sb_operationid_startdate: rest.sb_operationid_startdate
+          ? dayjs(rest.sb_operationid_startdate).format('YYYY-MM-DD HH:mm:ss')
           : null,
-        sb_operationid_enddate: rest.sb_operationid_enddate 
-          ? dayjs(rest.sb_operationid_enddate).format('YYYY-MM-DD HH:mm:ss') 
+        sb_operationid_enddate: rest.sb_operationid_enddate
+          ? dayjs(rest.sb_operationid_enddate).format('YYYY-MM-DD HH:mm:ss')
           : null,
       })),
       smartBill_Associate: smartBill_Associate,
@@ -389,9 +503,9 @@ export default function FormsStart() {
 
     try {
       const response = await client.post('/SmartBill_CreateForms', body);
-      
+
       console.log('✅ Response:', response.data);
-      
+
       const { sb_code, sb_operationids } = response.data;
 
       if (!sb_operationids) {
@@ -400,7 +514,7 @@ export default function FormsStart() {
 
       for (let opIndex = 0; opIndex < operations.length; opIndex++) {
         const op = operations[opIndex];
-        
+
         // ข้ามถ้าไม่มีไฟล์
         if (!op.files || op.files.length === 0) {
           console.log(`⚠️ Operation ${opIndex} ไม่มีไฟล์`);
@@ -417,7 +531,7 @@ export default function FormsStart() {
         console.log(`📤 Uploading files for operation ${opIndex} (ID: ${sb_operationid})`);
         for (let fileIndex = 0; fileIndex < op.files.length; fileIndex++) {
           const file = op.files[fileIndex];
-          
+
           if (!file.fileData) {
             console.warn(`⚠️ File ${fileIndex} ไม่มี fileData`);
             continue;
@@ -450,7 +564,7 @@ export default function FormsStart() {
     } catch (error: any) {
       console.error('❌ Submit error:', error);
       showAlert(
-        "เกิดข้อผิดพลาด", 
+        "เกิดข้อผิดพลาด",
         error.response?.data?.message || error.message || 'ไม่สามารถบันทึกข้อมูลได้'
       );
     }
@@ -472,7 +586,7 @@ export default function FormsStart() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Header Section */}
-          <CompanyHeader 
+          <CompanyHeader
             companyName={smartBillHeader.sb_name}
             onCompanyChange={handleCompanyChange}
           />
@@ -480,7 +594,7 @@ export default function FormsStart() {
           {/* Form Content */}
           <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
             {/* User Information */}
-            <UserInformation 
+            <UserInformation
               users={users}
               smartBillHeader={smartBillHeader}
               onHeaderChange={handleHeaderChange}
@@ -489,7 +603,7 @@ export default function FormsStart() {
             <div className="h-px bg-gray-200"></div>
 
             {/* Car Type Selection */}
-            <CarTypeSelection 
+            <CarTypeSelection
               typeCar={typeCar}
               onTypeCarChange={setTypeCar}
               onCarInfoDataChange={handleCarInfoDataChange}
@@ -552,7 +666,7 @@ export default function FormsStart() {
                   ...prev,
                   clean_status: parseInt(value)
                 }))}
-               >
+              >
                 {[
                   { value: 0, label: 'ไม่ได้ล้างรถ' },
                   { value: 1, label: 'ล้างรถ' }
@@ -586,20 +700,20 @@ export default function FormsStart() {
               >
                 {(() => {
                   // Check if all cars are existing cars (not new ones)
-                  const allCarsAreExisting = cars.every(car => 
+                  const allCarsAreExisting = cars.every(car =>
                     (typeCar === '1' ? carInfoDataCompanny : carInfoData)
                       .some((existingCar) => existingCar.car_infocode === car.car_infocode)
                   );
-                  
+
                   // If all cars are existing, show "ส่งฟอร์ม"
                   if (allCarsAreExisting) {
                     return 'ส่งฟอร์ม';
                   }
-                  
+
                   if (operations.length > 0) {
                     return 'ส่งฟอร์ม';
                   }
-                  
+
                   return 'เพิ่มข้อมูลรถ';
                 })()}
               </button>
@@ -608,41 +722,39 @@ export default function FormsStart() {
         </div>
       </div>
 
-      {/* Success Alert Dialog */}
+      {/* Success Alert Dialog - Minimal */}
       <AlertDialog open={alertOpen && alertType === 'success'} onOpenChange={setAlertOpen}>
-        <AlertDialogContent className="max-w-md mx-4 sm:mx-auto bg-white rounded-2xl shadow-2xl border-0 p-10 overflow-hidden">
-          {/* Success Header */}
-          <div className="px-6">
-            <AlertDialogHeader className="space-y-4">
-              <div className="flex items-center justify-center">
-                <div className="flex items-center justify-center w-20 h-20 bg-green-400 rounded-full shadow-lg animate-pulse">
-                  <Check className="h-10 w-10 text-white" strokeWidth={3} />
-                </div>
+        <AlertDialogContent className="max-w-md mx-4 sm:mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          {/* Success Icon */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-black/5 rounded-full blur-lg"></div>
+              <div className="relative w-16 h-16 bg-black rounded-full flex items-center justify-center">
+                <Check className="h-8 w-8 text-white" strokeWidth={3} />
               </div>
-              <AlertDialogTitle className="text-2xl font-bold text-center text-green-800">
-                {alertTitle}
-              </AlertDialogTitle>
-            </AlertDialogHeader>
+            </div>
           </div>
-          
-          {/* Success Content */}
-          <div className="px-6 mb-10">
-            <AlertDialogDescription className="text-gray-700 text-center leading-relaxed text-lg">
+
+          {/* Content */}
+          <AlertDialogHeader className="space-y-3 text-center">
+            <AlertDialogTitle className="text-xl font-semibold text-gray-900">
+              {alertTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 text-sm leading-relaxed">
               {alertMessage}
             </AlertDialogDescription>
-          </div>
-          
-          {/* Success Footer */}
-          <AlertDialogFooter className="px-6 pb-8 pt-2">
+          </AlertDialogHeader>
+
+          {/* Footer */}
+          <AlertDialogFooter className="mt-6">
             <AlertDialogAction
               onClick={() => {
                 setAlertOpen(false);
-                // Redirect after success
                 setTimeout(() => {
                   router.push('/smart/smart_bill/create');
                 }, 300);
               }}
-              className="w-full h-12 bg-black text-white font-semibold rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 focus:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300 focus:ring-opacity-50"
+              className="w-full h-11 bg-black max-w-30 mx-auto hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all duration-200"
             >
               เรียบร้อย
             </AlertDialogAction>
@@ -650,41 +762,35 @@ export default function FormsStart() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Error Alert Dialog */}
+      {/* Error Alert Dialog - Minimal */}
       <AlertDialog open={alertOpen && alertType === 'error'} onOpenChange={setAlertOpen}>
-        <AlertDialogContent className="max-w-md mx-4 sm:mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 p-10 overflow-hidden">
-          {/* Error Icon Section */}
-          <div className="px-6 pt-10">
-            <AlertDialogHeader className="space-y-5">
-              <div className="flex items-center justify-center">
-                <div className="relative">
-                  {/* Outer glow ring */}
-                  <div className="absolute inset-0 bg-red-500/20 dark:bg-red-500/30 rounded-full blur-xl animate-pulse"></div>
-                  {/* Icon container */}
-                  <div className="relative flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 rounded-full shadow-xl">
-                    <AlertCircle className="h-11 w-11 text-white" strokeWidth={2.5} />
-                  </div>
-                </div>
+        <AlertDialogContent className="max-w-md mx-4 sm:mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          {/* Error Icon */}
+          <div className="flex items-center justify-center mb-2">
+            <div className="relative">
+              <div className="absolute inset-0 bg-red-500/10 rounded-full blur-lg"></div>
+              <div className="relative w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-white" strokeWidth={2.5} />
               </div>
-              
-              <AlertDialogTitle className="text-2xl font-semibold text-center text-gray-900 dark:text-gray-50 tracking-tight">
-                {alertTitle}
-              </AlertDialogTitle>
-            </AlertDialogHeader>
+            </div>
           </div>
-          
-          {/* Error Message */}
-          <div className="px-8 mb-8">
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-400 text-center leading-relaxed text-base">
+
+          {/* Content */}
+          <AlertDialogHeader className="space-y-3 text-center">
+            <AlertDialogTitle className="text-xl font-semibold text-gray-900 text-center">
+              {alertTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 text-sm leading-relaxed text-center">
               {alertMessage}
             </AlertDialogDescription>
-          </div>
-          
-          {/* Action Footer */}
-          <AlertDialogFooter className="px-6 pb-8 pt-2">
-            <AlertDialogAction
-              className="w-full h-12 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-            >
+          </AlertDialogHeader>
+
+          {/* Footer */}
+          <AlertDialogFooter className="mt-6 flex gap-3">
+            {/* <AlertDialogCancel className="flex-1 h-11 bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm font-medium rounded-lg border-0 transition-all duration-200">
+              ยกเลิก
+            </AlertDialogCancel> */}
+            <AlertDialogAction className="flex-1 h-11 max-w-30 mx-auto bg-black hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all duration-200">
               ตรวจสอบ
             </AlertDialogAction>
           </AlertDialogFooter>

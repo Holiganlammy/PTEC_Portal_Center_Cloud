@@ -287,7 +287,9 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               Copy Smart Car Code
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-          {((!smartCar.admin_approve || smartCar.admin_approve === null || smartCar.admin_approve === '') 
+          {(smartCar.sb_status === 1 
+            && smartCar.sb_status_name === 'รอ Admin ตรวจสอบ' 
+            && !smartCar.admin_approve
             && (session?.user?.depid === 19 || session?.user?.depid === 23)) && (
               <Link href={`/smart/smart_car/checklist?code=${smartCar.sb_code}`}>
                 <DropdownMenuItem>

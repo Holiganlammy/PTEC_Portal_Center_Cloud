@@ -42,6 +42,7 @@ interface SmartCarData {
   car_categary_name?: number;
   car_categaryid?: number;
   TotalCount: number;
+  sb_status?: number;
 }
 
 interface SmartCar_FilterOption {
