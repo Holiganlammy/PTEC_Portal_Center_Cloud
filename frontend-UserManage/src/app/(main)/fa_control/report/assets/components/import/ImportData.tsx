@@ -174,8 +174,8 @@ export default function ImportDialog({
         invalidTypes,
     });
 
-    console.log("✅ Duplicate Codes:", duplicateCodes);
-    console.log("✅ Valid Data:", validData);
+    console.log(" Duplicate Codes:", duplicateCodes);
+    console.log(" Valid Data:", validData);
     };
 
     const handleUploadValidData = async () => {

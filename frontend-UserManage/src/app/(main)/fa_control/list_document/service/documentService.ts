@@ -54,7 +54,7 @@ export async function getAutoDataNAC(usercode: string, role: 'user' | 'admin' | 
     }
   }
 
-  // ✅ กำหนด mapping ระหว่าง role กับ API endpoint
+  //  กำหนด mapping ระหว่าง role กับ API endpoint
   const apiMap: Record<string, string> = {
     admin: '/FA_Control_Select_MyNAC_Approve',
     moderator: '/FA_Control_Select_MyNAC_Approve', // ใช้ endpoint เดียวกับ admin

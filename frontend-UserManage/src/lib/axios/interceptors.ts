@@ -71,7 +71,7 @@ export const resetAxiosState = () => {
   pendingRequests.clear();
   cleanupGlobalAlert();
   
-  console.log("✅ Axios state reset - ready for new session");
+  console.log(" Axios state reset - ready for new session");
 }
 
 export const isTokenExpiredAlertVisible = () => isTokenExpiredAlertShowing;

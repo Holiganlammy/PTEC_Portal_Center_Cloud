@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Car, Info, Building2, User as UserIcon, ChevronsUpDown, Check, X, AlertTriangle } from 'lucide-react' // ✅ เพิ่ม X, AlertTriangle
+import { Car, Info, Building2, User as UserIcon, ChevronsUpDown, Check, X, AlertTriangle } from 'lucide-react' //  เพิ่ม X, AlertTriangle
 import client from '@/lib/axios/interceptors'
 import { CarInfo } from '@/app/(main)/smart/smart_car/create/service/type/types'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -193,12 +193,12 @@ export default function VehicleSelection({
           // รถบริษัท
           const companyData = response.data.filter((res: any) => res.car_infostatus_companny === true)
           setCarInfoDataCompany(companyData)
-          console.log('✅ โหลดรถบริษัทใหม่:', companyData.length, 'คัน')
+          console.log(' โหลดรถบริษัทใหม่:', companyData.length, 'คัน')
         } else if (currentCondition === 1) {
           // รถส่วนตัว
           const personalData = response.data.filter((res: any) => res.car_infostatus_companny === false)
           setCarInfoData(personalData)
-          console.log('✅ โหลดรถส่วนตัวใหม่:', personalData.length, 'คัน')
+          console.log(' โหลดรถส่วนตัวใหม่:', personalData.length, 'คัน')
         }
       } catch (error) {
         console.error('❌ Error reloading car data:', error)
@@ -409,7 +409,7 @@ export default function VehicleSelection({
         <>
           <Separator />
 
-          {/* ✅ หมายเหตุการแก้ไข */}
+          {/*  หมายเหตุการแก้ไข */}
           {smartBill_Withdraw.car_infocode && (
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
               <div className="flex items-start gap-3">
@@ -432,7 +432,7 @@ export default function VehicleSelection({
               <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
                 รายละเอียดยานพาหนะ
               </h4>
-              {/* ✅ ปุ่มล้างทะเบียนรถ */}
+              {/*  ปุ่มล้างทะเบียนรถ */}
               {smartBill_Withdraw.car_infocode && !smartBill_Withdraw.lock_status && (
                 <Button
                   variant="outline"

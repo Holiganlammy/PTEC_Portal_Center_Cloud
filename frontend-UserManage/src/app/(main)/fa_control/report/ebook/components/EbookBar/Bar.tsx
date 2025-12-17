@@ -82,7 +82,7 @@ export function EbookFilterBar({
    const loadOptionsForSelect = async (input: string, offset?: number, pageSize?: number) => {
       const params: any = { search: input || "" };
 
-      // ✅ ส่ง offset และ pageSize เฉพาะกรณี infinite scroll เท่านั้น
+      //  ส่ง offset และ pageSize เฉพาะกรณี infinite scroll เท่านั้น
       if (typeof offset === "number" && typeof pageSize === "number") {
          params.offset = offset;
          params.pageSize = pageSize;

@@ -35,7 +35,7 @@ export default function OperationFileUpload({
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState<'error' | 'success'>('error');
 
-  // ✅ เพิ่ม state สำหรับ Image Dialog
+  //  เพิ่ม state สำหรับ Image Dialog
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -129,13 +129,13 @@ export default function OperationFileUpload({
     onFilesChange(newFiles);
   };
 
-  // ✅ เปิด Image Dialog
+  //  เปิด Image Dialog
   const handleViewImage = (index: number) => {
     setSelectedImageIndex(index);
     setImageDialogOpen(true);
   };
 
-  // ✅ แปลง files เป็น format ที่ ImageDialog ต้องการ
+  //  แปลง files เป็น format ที่ ImageDialog ต้องการ
   const imageDialogData = files.map(file => ({
     file: file.image_url,
     filename: file.image_name || 'Unknown File'
@@ -181,7 +181,7 @@ export default function OperationFileUpload({
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {files.map((file, index) => (
               <div key={index} className="relative group">
-                {/* ✅ Image Container with View Button */}
+                {/*  Image Container with View Button */}
                 <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 relative">
                   <img
                     src={file.image_url}
@@ -189,7 +189,7 @@ export default function OperationFileUpload({
                     className="w-full h-full object-cover"
                   />
                   
-                  {/* ✅ Hover Overlay with View Button */}
+                  {/*  Hover Overlay with View Button */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
                     <button
                       onClick={() => handleViewImage(index)}
@@ -238,7 +238,7 @@ export default function OperationFileUpload({
         )}
       </div>
 
-      {/* ✅ Image Dialog */}
+      {/*  Image Dialog */}
       <ImageDialog
         images={imageDialogData}
         initialIndex={selectedImageIndex}

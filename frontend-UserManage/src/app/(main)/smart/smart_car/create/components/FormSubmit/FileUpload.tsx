@@ -20,7 +20,7 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
     setDialogOpen(true);
   };
 
-  // ✅ สร้างตัวแปรที่มีค่า default เป็น array ว่าง
+  //  สร้างตัวแปรที่มีค่า default เป็น array ว่าง
   const files = dataFilesCount || [];
 
   return (

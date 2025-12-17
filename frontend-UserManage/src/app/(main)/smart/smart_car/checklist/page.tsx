@@ -4,10 +4,10 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { AlertCircle, Check, CheckCircle, Info, Lock } from 'lucide-react'; // ✅ เพิ่ม Lock
+import { AlertCircle, Check, CheckCircle, Info, Lock } from 'lucide-react'; //  เพิ่ม Lock
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useSearchParams, useRouter } from 'next/navigation'; // ✅ เพิ่ม useRouter
+import { useSearchParams, useRouter } from 'next/navigation'; //  เพิ่ม useRouter
 import client from '@/lib/axios/interceptors';
 import { SmartBillFile } from '../create/service/type/types';
 import {
@@ -39,7 +39,7 @@ import { Button } from '@/components/ui/button';
 export default function ChecklistForm() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const router = useRouter(); // ✅ เพิ่ม router
+  const router = useRouter(); //  เพิ่ม router
   const sbCode = searchParams.get('code');
   
   dayjs.extend(utc);
@@ -47,7 +47,7 @@ export default function ChecklistForm() {
   
   const [isLoading, setIsLoading] = useState(true);
   
-  // ✅ เพิ่ม state สำหรับตรวจสอบสิทธิ์
+  //  เพิ่ม state สำหรับตรวจสอบสิทธิ์
   const [hasAccess, setHasAccess] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [adminApprove, setAdminApprove] = useState<string | null>(null);
@@ -110,7 +110,7 @@ export default function ChecklistForm() {
     sb_associate_enddate: ''
   }]);
 
-  // ✅ ฟังก์ชันตรวจสอบสิทธิ์การเข้าถึง
+  //  ฟังก์ชันตรวจสอบสิทธิ์การเข้าถึง
   const checkAccess = (adminApproveValue: string | null) => {
     const currentDepId = session?.user?.depid;
     
@@ -227,11 +227,11 @@ export default function ChecklistForm() {
       if (headerAndCarData && headerAndCarData.length > 0) {
         const firstRecord = headerAndCarData[0];
         
-        // ✅ เก็บค่า admin_approve
+        //  เก็บค่า admin_approve
         const adminApproveValue = firstRecord.admin_approve || null;
         setAdminApprove(adminApproveValue);
         
-        // ✅ ตรวจสอบสิทธิ์การเข้าถึง
+        //  ตรวจสอบสิทธิ์การเข้าถึง
         const canAccess = checkAccess(adminApproveValue);
         setHasAccess(canAccess);
         
@@ -406,7 +406,7 @@ export default function ChecklistForm() {
     gettingUsers();
   }, []);
 
-  // ✅ Loading State
+  //  Loading State
   if (isLoading || isCheckingAccess) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -420,7 +420,7 @@ export default function ChecklistForm() {
     );
   }
 
-  // ✅ No Access Screen
+  //  No Access Screen
   if (!hasAccess) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -475,7 +475,7 @@ export default function ChecklistForm() {
     );
   }
 
-  // ✅ No Code Screen
+  //  No Code Screen
   if (!sbCode) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -487,7 +487,7 @@ export default function ChecklistForm() {
     );
   }
 
-  // ✅ Main Form (มีสิทธิ์เข้าถึง)
+  //  Main Form (มีสิทธิ์เข้าถึง)
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -618,7 +618,7 @@ export default function ChecklistForm() {
 
             <div className="h-px bg-gray-200"></div>
 
-            {/* ✅ เหลือแค่ปุ่มอนุมัติ */}
+            {/*  เหลือแค่ปุ่มอนุมัติ */}
             {showApproveButton && (
               <div className="flex justify-end pt-6 border-t border-gray-200">
                 <Button

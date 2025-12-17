@@ -84,7 +84,7 @@ export default function reserveCalendarCarPage() {
     const response = client.get('/reservation/reservation_get_booking_bill_on_calendar', { method: 'GET', headers: dataConfig().header })
     response.then((res) => {
       if (res.status === 200) {
-        console.log("✅ API response:", res.data);
+        console.log(" API response:", res.data);
         setBookingBill(res.data);
       } else {
         console.error("Failed to fetch data:", res.statusText);

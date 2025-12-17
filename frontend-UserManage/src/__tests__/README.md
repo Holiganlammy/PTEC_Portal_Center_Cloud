@@ -7,40 +7,40 @@
 
 ### 1. Middleware Tests (`middleware.test.ts`)
 ทดสอบการทำงานของ middleware ที่ทำหน้าที่:
-- ✅ **Public Path Access**: อนุญาตให้เข้าถึง public paths ได้
-- ✅ **Authentication Check**: ตรวจสอบการมี token และ redirect ไป login
-- ✅ **API Permission Check**: เรียก API เพื่อตรวจสอบสิทธิ์การเข้าถึง
-- ✅ **Path Permission Logic**: ตรวจสอบ exact path และ wildcard permissions
-- ✅ **Cache Functionality**: ใช้ cache เพื่อลดการเรียก API
-- ✅ **Error Handling**: จัดการกับ network errors และ API errors
+-  **Public Path Access**: อนุญาตให้เข้าถึง public paths ได้
+-  **Authentication Check**: ตรวจสอบการมี token และ redirect ไป login
+-  **API Permission Check**: เรียก API เพื่อตรวจสอบสิทธิ์การเข้าถึง
+-  **Path Permission Logic**: ตรวจสอบ exact path และ wildcard permissions
+-  **Cache Functionality**: ใช้ cache เพื่อลดการเรียก API
+-  **Error Handling**: จัดการกับ network errors และ API errors
 
 ### 2. TokenMonitor Tests (`TokenMonitor.test.tsx`)
 ทดสอบ React component ที่ทำหน้าที่:
-- ✅ **Public Path Handling**: ไม่ monitor session บน public paths
-- ✅ **Session Monitoring**: ตรวจสอบเวลาหมดอายุของ session
-- ✅ **Warning Display**: แสดงแจ้งเตือนเมื่อ session เหลือน้อยกว่า 5 นาที
-- ✅ **Expiry Dialog**: แสดง dialog เมื่อ session หมดอายุ
-- ✅ **Dialog Interactions**: จัดการการ logout
-- ✅ **Warning Timeout**: ซ่อนการแจ้งเตือนหลัง 10 วินาที
-- ✅ **Edge Cases**: จัดการกับข้อมูลที่ไม่ครบถ้วน
+-  **Public Path Handling**: ไม่ monitor session บน public paths
+-  **Session Monitoring**: ตรวจสอบเวลาหมดอายุของ session
+-  **Warning Display**: แสดงแจ้งเตือนเมื่อ session เหลือน้อยกว่า 5 นาที
+-  **Expiry Dialog**: แสดง dialog เมื่อ session หมดอายุ
+-  **Dialog Interactions**: จัดการการ logout
+-  **Warning Timeout**: ซ่อนการแจ้งเตือนหลัง 10 วินาที
+-  **Edge Cases**: จัดการกับข้อมูลที่ไม่ครบถ้วน
 
 ### 3. AuthOptions Tests (`authOptions.test.ts`)
 ทดสอบการตั้งค่า NextAuth:
-- ✅ **Credentials Provider**: การ authorize ด้วย OTP และ Login response
-- ✅ **JWT Callback**: การสร้างและอัพเดต JWT token
-- ✅ **Session Callback**: การ map ข้อมูล token ไป session
-- ✅ **Token Refresh**: การรีเฟรชข้อมูล user
-- ✅ **Error Handling**: จัดการกับ API errors
-- ✅ **Configuration**: ตรวจสอบการตั้งค่า session และ pages
+-  **Credentials Provider**: การ authorize ด้วย OTP และ Login response
+-  **JWT Callback**: การสร้างและอัพเดต JWT token
+-  **Session Callback**: การ map ข้อมูล token ไป session
+-  **Token Refresh**: การรีเฟรชข้อมูล user
+-  **Error Handling**: จัดการกับ API errors
+-  **Configuration**: ตรวจสอบการตั้งค่า session และ pages
 
 ### 4. Integration Tests (`integration.test.ts`)
 ทดสอบการทำงานร่วมกันของทุกส่วน:
-- ✅ **Complete Authentication Flow**: ตั้งแต่ login จนถึง session
-- ✅ **Token Refresh Flow**: การอัพเดตข้อมูล user
-- ✅ **Permission & Access Control**: การควบคุมการเข้าถึง paths
-- ✅ **Session Timing**: การคำนวณเวลาหมดอายุ
-- ✅ **Error Handling**: จัดการกับ network errors
-- ✅ **Cache Functionality**: การใช้งาน cache
+-  **Complete Authentication Flow**: ตั้งแต่ login จนถึง session
+-  **Token Refresh Flow**: การอัพเดตข้อมูล user
+-  **Permission & Access Control**: การควบคุมการเข้าถึง paths
+-  **Session Timing**: การคำนวณเวลาหมดอายุ
+-  **Error Handling**: จัดการกับ network errors
+-  **Cache Functionality**: การใช้งาน cache
 
 ## การรัน Tests
 
@@ -68,23 +68,23 @@ npm run test:ci
 
 ## Key Features Tested
 
-### ✅ Session End Detection
+###  Session End Detection
 - ตรวจสอบการหมดอายุของ session
 - แสดงแจ้งเตือนก่อนหมดอายุ 5 นาที
 - บังคับ logout เมื่อหมดอายุ
 
-### ✅ Path Permission Check
+###  Path Permission Check
 - ตรวจสอบสิทธิ์การเข้าถึงแต่ละ path
 - รองรับ exact path matching
 - รองรับ wildcard permissions (path/*)
 - Cache permissions เพื่อเพิ่มประสิทธิภาพ
 
-### ✅ Token Management
+###  Token Management
 - การสร้าง JWT token จากการ login
 - การรีเฟรชข้อมูล user
 - การจัดการ token expiry
 
-### ✅ Error Handling
+###  Error Handling
 - Network errors
 - API errors (401, 500, etc.)
 - Malformed data

@@ -146,7 +146,7 @@ const loadOptionsForSelect = useMemo(() => {
                 render={({ field }) => {
                   const matched = assets.find(asset => asset.Code === field.value);
 
-                  // ✅ ถ้าไม่มีใน assets ให้โชว์เป็น Input readOnly
+                  //  ถ้าไม่มีใน assets ให้โชว์เป็น Input readOnly
                   if (!matched && field.value) {
                     return (
                       <Input
@@ -159,13 +159,13 @@ const loadOptionsForSelect = useMemo(() => {
                     );
                   }
 
-                  // ✅ ถ้ามี matched หรือค่าว่าง — ใช้ CustomSelect ตามปกติ
+                  //  ถ้ามี matched หรือค่าว่าง — ใช้ CustomSelect ตามปกติ
                   return (
                     <CustomSelect
                       field={{
                         ...field,
                         onChange: (value: string) => {
-                          console.log("✅ Selected asset code:", value);
+                          console.log(" Selected asset code:", value);
 
                           field.onChange(value);
                           const matched = assets.find(asset => asset.Code === value);

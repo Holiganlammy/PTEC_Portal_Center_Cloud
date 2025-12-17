@@ -131,12 +131,12 @@ const [isLoading, setIsLoading] = useState(false)
         usercode: smartBill_Withdraw.ownercode || smartBill_Withdraw.UserCode
       })
       
-      console.log('✅ Vehicle updated')
+      console.log(' Vehicle updated')
       
       // Small delay for better UX
       await new Promise(resolve => setTimeout(resolve, 300))
       
-      // ✅ 2. Add Detail (Activity)
+      //  2. Add Detail (Activity)
       console.log('📝 Adding activity...')
       
       await client.post('/SmartBill_Withdraw_AddrowDtl', {
@@ -152,9 +152,9 @@ const [isLoading, setIsLoading] = useState(false)
         sbwdtl_operationid_endmile: parseFloat(formData.sbwdtl_operationid_endmile)
       })
       
-      console.log('✅ Activity added')
+      console.log(' Activity added')
       
-      // ✅ 3. Success
+      //  3. Success
       await Swal.fire({
         icon: 'success',
         title: 'สำเร็จ',

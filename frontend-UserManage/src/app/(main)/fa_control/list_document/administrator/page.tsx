@@ -70,7 +70,7 @@ export default function NacListAdministrator() {
 
       let dataNAC;
 
-      // ✅ ตรวจ role จาก session (หลัก audit)
+      //  ตรวจ role จาก session (หลัก audit)
       switch (session.user.role_id) {
         case 1: // Admin
           dataNAC = await getAutoDataNAC(session.user.UserCode, 'admin');
@@ -114,8 +114,8 @@ export default function NacListAdministrator() {
         sessionStorage.removeItem(`autoDataNAC_time_${session.user.UserCode}`);
       }
 
-      setIsChecking(true); // ✅ สั่ง fetch จริง
-      sessionStorage.setItem(cacheKey, "1"); // ✅ ตั้ง flag ว่าโหลดแล้ว
+      setIsChecking(true); //  สั่ง fetch จริง
+      sessionStorage.setItem(cacheKey, "1"); //  ตั้ง flag ว่าโหลดแล้ว
     } else {
       // ถ้าเคยโหลดแล้ว และไม่ใช่ reload → ไม่ fetch ใหม่
       setIsChecking(false);

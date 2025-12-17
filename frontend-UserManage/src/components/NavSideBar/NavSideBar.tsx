@@ -61,28 +61,68 @@ interface SiteHeaderProps {
 
 const getIcon = (menuName?: string) => {
   const icons: Record<string, JSX.Element> = {
+    // === PARENT MENUS (parent_id: null) ===
+    "user control": <Users className="h-4 w-4" />,
+    "fa control": <Package className="h-4 w-4" />,
+    "smart control": <Settings className="h-4 w-4" />,
+    "reservation systems": <Calendar className="h-4 w-4" />,
+    
+    // === USER CONTROL ===
     "dashboard": <BarChart3 className="h-4 w-4" />,
     "password": <LockKeyholeOpen className="h-4 w-4" />,
     "user list": <Users className="h-4 w-4" />,
+    
+    // === FA CONTROL - Create Document ===
+    "create document": <FileText className="h-4 w-4" />,
     "เพิ่มบัญชีทรัพย์สิน": <FileText className="h-4 w-4" />,
     "โยกย้ายบัญชีทรัพย์สิน": <Truck className="h-4 w-4" />,
     "เปลี่ยนแปลงรายละเอียดทรัพย์สิน": <Settings className="h-4 w-4" />,
     "ตัดบัญชีทรัพย์สิน": <Package className="h-4 w-4" />,
     "ขายบัญชีทรัพย์สิน": <ShoppingCart className="h-4 w-4" />,
-    "รายการเอกสารทั่วไป": <FileText className="h-4 w-4" />,
-    "รายการเอกสารทั้งหมด": <FileText className="h-4 w-4" />,
-    "Create Period": <Calendar className="h-4 w-4" />,
-    "List Period": <Calendar className="h-4 w-4" />,
+    
+    // === FA CONTROL - List Document ===
+    "list document": <FileText className="h-4 w-4" />,
+    "รายการเอกสารทรัพย์สิน": <FileText className="h-4 w-4" />,
+    "[admin] รายการเอกสารทรัพย์สิน": <FileText className="h-4 w-4" />,
+    
+    // === FA CONTROL - Period Count ===
+    "period count": <Calendar className="h-4 w-4" />,
+    "create period": <Calendar className="h-4 w-4" />,
+    "list period": <Calendar className="h-4 w-4" />,
+    
+    // === FA CONTROL - Report ===
+    "report": <BarChart3 className="h-4 w-4" />,
+    "[admin] รายงานตรวจนับทรัพย์สิน": <BarChart3 className="h-4 w-4" />,
     "รายงานตรวจนับทรัพย์สิน": <BarChart3 className="h-4 w-4" />,
-    "Create Document": <FileText className="h-4 w-4" />,
+    "ประวัติการทำเอกสาร": <FileText className="h-4 w-4" />,
+    "e-book": <FileText className="h-4 w-4" />,
     "ทะเบียนทรัพย์สิน": <Package className="h-4 w-4" />,
-    "Smart Car": <Truck className="h-4 w-4" />,
-    "Smart Bill": <FileText className="h-4 w-4" />,
-    "Cars Reservation": <Truck className="h-4 w-4" />,
-    "Meeting Rooms Reservation": <Calendar className="h-4 w-4" />,
-    "Tools Document": <Settings className="h-4 w-4" />,
-    "E-Book": <FileText className="h-4 w-4" />,
-    "ESG Report": <BarChart3 className="h-4 w-4" />,
+    
+    // === SMART CONTROL - Smart Car ===
+    "smart car": <Truck className="h-4 w-4" />,
+    
+    // === SMART CONTROL - Smart Bill ===
+    "smart bill": <FileText className="h-4 w-4" />,
+    
+    // === SMART CONTROL - ESG Report ===
+    "esg report": <BarChart3 className="h-4 w-4" />,
+    
+    // === SMART CONTROL - Tools Document ===
+    "tools document": <Settings className="h-4 w-4" />,
+    
+    // === RESERVATION SYSTEMS - Cars Reservation ===
+    "cars reservation": <Truck className="h-4 w-4" />,
+    "ข้อมูลรถและการจองรถ": <Truck className="h-4 w-4" />,
+    "รายการจองรถของฉัน": <FileText className="h-4 w-4" />,
+    "รายละเอียดการจองรถของฉัน": <FileText className="h-4 w-4" />,
+    "ปฏิทินการจองรถทั้งหมด": <Calendar className="h-4 w-4" />,
+    
+    // === RESERVATION SYSTEMS - Meeting Rooms Reservation ===
+    "meeting rooms reservation": <Calendar className="h-4 w-4" />,
+    "ข้อมูลห้องประชุมและการจองห้องประชุม": <Calendar className="h-4 w-4" />,
+    "รายการจองห้องประชุมของฉัน": <FileText className="h-4 w-4" />,
+    "รายละเอียดการของห้องประชุมของฉัน": <FileText className="h-4 w-4" />,
+    "ปฏิทินการจองรถห้องประชุมทั้งหมด": <Calendar className="h-4 w-4" />,
   };
 
   const key = menuName?.toLowerCase().trim() || "";
@@ -96,7 +136,7 @@ export default function SiteHeader({ children }: SiteHeaderProps) {
   const [openChangePassword, setOpenChangePassword] = useState(false)
   const [menus, setMenu] = useState<MenuItem[]>([])
   
-  // ✅ กรองเฉพาะเมนูที่แสดง (ไม่ใช่ hidden routes)
+  //  กรองเฉพาะเมนูที่แสดง (ไม่ใช่ hidden routes)
   const visibleMenus = useMemo(() => {
     return menus.filter(menu => {
       // กรองออก: parent_id = NULL && order_no = NULL
@@ -245,7 +285,7 @@ export default function SiteHeader({ children }: SiteHeaderProps) {
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Menu Items - ✅ ใช้ visibleMenus แทน menus */}
+              {/* Menu Items -  ใช้ visibleMenus แทน menus */}
               {session &&
                 menuTree
                   .sort((a, b) => (a.order_no || 0) - (b.order_no || 0))

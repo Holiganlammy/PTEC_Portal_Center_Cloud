@@ -107,10 +107,10 @@ export default function ImageDialog({
     setIsDragging(false);
   };
 
-  // ✅ เพิ่มการตรวจสอบ
+  //  เพิ่มการตรวจสอบ
   if (!images || images.length === 0) return null;
 
-  // ✅ ตรวจสอบว่า currentIndex ไม่เกินขอบเขต
+  //  ตรวจสอบว่า currentIndex ไม่เกินขอบเขต
   const safeIndex = Math.min(currentIndex, images.length - 1);
 
   return (

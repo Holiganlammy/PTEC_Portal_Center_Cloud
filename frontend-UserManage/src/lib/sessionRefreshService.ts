@@ -65,7 +65,7 @@ class SessionRefreshService {
       }
     }, this.REFRESH_INTERVAL);
 
-    console.log("✅ Session refresh service started");
+    console.log(" Session refresh service started");
   }
   private refresh() {
     if (this.updateFn) {

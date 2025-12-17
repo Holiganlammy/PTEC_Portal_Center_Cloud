@@ -2,7 +2,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
-// ✅ เพิ่ม: Bypass SSL verification สำหรับ development
+//  เพิ่ม: Bypass SSL verification สำหรับ development
 if (process.env.NODE_ENV === 'development' || process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
@@ -26,7 +26,7 @@ async function fetchUserAccessiblePaths(
   }
 
   try {
-    // ✅ เพิ่ม error logging ที่ละเอียดขึ้น
+    //  เพิ่ม error logging ที่ละเอียดขึ้น
     console.log(`[RBAC] 🔍 Fetching menu for user ${userId}...`);
 
     const res = await fetch(`${process.env.Localhost_API}/Apps_List_Menu`, {
@@ -62,10 +62,10 @@ async function fetchUserAccessiblePaths(
       timestamp: Date.now()
     });
 
-    console.log(`[RBAC] ✅ User ${userId} (role ${roleId}) accessible paths (${accessiblePaths.length}):`, accessiblePaths);
+    console.log(`[RBAC]  User ${userId} (role ${roleId}) accessible paths (${accessiblePaths.length}):`, accessiblePaths);
     return accessiblePaths;
   } catch (err) {
-    // ✅ แสดง error แบบละเอียด
+    //  แสดง error แบบละเอียด
     console.error("[RBAC] ❌ Middleware fetch error:", err);
     console.error("[RBAC] Error details:", {
       message: err instanceof Error ? err.message : 'Unknown error',
@@ -101,7 +101,7 @@ function isPathAllowed(requestPath: string, allowedPaths: string[]): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ✅ ต้องเช็ค static files ก่อนทุกอย่าง
+  //  ต้องเช็ค static files ก่อนทุกอย่าง
   if (
     pathname.startsWith('/_next/static') ||
     pathname.startsWith('/_next/image') ||
@@ -116,7 +116,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ✅ Public paths
+  //  Public paths
   const publicPaths = [
     "/login", 
     "/forget_password", 
@@ -125,7 +125,7 @@ export async function middleware(req: NextRequest) {
     "/api/auth",
   ];
   
-  // ✅ Home page
+  //  Home page
   if (pathname === "/home" || pathname === "/") {
     return NextResponse.next();
   }
@@ -179,13 +179,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
-  console.log(`[RBAC] ✅ User ${userId} (role ${roleId}) ALLOWED to access ${pathname}`);
+  console.log(`[RBAC]  User ${userId} (role ${roleId}) ALLOWED to access ${pathname}`);
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    // ✅ แก้ matcher ให้ถูกต้อง - ต้อง exclude _next/static และ _next/image
+    //  แก้ matcher ให้ถูกต้อง - ต้อง exclude _next/static และ _next/image
     "/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico).*)",
   ],
 };

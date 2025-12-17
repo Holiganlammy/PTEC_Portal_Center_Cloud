@@ -537,25 +537,25 @@ export default function ExpenseTable({
       totalHours
     })
     
-    // ✅ น้อยกว่า 12 ชม. = 0 วัน
+    //  น้อยกว่า 12 ชม. = 0 วัน
     if (totalHours < 12) {
       console.log('❌ น้อยกว่า 12 ชม. = 0 วัน')
       return 0
     }
     
-    // ✅ 12-23 ชม. = 1 วัน
+    //  12-23 ชม. = 1 วัน
     if (totalHours < 24) {
-      console.log('✅ 12-23 ชม. = 1 วัน')
+      console.log(' 12-23 ชม. = 1 วัน')
       return 1
     }
     
-    // ✅ 24-35 ชม. = 1 วัน (ยังไม่ถึง 36)
+    //  24-35 ชม. = 1 วัน (ยังไม่ถึง 36)
     if (totalHours < 36) {
-      console.log('✅ 24-35 ชม. = 1 วัน')
+      console.log(' 24-35 ชม. = 1 วัน')
       return 1
     }
     
-    // ✅ 36+ ชม. = คำนวณจำนวนวัน
+    //  36+ ชม. = คำนวณจำนวนวัน
     // ทุกๆ 24 ชม. = 1 วัน
     const fullDays = Math.floor(totalHours / 24)
     const remainingHours = totalHours % 24
@@ -828,7 +828,7 @@ export default function ExpenseTable({
           break
       }
 
-      // ✅ แสดง Success
+      //  แสดง Success
       await Swal.fire({
         icon: 'success',
         title: 'สำเร็จ',
@@ -1562,7 +1562,7 @@ export default function ExpenseTable({
                         </div>
                       </div>
 
-                      {/* ✅ แสดงข้อมูลระยะเวลา */}
+                      {/*  แสดงข้อมูลระยะเวลา */}
                       {allowanceItem.startdate && allowanceItem.enddate && (
                         <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mx-auto max-w-md">
                           <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">

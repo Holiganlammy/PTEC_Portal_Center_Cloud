@@ -4,10 +4,10 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { AlertCircle, Check, Lock } from 'lucide-react'; // ✅ เพิ่ม Lock icon
+import { AlertCircle, Check, Lock } from 'lucide-react'; //  เพิ่ม Lock icon
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useSearchParams, useRouter } from 'next/navigation'; // ✅ เพิ่ม useRouter
+import { useSearchParams, useRouter } from 'next/navigation'; //  เพิ่ม useRouter
 import client from '@/lib/axios/interceptors';
 import { SmartBillFile } from '../create/service/type/types';
 import {
@@ -37,7 +37,7 @@ import { Button } from '@/components/ui/button';
 export default function FormsUpdate() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const router = useRouter(); // ✅ เพิ่ม router
+  const router = useRouter(); //  เพิ่ม router
   const sbCode = searchParams.get('code');
   
   dayjs.extend(utc);
@@ -45,7 +45,7 @@ export default function FormsUpdate() {
   
   const [isLoading, setIsLoading] = useState(true);
   
-  // ✅ เพิ่ม state สำหรับตรวจสอบสิทธิ์
+  //  เพิ่ม state สำหรับตรวจสอบสิทธิ์
   const [hasAccess, setHasAccess] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   
@@ -591,7 +591,7 @@ export default function FormsUpdate() {
               },
             });
 
-            console.log(`✅ Upload success:`, uploadRes.data);
+            console.log(` Upload success:`, uploadRes.data);
           } catch (uploadErr: any) {
             console.error(`❌ Upload error for operation ${opIndex}, file ${fileIndex}:`, uploadErr);
             throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${fileIndex + 1} ของกิจกรรมที่ ${opIndex + 1}: ${uploadErr.message}`);

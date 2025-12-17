@@ -184,7 +184,7 @@ export const authOptions: AuthOptions = {
               token.depid = userData.depid;
               token.lastRefresh = now;
               
-              console.log("✅ User data refreshed successfully");
+              console.log(" User data refreshed successfully");
             }
           }
         } catch (error) {

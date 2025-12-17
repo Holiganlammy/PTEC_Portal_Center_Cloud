@@ -79,7 +79,7 @@ const fetchAssetsCounted = useCallback(async () => {
     try {
       const dataUser = await FetchData(session?.user.UserCode,session?.user.branchid);
       const myAssets = dataUser?.find((d) => d.key === "assets")?.data || [];
-      console.log("✅ My assets:", myAssets);
+      console.log(" My assets:", myAssets);
       const dataOther = await getAutoData();
       setTypeGroup(dataOther?.find((d) => d.key === "typeGroup")?.data || []);
       const dataNAC: PeriodDescription[] = await getAutoDataAssetCounted(Number(newValue));

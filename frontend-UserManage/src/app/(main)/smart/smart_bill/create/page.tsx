@@ -473,10 +473,10 @@ export default function PaymentPage() {
           
           <Separator className="my-6" />
           
-          {/* ✅ ปุ่มเพิ่มรายการ - มี validation */}
+          {/*  ปุ่มเพิ่มรายการ - มี validation */}
           {!smartBill_Withdraw.lock_status && (
             <Button 
-              onClick={handleAddExpenseClick} // ✅ เปลี่ยนจาก setOpenAddExpense(true)
+              onClick={handleAddExpenseClick} //  เปลี่ยนจาก setOpenAddExpense(true)
               variant="outline"
               className="w-full mb-4"
             >

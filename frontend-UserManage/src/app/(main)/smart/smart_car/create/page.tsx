@@ -145,7 +145,7 @@ export default function FormsStart() {
   };
 
   const handleAddOperation = (carIndex: number) => {
-    // ✅ ใช้ functional update เพื่อดึงค่าล่าสุด
+    //  ใช้ functional update เพื่อดึงค่าล่าสุด
     setOperations(prevOperations => {
       const carOperations = prevOperations.filter(op => op.carIndex === carIndex);
 
@@ -169,7 +169,7 @@ export default function FormsStart() {
 
       const lastOp = carOperations[carOperations.length - 1];
 
-      // ✅ Validate กิจกรรมล่าสุดก่อนเพิ่มใหม่
+      //  Validate กิจกรรมล่าสุดก่อนเพิ่มใหม่
       const lastEndMile = parseFloat(lastOp.sb_operationid_endmile || '0');
       const lastStartMile = parseFloat(lastOp.sb_operationid_startmile?.toString() || '0');
 
@@ -255,7 +255,7 @@ export default function FormsStart() {
         }
       }
 
-      // ✅ ทุกอย่างผ่าน -> เพิ่มกิจกรรมใหม่
+      //  ทุกอย่างผ่าน -> เพิ่มกิจกรรมใหม่
       const today = dayjs();
       const newOperation = {
         carIndex: carIndex,
@@ -271,7 +271,7 @@ export default function FormsStart() {
         sb_operationid: 0,
       };
 
-      console.log('✅ Adding new operation:', {
+      console.log(' Adding new operation:', {
         carIndex,
         lastEndMile,
         newStartMile: newOperation.sb_operationid_startmile
@@ -504,7 +504,7 @@ export default function FormsStart() {
     try {
       const response = await client.post('/SmartBill_CreateForms', body);
 
-      console.log('✅ Response:', response.data);
+      console.log(' Response:', response.data);
 
       const { sb_code, sb_operationids } = response.data;
 
@@ -551,7 +551,7 @@ export default function FormsStart() {
               },
             });
 
-            console.log(`✅ Upload success:`, uploadRes.data);
+            console.log(` Upload success:`, uploadRes.data);
           } catch (uploadErr: any) {
             console.error(`❌ Upload error for operation ${opIndex}, file ${fileIndex}:`, uploadErr);
             throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${fileIndex + 1} ของกิจกรรมที่ ${opIndex + 1}: ${uploadErr.message}`);

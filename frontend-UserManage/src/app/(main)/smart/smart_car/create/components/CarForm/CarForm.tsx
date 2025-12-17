@@ -73,7 +73,7 @@ export default function CarForm({
   
   const carOperations = operations.filter(op => op.carIndex === carIndex);
   
-  // ✅ Handle validation status change
+  //  Handle validation status change
   const handleValidationChange = (operationIndex: number, isValid: boolean) => {
     setOperationValidationStatus(prev => ({
       ...prev,
@@ -81,7 +81,7 @@ export default function CarForm({
     }));
   };
 
-  // ✅ Check if all operations are valid
+  //  Check if all operations are valid
   const areAllOperationsValid = () => {
     const carOperationIndexes = carOperations.map(op => operations.indexOf(op));
     return carOperationIndexes.every(opIndex => operationValidationStatus[opIndex] !== false);
@@ -97,7 +97,7 @@ export default function CarForm({
         car_color: '',
         car_milerate: 0,
         car_remarks: '',
-        car_categaryid: 5, // ✅ คงค่า 5 แทนที่จะรีเซ็ตเป็น 0
+        car_categaryid: 5, //  คงค่า 5 แทนที่จะรีเซ็ตเป็น 0
       });
       setSearchValue("");
       setActiveTab("select");
@@ -171,7 +171,7 @@ export default function CarForm({
       car_color: '',
       car_milerate: 0,
       car_remarks: '', 
-      car_categaryid: 5, // ✅ คงค่า 5 แทนที่จะรีเซ็ตเป็น 0
+      car_categaryid: 5, //  คงค่า 5 แทนที่จะรีเซ็ตเป็น 0
     });
     
     setSearchValue("");

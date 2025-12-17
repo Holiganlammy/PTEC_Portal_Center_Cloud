@@ -83,14 +83,14 @@ const fetchAssetsCounted = useCallback(async () => {
       console.log("🔍 Debug dataUser:", dataUser);
 
       const myAssets = dataUser?.find((d) => d.key === "assets")?.data || [];
-      console.log("✅ My assets:", myAssets);
+      console.log(" My assets:", myAssets);
       setUserFetch(myAssets);
 
       const dataOther = await getAutoData();
       setTypeGroup(dataOther?.find((d) => d.key === "typeGroup")?.data || []);
       const dataNAC: PeriodDescription[] = await getAutoDataAssetCounted(Number(newValue));
       // ------------------------------
-      // ✅ Filter รอบตรวจนับเฉพาะของตัวเอง
+      //  Filter รอบตรวจนับเฉพาะของตัวเอง
       // ------------------------------
       const filteredRounds = dataNAC.filter((round) => {
         const branchMatch =

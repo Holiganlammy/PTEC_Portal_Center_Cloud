@@ -60,10 +60,10 @@ interface DataTableProps<TData, TValue> {
    onPageChange?: (newPage: number) => void
    onPageSizeChange?: (newSize: number) => void
    Loading?: boolean
-   // ✅ เพิ่ม props สำหรับ server-side pagination
+   //  เพิ่ม props สำหรับ server-side pagination
    pageCount?: number  // จำนวนหน้าทั้งหมดจาก server
    totalRows?: number  // จำนวนแถวทั้งหมดจาก server
-   // ✅ เพิ่ม props สำหรับ server-side search
+   //  เพิ่ม props สำหรับ server-side search
    onSearchChange?: (searchValue: string) => void  // callback เมื่อ search เปลี่ยน
    searchValue?: string  // ค่า search จาก parent (controlled)
 }
