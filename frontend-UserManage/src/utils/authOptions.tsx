@@ -5,10 +5,10 @@ import type { User } from "next-auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Global flag เพื่อป้องกัน callback loop
 let isTokenExpired = false;
 
 export const authOptions: AuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -236,8 +236,6 @@ export const authOptions: AuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 60, // 30 นาที
   },
-
-  secret: process.env.NEXTAUTH_SECRET,
 
   pages: {
     signIn: '/login',
