@@ -6,6 +6,8 @@
     "dev": "node server.js",
     "build": "next build",
     "start": "next start",
+    "deploy": "node deploy.js",
+    "start:prod": "cd .next/standalone && node server.js",
     "start:custom": "npm run start:windows",
     "start:windows": "set NODE_ENV=production&& node server.js",
     "start:unix": "NODE_ENV=production node server.js",
