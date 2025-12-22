@@ -46,56 +46,58 @@ interface smartBill_CategoryDetails {
 }
 
 interface smartBill_Withdraw_Detail {
-    Name?: string
-    UserCode?: string
-    active: boolean
-    car_band?: string
-    car_color?: string
-    car_infocode?: string
-    car_infoid?: number
-    car_payname?: string
-    car_paytype?: number
-    car_tier?: string
-    condition?: number
-    createby?: number
-    createdate?: string
-    depcode?: string
-    lock_status: boolean
-    ownercode?: string
-    ownerid?: number
-    pure_card?: null
-    sbw_code?: string
-    sbw_id?: number
-    seccode?: string
-    statusid?: number
-    typePay?: string
-    amouthAll?:number
-    amouthAllowance?:number
-    amouthHotel?:number
-    amouthRush?:number
-    amouthTrueOil?:number
-    amouthother?:number
-    car_categary_name?: string
-    car_infostatus_companny?: boolean
-    car_typename?: string
-    oilBath?: number
-    oil_name:string
-    price: number
-    price_rateoil?: number
-    remark?: string
-    sb_operationid?: string
-    sbw_code: string
-    sbwdtl_id: string
-    sbwdtl_operationid_enddate?: string
-    sbwdtl_operationid_endmile: number
-    sbwdtl_operationid_location?: string
-    sbwdtl_operationid_startdate?: string
-    sbwdtl_operationid_startmile?: number
-    sum_mile?: number
-    typePay?: string
-    sb_paystatus?: boolean
+  amouthAll: number
+  amouthAllowance: number
+  amouthHotel: number
+  amouthRush: number
+  amouthTrueOil: number
+  amouthother: number
+  car_categary_name: string
+  car_infostatus_companny: boolean
+  car_typename: string
+  oilBath: number
+  oil_name: string
+  price: number
+  price_rateoil: number
+  remark: string
+  sb_operationid: number | null
+  sbw_code: string | null
+  sbwdtl_id: string
+  sbwdtl_operationid_enddate: string
+  sbwdtl_operationid_endmile: number
+  sbwdtl_operationid_location: string
+  sbwdtl_operationid_startdate: string
+  sbwdtl_operationid_startmile: number
+  sum_mile: number
+  typePay: string
+  sb_paystatus: boolean
 }
 
+interface smartBill_Withdraw_Header{
+  Name: string
+  UserCode: string
+  active: boolean
+  car_band: string
+  car_color: string
+  car_infocode: string
+  car_infoid: number
+  car_payname: string
+  car_paytype: number
+  car_tier: string
+  condition: number
+  createby: number
+  createdate: string
+  depcode: string
+  lock_status: boolean
+  ownercode: string
+  ownerid: number
+  pure_card: number
+  sbw_code: string
+  sbw_id: string
+  seccode: string
+  statusid: number
+  typePay: string
+}
 interface smartBill_SelectHotelGroup{
     amount: number
     sbc_hotelgroupid: string

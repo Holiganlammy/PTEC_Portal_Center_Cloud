@@ -27,6 +27,7 @@ import client from '@/lib/axios/interceptors'
 import { CarInfo } from '../../smart_car/create/service/type/types'
 import { useSession } from 'next-auth/react'
 import Swal from 'sweetalert2'
+import { Label } from '@/components/ui/label'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -78,6 +79,7 @@ export default function PaymentPage() {
   })
 
   const [smartBill_WithdrawDtl, setSmartBill_WithdrawDtl] = useState<smartBill_Withdraw_Detail[]>([])
+  const [smartBill_WithdrawHeader, setSmartBill_WithdrawHeader] = useState<smartBill_Withdraw_Header[]>([])
   
   // Alert states
   const [alert, setAlert] = useState<{
@@ -181,6 +183,7 @@ export default function PaymentPage() {
           const headerData = billRes.data[0][0]
           
           setSmartBill_Withdraw(headerData)
+          setSmartBill_WithdrawHeader(billRes.data[0] || [])
           setSmartBill_WithdrawDtl(billRes.data[1] || [])
           
           if (headerData.car_infocode) {
@@ -221,12 +224,49 @@ export default function PaymentPage() {
     fetchData()
   }, [sbw_code])
 
-  const calculateTotal = () => {
+  // const calculateTotal = () => {
+  //   if (!smartBill_WithdrawDtl.length) return 0
+  //   const total = smartBill_WithdrawDtl.reduce((sum, item) => {
+  //     return sum + (item.amouthAll || 0)
+  //   }, 0)
+  //   return total - (smartBill_Withdraw.pure_card || 0)
+  // }
+
+  const calculateActualTotal = () => {
     if (!smartBill_WithdrawDtl.length) return 0
-    const total = smartBill_WithdrawDtl.reduce((sum, item) => {
-      return sum + (item.amouthAll || 0)
+    
+    return smartBill_WithdrawDtl.reduce((sum, item) => {
+      if (item.sb_paystatus === false) return sum
+      // คำนวณค่าน้ำมันตามประเภทรถ
+      // let fuelCost = 0
+      console.log('🚗 ประเภทรถ:', item.car_infostatus_companny, 'ประเภทจ่ายเงิน:', smartBill_WithdrawHeader?.[0]?.car_paytype)
+      let amouthActual = 0
+      if (item.car_infostatus_companny === true) {
+        // รถบริษัท
+        if (smartBill_WithdrawHeader?.[0]?.car_paytype === 0) {
+          // รถบริษัท + เบิกตามไมล์เรท (รถเขต)
+          const itemTotal = parseFloat(item.amouthAll?.toString() || '0') || 0
+          return sum + itemTotal
+        } else {
+          // รถบริษัท + เบิกตามจริง
+          amouthActual = parseFloat(item.amouthTrueOil?.toString() || '0') || 0
+        }
+      }
+      else if (item.car_infostatus_companny === false) {
+        // รถส่วนตัว
+        const itemTotal = parseFloat(item.amouthAll?.toString() || '0') || 0
+        return sum + itemTotal
+      }
+      // ค่าใช้จ่ายอื่นๆ - ทุกประเภทรถสามารถเบิกได้
+      const allowance = parseFloat(item.amouthAllowance?.toString() || '0') || 0
+      const hotel = parseFloat(item.amouthHotel?.toString() || '0') || 0
+      const toll = parseFloat(item.amouthRush?.toString() || '0') || 0
+      const other = parseFloat(item.amouthother?.toString() || '0') || 0
+      
+      const totalForThisItem = amouthActual + allowance + hotel + toll + other
+      
+      return sum + totalForThisItem
     }, 0)
-    return total - (smartBill_Withdraw.pure_card || 0)
   }
 
   const handleSave = async () => {
@@ -480,13 +520,17 @@ export default function PaymentPage() {
               variant="outline"
               className="w-full mb-4"
             >
-              เพิ่มรายการ
+              เพิ่มรายการค่าใช้จ่ายที่ต้องการเบิก
             </Button>
           )}
+          <Label className='text-red-500'>
+            หมายเหตุ: หากต้องการเพิ่มรายการค่าใช้จ่าย กรุณาตรวจสอบให้แน่ใจว่าได้เลือกประเภทรถและทะเบียนรถเรียบร้อยแล้ว และกด ปุ่มเพิ่มรายการ ด้านบนนี้
+          </Label>
           
           <ExpenseTable 
             smartBill_WithdrawDtl={smartBill_WithdrawDtl}
             smartBill_Withdraw={smartBill_Withdraw}
+            smartBill_WithdrawHeader={smartBill_WithdrawHeader}
             fetchData={fetchData}
           />
           
@@ -495,7 +539,7 @@ export default function PaymentPage() {
           <SummarySection 
             smartBill_Withdraw={smartBill_Withdraw}
             setSmartBill_Withdraw={setSmartBill_Withdraw}
-            totalAmount={calculateTotal()}
+            totalAmount={calculateActualTotal()}
           />
         </Card>
 

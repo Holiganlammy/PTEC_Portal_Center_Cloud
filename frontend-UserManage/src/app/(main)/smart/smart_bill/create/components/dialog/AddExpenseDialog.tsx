@@ -28,7 +28,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Calendar } from '@/components/ui/calendar'
-import { CalendarIcon, MapPin, Gauge, AlertCircle, Check, ChevronsUpDown } from 'lucide-react'
+import { CalendarIcon, MapPin, Gauge, AlertCircle, Check, ChevronsUpDown, Ban } from 'lucide-react'
 import { format } from 'date-fns'
 import dayjs from 'dayjs'
 import axios from 'axios'
@@ -69,11 +69,30 @@ export default function AddExpenseDialog({
     sbwdtl_operationid_endmile: ''
   })
 
+  // ✅ ตรวจสอบว่าเป็นรถสาธารณะ/อื่นๆ หรือไม่
+  const isPublicOrOther = smartBill_Withdraw.condition === 2 || smartBill_Withdraw.condition === 3
+  const shouldDisableSmartCar = isPublicOrOther
+  const shouldDisableMileage = isPublicOrOther
+
+  // ✅ Auto-reset เมื่อเป็นรถสาธารณะ/อื่นๆ
   useEffect(() => {
-    if (open && mode === 'smartcar') {
+    if (isPublicOrOther) {
+      setMode('manual')
+      setSelectedOperation(null)
+      setFormData(prev => ({
+        ...prev,
+        sb_operationid: '',
+        sbwdtl_operationid_startmile: '0',
+        sbwdtl_operationid_endmile: '0'
+      }))
+    }
+  }, [smartBill_Withdraw.condition, isPublicOrOther])
+
+  useEffect(() => {
+    if (open && mode === 'smartcar' && !isPublicOrOther) {
       loadOperations()
     }
-  }, [open, mode])
+  }, [open, mode, isPublicOrOther])
 
   const loadOperations = async () => {
     try {
@@ -103,7 +122,7 @@ export default function AddExpenseDialog({
     setSearchValue("")
   }
 
-const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSave = async () => {
     // Validation
@@ -112,7 +131,8 @@ const [isLoading, setIsLoading] = useState(false)
       return
     }
 
-    if (!formData.sbwdtl_operationid_startmile || !formData.sbwdtl_operationid_endmile) {
+    // ✅ ข้ามการตรวจสอบไมล์ถ้าเป็นรถสาธารณะ/อื่นๆ
+    if (!isPublicOrOther && (!formData.sbwdtl_operationid_startmile || !formData.sbwdtl_operationid_endmile)) {
       Swal.fire('แจ้งเตือน', 'กรุณากรอกระยะทางเริ่มต้นและสิ้นสุด', 'warning')
       return
     }
@@ -131,30 +151,28 @@ const [isLoading, setIsLoading] = useState(false)
         usercode: smartBill_Withdraw.ownercode || smartBill_Withdraw.UserCode
       })
       
-      console.log(' Vehicle updated')
+      console.log('✅ Vehicle updated')
       
-      // Small delay for better UX
       await new Promise(resolve => setTimeout(resolve, 300))
       
-      //  2. Add Detail (Activity)
       console.log('📝 Adding activity...')
       
+      // ✅ ส่งข้อมูลถูกต้องตามประเภทรถ
       await client.post('/SmartBill_Withdraw_AddrowDtl', {
         sbw_code: sbw_code,
-        sb_operationid: mode === 'smartcar' ? formData.sb_operationid : '',
+        sb_operationid: (mode === 'smartcar' && !isPublicOrOther) ? formData.sb_operationid : '',
         ownercode: smartBill_Withdraw.ownercode,
         car_infocode: smartBill_Withdraw.car_infocode,
         car_infoid: smartBill_Withdraw.car_infoid || null,
         remark: formData.remark,
         sbwdtl_operationid_startdate: dayjs(formData.sbwdtl_operationid_startdate).format('YYYY-MM-DD HH:mm:ss'),
         sbwdtl_operationid_enddate: dayjs(formData.sbwdtl_operationid_enddate).format('YYYY-MM-DD HH:mm:ss'),
-        sbwdtl_operationid_startmile: parseFloat(formData.sbwdtl_operationid_startmile),
-        sbwdtl_operationid_endmile: parseFloat(formData.sbwdtl_operationid_endmile)
+        sbwdtl_operationid_startmile: isPublicOrOther ? 0 : parseFloat(formData.sbwdtl_operationid_startmile),
+        sbwdtl_operationid_endmile: isPublicOrOther ? 0 : parseFloat(formData.sbwdtl_operationid_endmile)
       })
       
-      console.log(' Activity added')
+      console.log('✅ Activity added')
       
-      //  3. Success
       await Swal.fire({
         icon: 'success',
         title: 'สำเร็จ',
@@ -198,18 +216,17 @@ const [isLoading, setIsLoading] = useState(false)
   }
 
   const calculateDistance = () => {
+    if (isPublicOrOther) return 0
     const start = parseFloat(formData.sbwdtl_operationid_startmile) || 0
     const end = parseFloat(formData.sbwdtl_operationid_endmile) || 0
     return Math.max(0, end - start)
   }
 
-  // ฟังก์ชันสำหรับตัดข้อความที่ยาวเกินไป
   const truncateText = (text: string, maxLength: number = 50) => {
     if (!text) return ''
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
   }
 
-  // สร้าง display text สำหรับ trigger
   const getDisplayText = () => {
     if (!selectedOperation) return "คลิกเพื่อเลือกรายการ"
     
@@ -236,19 +253,51 @@ const [isLoading, setIsLoading] = useState(false)
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Mode Selection */}
+          {/* ✅ แสดง Warning เมื่อเป็นรถสาธารณะ/อื่นๆ */}
+          {isPublicOrOther && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Ban className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    หมายเหตุสำหรับรถสาธารณะ/อื่นๆ
+                  </p>
+                  <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-0.5 list-disc list-inside">
+                    <li>ไม่ต้องเลือกข้อมูลจาก SmartCar</li>
+                    <li>ไม่ต้องระบุเลขไมล์</li>
+                    <li>สามารถเบิกค่าใช้จ่ายอื่นๆ ได้ตามปกติ (ทางด่วน, เบี้ยเลี้ยง, ที่พัก, อื่นๆ)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mode Selection - ✅ Disable เมื่อเป็นรถสาธารณะ/อื่นๆ */}
           <div className="space-y-3">
-            <Label className="text-sm font-semibold">โหมดการป้อนข้อมูล</Label>
-            <RadioGroup value={mode} onValueChange={(value: any) => setMode(value)}>
+            <Label className={`text-sm font-semibold ${shouldDisableSmartCar ? 'text-gray-400' : ''}`}>
+              โหมดการป้อนข้อมูล
+              {shouldDisableSmartCar && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  บังคับ "สร้างใหม่"
+                </Badge>
+              )}
+            </Label>
+            <RadioGroup 
+              value={mode} 
+              onValueChange={(value: any) => setMode(value)}
+              disabled={shouldDisableSmartCar}
+            >
               <div className="grid grid-cols-2 gap-3">
                 <label className={`
-                  flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all
-                  ${mode === 'smartcar' 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' 
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                  flex items-center gap-3 p-4 rounded-lg border-2 transition-all
+                  ${shouldDisableSmartCar 
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' 
+                    : mode === 'smartcar'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20 cursor-pointer' 
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 cursor-pointer'
                   }
                 `}>
-                  <RadioGroupItem value="smartcar" id="smartcar" />
+                  <RadioGroupItem value="smartcar" id="smartcar" disabled={shouldDisableSmartCar} />
                   <div className="flex-1">
                     <span className="font-medium text-sm">จาก SmartCar</span>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -278,8 +327,8 @@ const [isLoading, setIsLoading] = useState(false)
 
           <Separator />
 
-          {/* SmartCar Selection with Combobox */}
-          {mode === 'smartcar' && (
+          {/* SmartCar Selection - ✅ ซ่อนเมื่อเป็นรถสาธารณะ/อื่นๆ */}
+          {mode === 'smartcar' && !isPublicOrOther && (
             <div className="space-y-3">
               <Label>เลือกข้อมูลจาก SmartCar</Label>
               {operations.length > 0 ? (
@@ -367,7 +416,6 @@ const [isLoading, setIsLoading] = useState(false)
                 </div>
               )}
 
-              {/* แสดงข้อมูลรายละเอียดเมื่อเลือกแล้ว */}
               {selectedOperation && (
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-700 rounded-lg space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -413,7 +461,7 @@ const [isLoading, setIsLoading] = useState(false)
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
-                    disabled={mode === 'smartcar' && !selectedOperation}
+                    disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                     <span className="truncate">
@@ -438,7 +486,7 @@ const [isLoading, setIsLoading] = useState(false)
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
-                    disabled={mode === 'smartcar' && !selectedOperation}
+                    disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                     <span className="truncate">
@@ -457,41 +505,65 @@ const [isLoading, setIsLoading] = useState(false)
             </div>
           </div>
 
-          {/* Mileage */}
+          {/* ✅ Mileage - Disable เมื่อเป็นรถสาธารณะ/อื่นๆ */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>ระยะทางเริ่มต้น (กม.)</Label>
+              <Label className={shouldDisableMileage ? 'text-gray-400' : ''}>
+                ระยะทางเริ่มต้น (กม.)
+                {shouldDisableMileage && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    ไม่จำเป็น
+                  </Badge>
+                )}
+              </Label>
               <div className="relative">
-                <Gauge className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Gauge className={`absolute left-3 top-3 h-4 w-4 ${shouldDisableMileage ? 'text-gray-300' : 'text-slate-400'}`} />
                 <Input
                   type="number"
-                  value={formData.sbwdtl_operationid_startmile}
+                  value={shouldDisableMileage ? '0' : formData.sbwdtl_operationid_startmile}
                   onChange={(e) => setFormData({...formData, sbwdtl_operationid_startmile: e.target.value})}
-                  disabled={mode === 'smartcar' && !selectedOperation}
-                  className="pl-10"
+                  disabled={shouldDisableMileage || (mode === 'smartcar' && !selectedOperation)}
+                  className={`pl-10 ${shouldDisableMileage ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''}`}
                   placeholder="0"
                 />
+                {shouldDisableMileage && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Ban className="h-4 w-4 text-gray-400" />
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>ระยะทางสิ้นสุด (กม.)</Label>
+              <Label className={shouldDisableMileage ? 'text-gray-400' : ''}>
+                ระยะทางสิ้นสุด (กม.)
+                {shouldDisableMileage && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    ไม่จำเป็น
+                  </Badge>
+                )}
+              </Label>
               <div className="relative">
-                <Gauge className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Gauge className={`absolute left-3 top-3 h-4 w-4 ${shouldDisableMileage ? 'text-gray-300' : 'text-slate-400'}`} />
                 <Input
                   type="number"
-                  value={formData.sbwdtl_operationid_endmile}
+                  value={shouldDisableMileage ? '0' : formData.sbwdtl_operationid_endmile}
                   onChange={(e) => setFormData({...formData, sbwdtl_operationid_endmile: e.target.value})}
-                  disabled={mode === 'smartcar' && !selectedOperation}
-                  className="pl-10"
+                  disabled={shouldDisableMileage || (mode === 'smartcar' && !selectedOperation)}
+                  className={`pl-10 ${shouldDisableMileage ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''}`}
                   placeholder="0"
                 />
+                {shouldDisableMileage && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Ban className="h-4 w-4 text-gray-400" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Distance Badge */}
-          {(formData.sbwdtl_operationid_startmile && formData.sbwdtl_operationid_endmile) && (
+          {/* Distance Badge - ✅ ซ่อนเมื่อเป็นรถสาธารณะ/อื่นๆ */}
+          {!isPublicOrOther && (formData.sbwdtl_operationid_startmile && formData.sbwdtl_operationid_endmile) && (
             <div className="flex items-center justify-center">
               <Badge variant="outline" className="text-base px-4 py-2">
                 ระยะทาง: {calculateDistance().toLocaleString()} กม.
@@ -506,7 +578,7 @@ const [isLoading, setIsLoading] = useState(false)
               <Textarea
                 value={formData.remark}
                 onChange={(e) => setFormData({...formData, remark: e.target.value})}
-                placeholder="Enter activity or destination details"
+                placeholder="ระบุรายละเอียดการเดินทางและกิจกรรมที่ทำ"
                 rows={4}
                 className="resize-none"
               />
@@ -520,9 +592,14 @@ const [isLoading, setIsLoading] = useState(false)
               <div className="text-sm text-blue-900 dark:text-blue-100">
                 <p className="font-semibold mb-2">หมายเหตุสำคัญ:</p>
                 <ul className="space-y-1 text-xs">
-                  <li>• ป้อนระยะทางเริ่มต้นและสิ้นสุดอย่างถูกต้องเพื่อการคำนวณที่ถูกต้อง</li>
+                  {!isPublicOrOther && (
+                    <li>• ป้อนระยะทางเริ่มต้นและสิ้นสุดอย่างถูกต้องเพื่อการคำนวณที่ถูกต้อง</li>
+                  )}
                   <li>• วันที่ควรตรงกับช่วงเวลาการเดินทางจริงของคุณ</li>
                   <li>• รายละเอียดกิจกรรมจะแสดงในรายงานค่าใช้จ่าย</li>
+                  {isPublicOrOther && (
+                    <li>• สำหรับรถสาธารณะ/อื่นๆ สามารถเบิกค่าใช้จ่ายอื่นๆ เช่น ทางด่วน, เบี้ยเลี้ยง, ที่พัก</li>
+                  )}
                 </ul>
               </div>
             </div>
@@ -539,7 +616,7 @@ const [isLoading, setIsLoading] = useState(false)
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={(mode === 'smartcar' && !selectedOperation) || isLoading}
+            disabled={(mode === 'smartcar' && !selectedOperation && !isPublicOrOther) || isLoading}
           >
             {isLoading ? (
               <>

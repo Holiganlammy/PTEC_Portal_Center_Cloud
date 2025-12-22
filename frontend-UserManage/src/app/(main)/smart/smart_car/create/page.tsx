@@ -737,10 +737,10 @@ export default function FormsStart() {
 
           {/* Content */}
           <AlertDialogHeader className="space-y-3 text-center">
-            <AlertDialogTitle className="text-xl font-semibold text-gray-900">
+            <AlertDialogTitle className="text-xl font-semibold text-gray-900 text-center">
               {alertTitle}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 text-sm leading-relaxed">
+            <AlertDialogDescription className="text-gray-600 text-sm leading-relaxed text-center">
               {alertMessage}
             </AlertDialogDescription>
           </AlertDialogHeader>

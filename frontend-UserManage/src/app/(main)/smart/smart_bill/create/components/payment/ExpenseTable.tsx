@@ -1,6 +1,5 @@
 "use client"
 
-import React, { useState } from 'react'
 import { 
   Table, 
   TableBody, 
@@ -28,6 +27,8 @@ import {
   CommandInput,
   CommandItem,
 } from '@/components/ui/command'
+
+import toast from 'react-hot-toast'
 import {
   Popover,
   PopoverContent,
@@ -59,16 +60,17 @@ import client from '@/lib/axios/interceptors'
 import { Label } from '@/components/ui/label'
 import { useSession } from 'next-auth/react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-
-
+import React ,{ useState, useRef, useEffect } from 'react'
 interface ExpenseTableProps {
   smartBill_WithdrawDtl: smartBill_Withdraw_Detail[]
+  smartBill_WithdrawHeader: smartBill_Withdraw_Header[]
   smartBill_Withdraw: smartBill_Withdraw
   fetchData: () => void
 }
 
 export default function ExpenseTable({
   smartBill_WithdrawDtl,
+  smartBill_WithdrawHeader,
   smartBill_Withdraw,
   fetchData
 }: ExpenseTableProps) {
@@ -77,7 +79,7 @@ export default function ExpenseTable({
     index: number
     type: string
   } | null>(null)
-  const [categoryDetails, setCategoryDetails] = useState<smartBill_CategoryDetails[]>([])
+  const [categoryDetails, setCategoryDetails] = useState<any[]>([])
   const [hotelGuestDetails, setHotelGuestDetails] = useState<smartBill_SelectHotelGroup[]>([])
   const [isAddingNew, setIsAddingNew] = useState(false)
   // แยก state สำหรับแต่ละ category
@@ -103,7 +105,22 @@ export default function ExpenseTable({
   const [allowanceEndDateInput, setAllowanceEndDateInput] = useState('')
   const [allowanceStartTimeInput, setAllowanceStartTimeInput] = useState('08:00')
   const [allowanceEndTimeInput, setAllowanceEndTimeInput] = useState('17:00')
-  
+  const [fuelDateInput, setFuelDateInput] = useState('')
+  const [fuelDateOpen, setFuelDateOpen] = useState(false)
+  const scrollPositionRef = useRef(0)
+  useEffect(() => {
+    const handleScroll = () => {
+      scrollPositionRef.current = window.scrollY
+    }
+    
+    scrollPositionRef.current = window.scrollY
+    
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
   // Options from API
   const [options, setOptions] = useState<{
     users?: UserHotelWelfare[]
@@ -210,13 +227,16 @@ export default function ExpenseTable({
       cancelButtonText: 'ยกเลิก',
       confirmButtonColor: '#ef4444'
     })
-
+    const scrollY = window.scrollY
     if (result.isConfirmed) {
       try {
         await client.post('/SmartBill_WithdrawDtl_Delete', { 
           sbwdtl_id: smartBill_WithdrawDtl[index].sbwdtl_id 
         })
         Swal.fire('สำเร็จ!', 'ลบรายการเรียบร้อย', 'success')
+        setTimeout(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' })
+        }, 0)
         fetchData()
       } catch (error) {
         Swal.fire('ข้อผิดพลาด', 'ไม่สามารถลบรายการได้', 'error')
@@ -380,7 +400,9 @@ export default function ExpenseTable({
       setAllowanceStartTimeInput('08:00')
       setAllowanceEndTimeInput('17:00')
     } else if (expandedCategory?.type === 'fuel') {
-      setFuelItem({})
+      const today = dayjs()
+      setFuelItem({ date: today.format('YYYY-MM-DD') })
+      setFuelDateInput(today.format('DD/MM/YYYY'))
     } else if (expandedCategory?.type === 'toll') {
       setTollItem({})
     } else if (expandedCategory?.type === 'other') {
@@ -469,6 +491,7 @@ export default function ExpenseTable({
     setAllowanceEndDateInput('')
     setAllowanceStartTimeInput('08:00')
     setAllowanceEndTimeInput('17:00')
+    setFuelDateInput('')
   }
 
   // ========== ALLOWANCE (เบี้ยเลี้ยง) ==========
@@ -676,14 +699,12 @@ export default function ExpenseTable({
 
   const handleSaveNew = async () => {
     if (!expandedCategory) return
-    if (isSaving) return // ป้องกันการกดซ้ำ
-    
+    if (isSaving) return
+
     if (smartBill_Withdraw.lock_status) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'ไม่สามารถบันทึกได้',
-        text: 'เอกสารนี้ถูกล็อคแล้ว ไม่สามารถบันทึกรายการใหม่ได้',
-        confirmButtonText: 'รับทราบ'
+      toast.error('เอกสารถูกล็อค ไม่สามารถบันทึกได้', {
+        icon: '🔒',
+        duration: 3000
       })
       return
     }
@@ -691,21 +712,33 @@ export default function ExpenseTable({
     // Validation สำหรับเบี้ยเลี้ยง
     if (expandedCategory.type === 'allowance') {
       if (!allowanceItem.usercode) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'กรุณาเลือกผู้เดินทาง',
-          text: 'กรุณาเลือกผู้เดินทางก่อนบันทึก',
-          confirmButtonText: 'รับทราบ'
+        toast.error('กรุณาเลือกผู้เดินทางก่อนบันทึก', {
+          icon: '⚠️',
+          duration: 3000
+        })
+        return
+      }
+
+      const calculatedDays = calculateDays()
+      if (calculatedDays === 0) {
+        toast.error('การเดินทางต้องมีระยะเวลาไม่น้อยกว่า 12 ชั่วโมง', {
+          icon: '⏰',
+          duration: 3000
         })
         return
       }
     }
 
-    setIsSaving(true) // เริ่ม loading
+    const scrollY = scrollPositionRef.current
+    setIsSaving(true)
+    const loadingToast = toast.loading('กำลังบันทึก...')
+
     try {
       const sbwdtl_id = smartBill_WithdrawDtl[expandedCategory.index].sbwdtl_id
-      let categoryId: number | null = null
-      let payload: any
+      let categoryId = null
+      let payload = null
+      let newItem = null
+
       switch (expandedCategory.type) {
         case 'fuel':
           categoryId = 1
@@ -715,7 +748,7 @@ export default function ExpenseTable({
             id: null,
             category_id: categoryId,
             count: null,
-            startdate: null,
+            startdate: fuelItem.date || null,
             enddate: null,
             sbc_hotelProvince: null,
             sbc_hotelname: null,
@@ -724,7 +757,14 @@ export default function ExpenseTable({
             amount: parseFloat((fuelItem.amount || '0').toString()) || 0,
             category_name: null
           }]
-          await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+
+          const fuelResponse = await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+          newItem = {
+            cost_id: fuelResponse.data?.id || Date.now(),
+            amount: parseFloat((fuelItem.amount || '0').toString()) || 0,
+            startdate: fuelItem.date || null,
+            category_id: categoryId
+          }
           break
 
         case 'toll':
@@ -736,23 +776,20 @@ export default function ExpenseTable({
             usercode: session?.user?.UserCode,
             amount: parseFloat((tollItem.amount || '0').toString()) || 0,
           }]
-          await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+
+          const tollResponse = await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+          newItem = {
+            cost_id: tollResponse.data?.id || Date.now(),
+            amount: parseFloat((tollItem.amount || '0').toString()) || 0,
+            category_id: categoryId
+          }
           break
 
         case 'allowance':
           categoryId = 4
           const calculatedDays = calculateDays()
-          
-          if (calculatedDays === 0) {
-            Swal.fire({
-              icon: 'warning',
-              title: 'เวลาไม่ถึงเกณฑ์',
-              text: 'การเดินทางต้องมีระยะเวลาไม่น้อยกว่า 12 ชั่วโมง',
-            })
-            return
-          }
-          
           const baseAmount = calculatedDays * (parseFloat(allowanceItem.rate?.toString() || '0') || 0)
+          const finalAmount = allowanceItem.foodStatus === true ? baseAmount / 2 : baseAmount
           
           payload = [{
             sbwdtl_id: parseInt(sbwdtl_id),
@@ -766,15 +803,26 @@ export default function ExpenseTable({
             sbc_hotelname: null,
             usercode: allowanceItem.usercode || null,
             foodStatus: allowanceItem.foodStatus || false,
-            amount: parseFloat(baseAmount.toString()),
+            amount: parseFloat(finalAmount.toString()),
             category_name: null
           }]
-             
-          await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+
+          const allowanceResponse = await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+          newItem = {
+            cost_id: allowanceResponse.data?.id || Date.now(),
+            amount: parseFloat(finalAmount.toString()),
+            count: calculatedDays,
+            startdate: allowanceItem.startdate,
+            enddate: allowanceItem.enddate,
+            usercode: allowanceItem.usercode,
+            foodStatus: allowanceItem.foodStatus,
+            category_id: categoryId
+          }
           break
 
         case 'hotel':
           categoryId = 3
+          const maxAllowance = calculateHotelMaxAllowance()
           payload = [{
             sbwdtl_id: parseInt(sbwdtl_id),
             cost_id: null,
@@ -787,6 +835,7 @@ export default function ExpenseTable({
             sbc_hotelname: hotelItem.hotel_name || null,
             usercode: session?.user?.UserCode,
             amount: parseFloat((hotelItem.amount || '0').toString()) || 0,
+            max_allowance: maxAllowance,
             smartBill_CostHotelGroup: (hotelItem.guests || []).map((guest: HotelGuestItem) => ({
               sbc_hotelid: null,
               sbc_hotelgroupid: "",
@@ -794,25 +843,39 @@ export default function ExpenseTable({
               amount: guest.hotel_rate || 0
             }))
           }]
-          
+
           const hotelResponse = await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+
+          // บันทึกผู้เข้าพัก
           if (hotelResponse.data && hotelResponse.data.length > 0) {
             const responseData = Array.isArray(hotelResponse.data[0]) ? hotelResponse.data[0] : hotelResponse.data
-            
+
             for (let i = 0; i < responseData.length; i++) {
               const hotelData = responseData[i]
+
               if (payload[i].smartBill_CostHotelGroup && payload[i].smartBill_CostHotelGroup.length > 0) {
-                // เตรียมข้อมูลสำหรับบันทึกผู้เข้าพัก
-                const hotelGroupData = payload[i].smartBill_CostHotelGroup.map((guest: HotelGuestItem) => ({
+                const hotelGroupData = payload[i].smartBill_CostHotelGroup.map((guest: any) => ({
                   sbc_hotelid: parseInt(hotelData.id),
                   sbc_hotelgroupid: guest.sbc_hotelgroupid || "",
                   usercode: guest.usercode,
                   amount: guest.amount
                 }))
-                
-                console.log('📤 Saving hotel group data:', hotelGroupData)
+
                 await client.post('/SmartBill_WithdrawDtl_SaveChangesHotelGroup', hotelGroupData)
               }
+            }
+
+            // ดึงข้อมูลผู้เข้าพักที่บันทึกแล้ว
+            const guestData = await fetchHotelGuestDetails(parseInt(responseData[0].id))
+            newItem = {
+              cost_id: responseData[0].id,
+              sbc_hotelid: responseData[0].id,
+              sbc_hotelname: hotelItem.hotel_name,
+              sbc_hotelProvince: hotelItem.province,
+              count: parseInt((hotelItem.nights || '0').toString()) || 0,
+              amount: parseFloat((hotelItem.amount || '0').toString()) || 0,
+              max_allowance: maxAllowance,
+              category_id: categoryId
             }
           }
           break
@@ -824,36 +887,69 @@ export default function ExpenseTable({
             cost_id: null,
             category_name: otherItem.category_name || null
           }]
-          await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+
+          const otherResponse = await client.post('/SmartBill_WithdrawDtl_SaveChangesCategory', payload)
+          newItem = {
+            cost_id: otherResponse.data?.id || Date.now(),
+            amount: parseFloat((otherItem.amount || '0').toString()) || 0,
+            category_name: otherItem.category_name
+          }
           break
       }
 
-      //  แสดง Success
-      await Swal.fire({
-        icon: 'success',
-        title: 'สำเร็จ',
-        text: 'บันทึกข้อมูลเรียบร้อย',
-        timer: 1500,
-        showConfirmButton: false
-      })
-      
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      await fetchData()
-      
-      if (expandedCategory) {
-        await handleCategoryClick(expandedCategory.index, expandedCategory.type, sbwdtl_id)
+      if (newItem) {
+        setCategoryDetails([...categoryDetails, newItem])
       }
-      
+
+      setIsAddingNew(false)
+
+      //  Reset State
+      setFuelItem({})
+      setTollItem({})
+      setAllowanceItem({})
+      setHotelItem({})
+      setOtherItem({})
+      setWelfareData({})
+      setAllowanceStartDateInput('')
+      setAllowanceEndDateInput('')
+      setAllowanceStartTimeInput('08:00')
+      setAllowanceEndTimeInput('17:00')
+      setFuelDateInput('')
+
+      toast.success('✅ บันทึกสำเร็จ!', {
+        id: loadingToast,
+        duration: 2000,
+        icon: '✅',
+      })
+
+      console.log('🔄 Restoring scroll to:', scrollY)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' })
+          console.log('✅ Restored to:', window.scrollY)
+        })
+      })
+
+      setTimeout(() => {
+        fetchData()
+      }, 100)
+
+
     } catch (error: any) {
       console.error('❌ Save Error:', error)
-      console.error('❌ Error Response:', error.response?.data)
-      Swal.fire(
-        'ข้อผิดพลาด', 
-        error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้', 
-        'error'
+
+      // ❌ แสดง Error Toast
+      toast.error(
+        error.response?.data?.message || 'ไม่สามารถบันทึกได้ กรุณาลองใหม่',
+        {
+          id: loadingToast,
+          duration: 3000,
+          icon: '❌'
+        }
       )
+
     } finally {
-      setIsSaving(false) // หยุด loading
+      setIsSaving(false)
     }
   }
 
@@ -877,12 +973,14 @@ export default function ExpenseTable({
       cancelButtonText: 'ยกเลิก',
       confirmButtonColor: '#ef4444'
     })
-
+    const scrollY = window.scrollY
     if (result.isConfirmed) {
       try {
         await client.post('/SmartBill_WithdrawDtl_DeleteCategory', { cost_id: item.cost_id })
         Swal.fire('สำเร็จ!', 'ลบรายการเรียบร้อย', 'success')
-        
+        setTimeout(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' })
+        }, 0)
         if (expandedCategory) {
           const sbwdtl_id = smartBill_WithdrawDtl[expandedCategory.index].sbwdtl_id
           handleCategoryClick(expandedCategory.index, expandedCategory.type, sbwdtl_id)
@@ -894,10 +992,51 @@ export default function ExpenseTable({
     }
   }
 
-  const calculateColumnTotal = (field: keyof smartBill_Withdraw_Detail) => {
+  const calculateActualTotalLocal = () => {
     if (!smartBill_WithdrawDtl.length) return 0
+
     return smartBill_WithdrawDtl.reduce((sum, item) => {
-      const value = item.sb_paystatus === false ? 0 : parseFloat(item[field] as string) || 0
+      if (item.sb_paystatus === false) return sum
+
+      // คำนวณค่าน้ำมันตามประเภทรถ
+      // let fuelCost = 0
+      let amouthActual = 0
+
+      if (item.car_infostatus_companny === true) {
+        // รถบริษัท
+        if (smartBill_WithdrawHeader?.[0]?.car_paytype === 0) {
+          // รถบริษัท + เบิกตามไมล์เรท (รถเขต)
+          const itemTotal = parseFloat(item.amouthAll?.toString() || '0') || 0
+          return sum + itemTotal
+        } else {
+          // รถบริษัท + เบิกตามจริง
+          amouthActual = parseFloat(item.amouthTrueOil?.toString() || '0') || 0
+        }
+      }
+      else if (item.car_infostatus_companny === false) {
+        // รถส่วนตัว
+        const itemTotal = parseFloat(item.amouthAll?.toString() || '0') || 0
+        return sum + itemTotal
+      }
+      // ค่าใช้จ่ายอื่นๆ - ทุกประเภทรถสามารถเบิกได้
+      const allowance = parseFloat(item.amouthAllowance?.toString() || '0') || 0
+      const hotel = parseFloat(item.amouthHotel?.toString() || '0') || 0
+      const toll = parseFloat(item.amouthRush?.toString() || '0') || 0
+      const other = parseFloat(item.amouthother?.toString() || '0') || 0
+
+      return sum + amouthActual + allowance + hotel + toll + other
+    }, 0)
+  }
+  
+
+  const calculateColumnTotalLocal = (field: keyof smartBill_Withdraw_Detail) => {
+    if (!smartBill_WithdrawDtl.length) return 0
+
+    return smartBill_WithdrawDtl.reduce((sum, item) => {
+      // ข้ามรายการที่ sb_paystatus = false
+      if (item.sb_paystatus === false) return 0
+      
+      const value = parseFloat(item[field] as string) || 0
       return sum + value
     }, 0)
   }
@@ -1958,12 +2097,52 @@ export default function ExpenseTable({
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Input
-                        type="date"
-                        value={fuelItem.date || ''}
-                        onChange={(e) => setFuelItem({ ...fuelItem, date: e.target.value })}
-                        className="h-9"
-                      />
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          value={fuelDateInput}
+                          onChange={(e) => {
+                            const formatted = formatDateInput(e.target.value)
+                            setFuelDateInput(formatted)
+                            
+                            if (formatted.length === 10) {
+                              const date = parseDateInput(formatted)
+                              if (date) {
+                                setFuelItem({ ...fuelItem, date: dayjs(date).format('YYYY-MM-DD') })
+                              }
+                            }
+                          }}
+                          placeholder="วว/ดด/ปปปป"
+                          className="h-9 pr-10 bg-white"
+                          maxLength={10}
+                        />
+                        <Popover open={fuelDateOpen} onOpenChange={setFuelDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                              onClick={() => setFuelDateOpen(true)}
+                            >
+                              <CalendarIcon className="h-4 w-4 text-gray-500" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={fuelItem.date ? new Date(fuelItem.date) : undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  setFuelItem({ ...fuelItem, date: dayjs(date).format('YYYY-MM-DD') })
+                                  setFuelDateInput(dayjs(date).format('DD/MM/YYYY'))
+                                  setFuelDateOpen(false)
+                                }
+                              }}
+                              captionLayout="dropdown"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -2108,7 +2287,10 @@ export default function ExpenseTable({
               <span className="text-slate-700 dark:text-slate-300">
                 {smartBill_Withdraw.lock_status 
                   ? <>🔒 <strong>เอกสารถูกล็อค</strong> ไม่สามารถแก้ไขหรือเพิ่มรายการค่าใช้จ่ายได้</>
-                  : <>💡 <strong>คลิกที่จำนวนเงิน</strong> ในคอลัมน์ Actual, Allowance, Hotel, Toll, Other เพื่อเพิ่ม/แก้ไขรายการค่าใช้จ่าย</>
+                  : <>💡 
+                  <strong>คลิกที่จำนวนเงิน</strong> ในคอลัมน์ เบิกตามบิล, เบี้ยเลี้ยง, ที่พัก, ทางด่วน, อื่นๆ เพื่อเพิ่ม/แก้ไขรายการค่าใช้จ่าย <br />
+                  <strong className='text-red-500'>หมายเหตุ:</strong> การเบิกค่าใช้จ่าย รถบริษัทจะไม่คำนวนเบิกตามไมล์เรทรวมอยู่ในสรุปยอดรวมค่าใช้จ่าย (นอกจากรถประจำเขต ที่จะเบิกตามไมล์เรทได้)
+                  </>
                 }
               </span>
             </div>
@@ -2529,51 +2711,51 @@ export default function ExpenseTable({
         
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <div className="space-y-1">
-            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">Mile Rate</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">ไมล์เรท</p>
             <p className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100">
-              {calculateColumnTotal('oilBath').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {calculateColumnTotalLocal('oilBath').toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
           
           <div className="space-y-1">
-            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actual</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">เบิกตามบิล</p>
             <p className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100">
-              {calculateColumnTotal('amouthTrueOil').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {calculateColumnTotalLocal('amouthTrueOil').toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
           
           <div className="space-y-1">
-            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">Allowance</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">เบี้ยเลี้ยง</p>
             <p className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100">
-              {calculateColumnTotal('amouthAllowance').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {calculateColumnTotalLocal('amouthAllowance').toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
           
           <div className="space-y-1">
-            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">Hotel</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">ที่พัก</p>
             <p className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100">
-              {calculateColumnTotal('amouthHotel').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {calculateColumnTotalLocal('amouthHotel').toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
           
           <div className="space-y-1">
-            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">Toll</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">ค่าทางด่วน</p>
             <p className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100">
-              {calculateColumnTotal('amouthRush').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {calculateColumnTotalLocal('amouthRush').toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
           
           <div className="space-y-1">
-            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">Other</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">อื่นๆ</p>
             <p className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100">
-              {calculateColumnTotal('amouthother').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {calculateColumnTotalLocal('amouthother').toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
           
           <div className="space-y-1 col-span-full md:col-span-1">
-            <p className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wider font-semibold">Subtotal</p>
+            <p className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wider font-semibold">ยอดรวม</p>
             <p className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">
-              {calculateColumnTotal('amouthAll').toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {calculateActualTotalLocal().toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </div>
         </div>

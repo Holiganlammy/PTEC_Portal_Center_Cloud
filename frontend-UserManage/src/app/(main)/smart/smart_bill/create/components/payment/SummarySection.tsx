@@ -117,7 +117,7 @@ export default function SummarySection({
                     Pure Card Advance
                   </Label>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    Cash advance received
+                    เงินจากบัตร Pure Card 
                   </p>
                 </div>
               </div>
@@ -147,10 +147,10 @@ export default function SummarySection({
                 </div>
                 <div className="flex-1">
                   <Label className="text-xs text-blue-700 dark:text-blue-300 uppercase tracking-wider font-semibold">
-                    Total Expenses
+                    ยอดรวมค่าใช้จ่าย
                   </Label>
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
-                    Sum of all claims
+                    รวมค่าใช้จ่ายทั้งหมด
                   </p>
                 </div>
               </div>
@@ -190,15 +190,15 @@ export default function SummarySection({
                       ? 'text-green-700 dark:text-green-300' 
                       : 'text-red-700 dark:text-red-300'
                   }`}>
-                    Net Amount {netAmount >= 0 ? 'Payable' : 'Refundable'}
+                    ยอดรวมสุทธิทั้งหมด {netAmount >= 0 ? '' : '(ติดลบ)'}
                   </Label>
-                  <p className={`text-xs mt-0.5 ${
+                  {/* <p className={`text-xs mt-0.5 ${
                     netAmount >= 0 
                       ? 'text-green-600 dark:text-green-400' 
                       : 'text-red-600 dark:text-red-400'
                   }`}>
                     {netAmount >= 0 ? 'Amount to be paid' : 'Amount to refund'}
-                  </p>
+                  </p> */}
                 </div>
               </div>
               <div className="text-right">
