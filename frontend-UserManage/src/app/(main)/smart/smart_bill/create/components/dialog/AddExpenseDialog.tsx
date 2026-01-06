@@ -28,7 +28,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Calendar } from '@/components/ui/calendar'
-import { CalendarIcon, MapPin, Gauge, AlertCircle, Check, ChevronsUpDown, Ban } from 'lucide-react'
+import { CalendarIcon, MapPin, Gauge, AlertCircle, Check, ChevronsUpDown, Ban, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import dayjs from 'dayjs'
 import axios from 'axios'
@@ -40,7 +40,7 @@ interface AddExpenseDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   smartBill_Withdraw: any
-  fetchData: () => void
+  onSaveSuccess?: () => void
   sbw_code: string
 }
 
@@ -48,7 +48,7 @@ export default function AddExpenseDialog({
   open,
   onOpenChange,
   smartBill_Withdraw,
-  fetchData,
+  onSaveSuccess,
   sbw_code
 }: AddExpenseDialogProps) {
   const [mode, setMode] = useState<'smartcar' | 'manual'>('smartcar')
@@ -69,12 +69,23 @@ export default function AddExpenseDialog({
     sbwdtl_operationid_endmile: ''
   })
 
-  // ✅ ตรวจสอบว่าเป็นรถสาธารณะ/อื่นๆ หรือไม่
+  // Date/Time inputs (รูปแบบเดียวกับ AllowanceForm)
+  const [startDateInput, setStartDateInput] = useState(dayjs().format('DD/MM/YYYY'))
+  const [endDateInput, setEndDateInput] = useState(dayjs().format('DD/MM/YYYY'))
+  const [startTimeInput, setStartTimeInput] = useState(dayjs().format('HH:mm'))
+  const [endTimeInput, setEndTimeInput] = useState(dayjs().format('HH:mm'))
+
+  const [startDateOpen, setStartDateOpen] = useState(false)
+  const [endDateOpen, setEndDateOpen] = useState(false)
+  const [startTimeOpen, setStartTimeOpen] = useState(false)
+  const [endTimeOpen, setEndTimeOpen] = useState(false)
+
+  //  ตรวจสอบว่าเป็นรถสาธารณะ/อื่นๆ หรือไม่
   const isPublicOrOther = smartBill_Withdraw.condition === 2 || smartBill_Withdraw.condition === 3
   const shouldDisableSmartCar = isPublicOrOther
   const shouldDisableMileage = isPublicOrOther
 
-  // ✅ Auto-reset เมื่อเป็นรถสาธารณะ/อื่นๆ
+  //  Auto-reset เมื่อเป็นรถสาธารณะ/อื่นๆ
   useEffect(() => {
     if (isPublicOrOther) {
       setMode('manual')
@@ -108,16 +119,25 @@ export default function AddExpenseDialog({
   }
 
   const handleOperationSelect = (operation: any) => {
+    const startDate = new Date(operation.sb_operationid_startdate)
+    const endDate = new Date(operation.sb_operationid_enddate)
+
     setSelectedOperation(operation)
     setFormData({
       ...formData,
       sb_operationid: operation.sb_operationid,
-      sbwdtl_operationid_startdate: new Date(operation.sb_operationid_startdate),
-      sbwdtl_operationid_enddate: new Date(operation.sb_operationid_enddate),
+      sbwdtl_operationid_startdate: startDate,
+      sbwdtl_operationid_enddate: endDate,
       sbwdtl_operationid_startmile: operation.sb_operationid_startmile,
       sbwdtl_operationid_endmile: operation.sb_operationid_endmile,
       remark: operation.sb_operationid_location
     })
+
+    setStartDateInput(dayjs(startDate).format('DD/MM/YYYY'))
+    setStartTimeInput(dayjs(startDate).format('HH:mm'))
+    setEndDateInput(dayjs(endDate).format('DD/MM/YYYY'))
+    setEndTimeInput(dayjs(endDate).format('HH:mm'))
+
     setOpenCombobox(false)
     setSearchValue("")
   }
@@ -131,7 +151,7 @@ export default function AddExpenseDialog({
       return
     }
 
-    // ✅ ข้ามการตรวจสอบไมล์ถ้าเป็นรถสาธารณะ/อื่นๆ
+    //  ข้ามการตรวจสอบไมล์ถ้าเป็นรถสาธารณะ/อื่นๆ
     if (!isPublicOrOther && (!formData.sbwdtl_operationid_startmile || !formData.sbwdtl_operationid_endmile)) {
       Swal.fire('แจ้งเตือน', 'กรุณากรอกระยะทางเริ่มต้นและสิ้นสุด', 'warning')
       return
@@ -151,13 +171,13 @@ export default function AddExpenseDialog({
         usercode: smartBill_Withdraw.ownercode || smartBill_Withdraw.UserCode
       })
       
-      console.log('✅ Vehicle updated')
+      console.log(' Vehicle updated')
       
       await new Promise(resolve => setTimeout(resolve, 300))
       
       console.log('📝 Adding activity...')
       
-      // ✅ ส่งข้อมูลถูกต้องตามประเภทรถ
+      //  ส่งข้อมูลถูกต้องตามประเภทรถ
       await client.post('/SmartBill_Withdraw_AddrowDtl', {
         sbw_code: sbw_code,
         sb_operationid: (mode === 'smartcar' && !isPublicOrOther) ? formData.sb_operationid : '',
@@ -170,8 +190,11 @@ export default function AddExpenseDialog({
         sbwdtl_operationid_startmile: isPublicOrOther ? 0 : parseFloat(formData.sbwdtl_operationid_startmile),
         sbwdtl_operationid_endmile: isPublicOrOther ? 0 : parseFloat(formData.sbwdtl_operationid_endmile)
       })
+
+      // รีเฟรชข้อมูลลง ExpenseTable ทันที
+      onSaveSuccess?.()
       
-      console.log('✅ Activity added')
+      console.log(' Activity added')
       
       await Swal.fire({
         icon: 'success',
@@ -183,7 +206,6 @@ export default function AddExpenseDialog({
       
       onOpenChange(false)
       resetForm()
-      await fetchData()
       
     } catch (error: any) {
       console.error('❌ Error:', error)
@@ -199,20 +221,124 @@ export default function AddExpenseDialog({
   }
 
   const resetForm = () => {
+    const now = new Date()
+
     setFormData({
       sbw_code: smartBill_Withdraw.sbw_code,
       sb_operationid: '',
       ownercode: smartBill_Withdraw.ownercode,
       car_infocode: smartBill_Withdraw.car_infocode,
       remark: '',
-      sbwdtl_operationid_startdate: new Date(),
-      sbwdtl_operationid_enddate: new Date(),
+      sbwdtl_operationid_startdate: now,
+      sbwdtl_operationid_enddate: now,
       sbwdtl_operationid_startmile: '',
       sbwdtl_operationid_endmile: ''
     })
+
+    setStartDateInput(dayjs(now).format('DD/MM/YYYY'))
+    setStartTimeInput(dayjs(now).format('HH:mm'))
+    setEndDateInput(dayjs(now).format('DD/MM/YYYY'))
+    setEndTimeInput(dayjs(now).format('HH:mm'))
+
     setSelectedOperation(null)
     setMode('smartcar')
     setSearchValue("")
+  }
+
+  const formatDateInput = (dateStr: string) => {
+    let cleaned = dateStr.replace(/[^0-9]/g, '')
+    if (cleaned.length > 8) cleaned = cleaned.substr(0, 8)
+    if (cleaned.length >= 2) {
+      cleaned = cleaned.substr(0, 2) + '/' + cleaned.substr(2)
+    }
+    if (cleaned.length >= 5) {
+      cleaned = cleaned.substr(0, 5) + '/' + cleaned.substr(5)
+    }
+    return cleaned
+  }
+
+  const parseDateInput = (input: string) => {
+    if (!input || input.length < 10) return null
+    const parts = input.split('/')
+    if (parts.length !== 3) return null
+    const day = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10) - 1
+    let year = parseInt(parts[2], 10)
+
+    // รองรับปี พ.ศ. (25xx) -> แปลงเป็น ค.ศ. โดยลบ 543
+    if (year >= 2400) {
+      year = year - 543
+    }
+
+    const date = new Date(year, month, day)
+    if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+      return null
+    }
+    return date
+  }
+
+  const formatTimeInput = (timeStr: string) => {
+    let cleaned = timeStr.replace(/[^0-9]/g, '')
+    if (cleaned.length > 4) cleaned = cleaned.substr(0, 4)
+    if (cleaned.length >= 2) {
+      cleaned = cleaned.substr(0, 2) + ':' + cleaned.substr(2)
+    }
+    return cleaned
+  }
+
+  const validateAndFixTime = (input: string) => {
+    if (!input || input.length < 5) return input
+    const parts = input.split(':')
+    if (parts.length !== 2) return input
+    let hour = parseInt(parts[0], 10)
+    let minute = parseInt(parts[1], 10)
+    if (hour > 23) hour = 23
+    if (hour < 0) hour = 0
+    if (minute > 59) minute = 59
+    if (minute < 0) minute = 0
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+  }
+
+  const applyStartDateTime = (datePart: Date, timePart: string) => {
+    const [hh, mm] = (timePart || '00:00').split(':')
+    const next = new Date(datePart)
+    next.setHours(parseInt(hh || '0', 10), parseInt(mm || '0', 10), 0, 0)
+
+    // Enforce: start <= end
+    const currentEnd = formData.sbwdtl_operationid_enddate
+    if (next.getTime() > currentEnd.getTime()) {
+      setEndDateInput(dayjs(next).format('DD/MM/YYYY'))
+      setEndTimeInput(dayjs(next).format('HH:mm'))
+      setFormData(prev => ({
+        ...prev,
+        sbwdtl_operationid_startdate: next,
+        sbwdtl_operationid_enddate: next
+      }))
+      return
+    }
+
+    setFormData(prev => ({ ...prev, sbwdtl_operationid_startdate: next }))
+  }
+
+  const applyEndDateTime = (datePart: Date, timePart: string) => {
+    const [hh, mm] = (timePart || '00:00').split(':')
+    const next = new Date(datePart)
+    next.setHours(parseInt(hh || '0', 10), parseInt(mm || '0', 10), 0, 0)
+
+    // Enforce: end >= start
+    const currentStart = formData.sbwdtl_operationid_startdate
+    if (next.getTime() < currentStart.getTime()) {
+      setStartDateInput(dayjs(next).format('DD/MM/YYYY'))
+      setStartTimeInput(dayjs(next).format('HH:mm'))
+      setFormData(prev => ({
+        ...prev,
+        sbwdtl_operationid_startdate: next,
+        sbwdtl_operationid_enddate: next
+      }))
+      return
+    }
+
+    setFormData(prev => ({ ...prev, sbwdtl_operationid_enddate: next }))
   }
 
   const calculateDistance = () => {
@@ -242,7 +368,7 @@ export default function AddExpenseDialog({
       onOpenChange(isOpen)
       if (!isOpen) resetForm()
     }}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl! max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
@@ -253,7 +379,7 @@ export default function AddExpenseDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* ✅ แสดง Warning เมื่อเป็นรถสาธารณะ/อื่นๆ */}
+          {/*  แสดง Warning เมื่อเป็นรถสาธารณะ/อื่นๆ */}
           {isPublicOrOther && (
             <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
               <div className="flex items-start gap-3">
@@ -272,7 +398,7 @@ export default function AddExpenseDialog({
             </div>
           )}
 
-          {/* Mode Selection - ✅ Disable เมื่อเป็นรถสาธารณะ/อื่นๆ */}
+          {/* Mode Selection -  Disable เมื่อเป็นรถสาธารณะ/อื่นๆ */}
           <div className="space-y-3">
             <Label className={`text-sm font-semibold ${shouldDisableSmartCar ? 'text-gray-400' : ''}`}>
               โหมดการป้อนข้อมูล
@@ -327,7 +453,7 @@ export default function AddExpenseDialog({
 
           <Separator />
 
-          {/* SmartCar Selection - ✅ ซ่อนเมื่อเป็นรถสาธารณะ/อื่นๆ */}
+          {/* SmartCar Selection -  ซ่อนเมื่อเป็นรถสาธารณะ/อื่นๆ */}
           {mode === 'smartcar' && !isPublicOrOther && (
             <div className="space-y-3">
               <Label>เลือกข้อมูลจาก SmartCar</Label>
@@ -431,16 +557,22 @@ export default function AddExpenseDialog({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
+                        const now = new Date()
                         setSelectedOperation(null)
                         setFormData({
                           ...formData,
                           sb_operationid: '',
                           remark: '',
-                          sbwdtl_operationid_startdate: new Date(),
-                          sbwdtl_operationid_enddate: new Date(),
+                          sbwdtl_operationid_startdate: now,
+                          sbwdtl_operationid_enddate: now,
                           sbwdtl_operationid_startmile: '',
                           sbwdtl_operationid_endmile: ''
                         })
+
+                        setStartDateInput(dayjs(now).format('DD/MM/YYYY'))
+                        setStartTimeInput(dayjs(now).format('HH:mm'))
+                        setEndDateInput(dayjs(now).format('DD/MM/YYYY'))
+                        setEndTimeInput(dayjs(now).format('HH:mm'))
                       }}
                       className="h-8 text-xs shrink-0"
                     >
@@ -456,56 +588,306 @@ export default function AddExpenseDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>วันที่และเวลาที่เริ่มต้น</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={startDateInput}
+                    onChange={(e) => {
+                      const formatted = formatDateInput(e.target.value)
+                      setStartDateInput(formatted)
+                      if (formatted.length === 10) {
+                        const parsed = parseDateInput(formatted)
+                        if (parsed) {
+                          applyStartDateTime(parsed, startTimeInput)
+                          // normalize input (รองรับปี พ.ศ. -> ค.ศ.)
+                          setStartDateInput(dayjs(parsed).format('DD/MM/YYYY'))
+                        }
+                      }
+                    }}
+                    placeholder="วว/ดด/ปปปป"
+                    className="pr-10"
+                    maxLength={10}
                     disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                    <span className="truncate">
-                      {format(formData.sbwdtl_operationid_startdate, 'dd/MM/yyyy HH:mm')}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.sbwdtl_operationid_startdate}
-                    onSelect={(date) => date && setFormData({...formData, sbwdtl_operationid_startdate: date})}
                   />
-                </PopoverContent>
-              </Popover>
+                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen} modal={true}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
+                      >
+                        <CalendarIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={formData.sbwdtl_operationid_startdate}
+                        defaultMonth={formData.sbwdtl_operationid_startdate}
+                        disabled={(date) => {
+                          const endDate = new Date(formData.sbwdtl_operationid_enddate)
+                          endDate.setHours(0, 0, 0, 0)
+                          const check = new Date(date)
+                          check.setHours(0, 0, 0, 0)
+                          return check.getTime() > endDate.getTime()
+                        }}
+                        onSelect={(date) => {
+                          if (!date) return
+                          const nextDate = new Date(date)
+                          applyStartDateTime(nextDate, startTimeInput)
+                          setStartDateInput(dayjs(nextDate).format('DD/MM/YYYY'))
+                          setStartDateOpen(false)
+                        }}
+                        captionLayout="dropdown"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={startTimeInput}
+                    onChange={(e) => {
+                      const formatted = formatTimeInput(e.target.value)
+                      const validated = validateAndFixTime(formatted)
+                      setStartTimeInput(validated)
+                      if (validated.length === 5) {
+                        applyStartDateTime(formData.sbwdtl_operationid_startdate, validated)
+                      }
+                    }}
+                    placeholder="HH:mm"
+                    maxLength={5}
+                    className="pr-10"
+                    disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
+                  />
+                  <Popover open={startTimeOpen} onOpenChange={setStartTimeOpen} modal={true}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-4">
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm">เลือกเวลา</h4>
+                        <div className="flex items-center gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs">ชั่วโมง</Label>
+                            <div className="h-40 w-20 border rounded overflow-auto">
+                              <div className="space-y-1 p-1">
+                                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
+                                  <button
+                                    key={hour}
+                                    className={`w-full text-center py-1 rounded text-sm hover:bg-gray-100 ${
+                                      startTimeInput.split(':')[0] === hour ? 'bg-blue-500 text-white' : ''
+                                    }`}
+                                    onClick={() => {
+                                      const next = `${hour}:${startTimeInput.split(':')[1] || '00'}`
+                                      setStartTimeInput(next)
+                                      applyStartDateTime(formData.sbwdtl_operationid_startdate, next)
+                                    }}
+                                    type="button"
+                                  >
+                                    {hour}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold">:</div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">นาที</Label>
+                            <div className="h-40 w-20 border rounded overflow-auto">
+                              <div className="space-y-1 p-1">
+                                {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')).map((minute) => (
+                                  <button
+                                    key={minute}
+                                    className={`w-full text-center py-1 rounded text-sm hover:bg-gray-100 ${
+                                      startTimeInput.split(':')[1] === minute ? 'bg-blue-500 text-white' : ''
+                                    }`}
+                                    onClick={() => {
+                                      const next = `${startTimeInput.split(':')[0] || '00'}:${minute}`
+                                      setStartTimeInput(next)
+                                      applyStartDateTime(formData.sbwdtl_operationid_startdate, next)
+                                    }}
+                                    type="button"
+                                  >
+                                    {minute}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <Button size="sm" onClick={() => setStartTimeOpen(false)} className="w-full" type="button">
+                          ตกลง
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label>วันที่และเวลาที่สิ้นสุด</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={endDateInput}
+                    onChange={(e) => {
+                      const formatted = formatDateInput(e.target.value)
+                      setEndDateInput(formatted)
+                      if (formatted.length === 10) {
+                        const parsed = parseDateInput(formatted)
+                        if (parsed) {
+                          applyEndDateTime(parsed, endTimeInput)
+                          // normalize input (รองรับปี พ.ศ. -> ค.ศ.)
+                          setEndDateInput(dayjs(parsed).format('DD/MM/YYYY'))
+                        }
+                      }
+                    }}
+                    placeholder="วว/ดด/ปปปป"
+                    className="pr-10"
+                    maxLength={10}
                     disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                    <span className="truncate">
-                      {format(formData.sbwdtl_operationid_enddate, 'dd/MM/yyyy HH:mm')}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.sbwdtl_operationid_enddate}
-                    onSelect={(date) => date && setFormData({...formData, sbwdtl_operationid_enddate: date})}
                   />
-                </PopoverContent>
-              </Popover>
+                  <Popover open={endDateOpen} onOpenChange={setEndDateOpen} modal={true}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
+                      >
+                        <CalendarIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={formData.sbwdtl_operationid_enddate}
+                        defaultMonth={formData.sbwdtl_operationid_enddate}
+                        disabled={(date) => {
+                          const startDate = new Date(formData.sbwdtl_operationid_startdate)
+                          startDate.setHours(0, 0, 0, 0)
+                          const check = new Date(date)
+                          check.setHours(0, 0, 0, 0)
+                          return check.getTime() < startDate.getTime()
+                        }}
+                        onSelect={(date) => {
+                          if (!date) return
+                          const nextDate = new Date(date)
+                          applyEndDateTime(nextDate, endTimeInput)
+                          setEndDateInput(dayjs(nextDate).format('DD/MM/YYYY'))
+                          setEndDateOpen(false)
+                        }}
+                        captionLayout="dropdown"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={endTimeInput}
+                    onChange={(e) => {
+                      const formatted = formatTimeInput(e.target.value)
+                      const validated = validateAndFixTime(formatted)
+                      setEndTimeInput(validated)
+                      if (validated.length === 5) {
+                        applyEndDateTime(formData.sbwdtl_operationid_enddate, validated)
+                      }
+                    }}
+                    placeholder="HH:mm"
+                    maxLength={5}
+                    className="pr-10"
+                    disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
+                  />
+                  <Popover open={endTimeOpen} onOpenChange={setEndTimeOpen} modal={true}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        disabled={mode === 'smartcar' && !selectedOperation && !isPublicOrOther}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-4">
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm">เลือกเวลา</h4>
+                        <div className="flex items-center gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs">ชั่วโมง</Label>
+                            <div className="h-40 w-20 border rounded overflow-auto">
+                              <div className="space-y-1 p-1">
+                                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((hour) => (
+                                  <button
+                                    key={hour}
+                                    className={`w-full text-center py-1 rounded text-sm hover:bg-gray-100 ${
+                                      endTimeInput.split(':')[0] === hour ? 'bg-blue-500 text-white' : ''
+                                    }`}
+                                    onClick={() => {
+                                      const next = `${hour}:${endTimeInput.split(':')[1] || '00'}`
+                                      setEndTimeInput(next)
+                                      applyEndDateTime(formData.sbwdtl_operationid_enddate, next)
+                                    }}
+                                    type="button"
+                                  >
+                                    {hour}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold">:</div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">นาที</Label>
+                            <div className="h-40 w-20 border rounded overflow-auto">
+                              <div className="space-y-1 p-1">
+                                {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')).map((minute) => (
+                                  <button
+                                    key={minute}
+                                    className={`w-full text-center py-1 rounded text-sm hover:bg-gray-100 ${
+                                      endTimeInput.split(':')[1] === minute ? 'bg-blue-500 text-white' : ''
+                                    }`}
+                                    onClick={() => {
+                                      const next = `${endTimeInput.split(':')[0] || '00'}:${minute}`
+                                      setEndTimeInput(next)
+                                      applyEndDateTime(formData.sbwdtl_operationid_enddate, next)
+                                    }}
+                                    type="button"
+                                  >
+                                    {minute}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <Button size="sm" onClick={() => setEndTimeOpen(false)} className="w-full" type="button">
+                          ตกลง
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* ✅ Mileage - Disable เมื่อเป็นรถสาธารณะ/อื่นๆ */}
+          {/*  Mileage - Disable เมื่อเป็นรถสาธารณะ/อื่นๆ */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className={shouldDisableMileage ? 'text-gray-400' : ''}>
@@ -562,7 +944,7 @@ export default function AddExpenseDialog({
             </div>
           </div>
 
-          {/* Distance Badge - ✅ ซ่อนเมื่อเป็นรถสาธารณะ/อื่นๆ */}
+          {/* Distance Badge -  ซ่อนเมื่อเป็นรถสาธารณะ/อื่นๆ */}
           {!isPublicOrOther && (formData.sbwdtl_operationid_startmile && formData.sbwdtl_operationid_endmile) && (
             <div className="flex items-center justify-center">
               <Badge variant="outline" className="text-base px-4 py-2">

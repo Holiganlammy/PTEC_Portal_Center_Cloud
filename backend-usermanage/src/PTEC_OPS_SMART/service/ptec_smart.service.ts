@@ -115,6 +115,11 @@ export class AppService {
         type: sql.NVarChar(500),
         value: data.sb_operationid_location,
       },
+      {
+        name: 'return_parking_location',
+        type: sql.NVarChar(255),
+        value: data.return_parking_location,
+      },
     ];
 
     const result = await this.dbManager.executeStoredProcedure(
@@ -543,6 +548,11 @@ export class AppService {
         name: 'category_name',
         type: sql.NVarChar(100),
         value: body.category_name ?? null,
+      },
+      {
+        name: 'create_by_usercode',
+        type: sql.VarChar(20),
+        value: body.create_by_usercode,
       },
     ];
 
@@ -1086,6 +1096,11 @@ export class AppService {
         name: 'sb_operationid_location',
         type: sql.NVarChar(500),
         value: op.sb_operationid_location,
+      },
+      {
+        name: 'return_parking_location',
+        type: sql.NVarChar(255),
+        value: op.return_parking_location,
       },
     ];
 

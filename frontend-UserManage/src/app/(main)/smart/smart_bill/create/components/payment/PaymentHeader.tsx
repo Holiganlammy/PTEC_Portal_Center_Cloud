@@ -214,8 +214,9 @@ export default function PaymentHeader({
           </div>
         </div>
       )}
-
+    {sbw_code &&
       <Separator className="!mt-0" />
+    }
     </div>
   )
 }

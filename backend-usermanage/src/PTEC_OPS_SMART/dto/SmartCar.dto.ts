@@ -118,6 +118,9 @@ export class SmartBillOperationInput {
 
   @IsString()
   image3: string;
+
+  @IsString()
+  return_parking_location: string;
 }
 
 export class SmartBillAssociateInput {

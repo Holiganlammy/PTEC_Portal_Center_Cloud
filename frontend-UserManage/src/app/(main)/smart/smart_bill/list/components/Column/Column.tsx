@@ -151,11 +151,23 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
   {
     accessorKey: "car_tier",
     header: "รุ่นรถ",
-    cell: ({ row }) => (
-      <div className="text-sm">
-        {row.getValue("car_tier") || "-"}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const carTier = row.getValue("car_tier") as string;
+      
+      if (!carTier || carTier === "" || carTier === "-") {
+        return (
+          <div className="text-sm text-red-600 font-medium">
+            ยังไม่มีรายการรถยนต์
+          </div>
+        );
+      }
+      
+      return (
+        <div className="text-sm">
+          {carTier}
+        </div>
+      );
+    },
   },
   { 
     accessorKey: "lock_status",

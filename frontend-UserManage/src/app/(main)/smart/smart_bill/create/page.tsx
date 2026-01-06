@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -36,10 +36,14 @@ export default function PaymentPage() {
   const searchParams = useSearchParams()
   const sbw_code = searchParams.get('code')
   const { data: session } = useSession()
+  
+  const scrollPositionRef = useRef(0)
+  
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<UserData[]>([])
   const [carInfoData, setCarInfoData] = useState<CarInfo[]>([])
   const [carInfoDataCompany, setCarInfoDataCompany] = useState<CarInfo[]>([])
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
   const [smartBill_Withdraw, setSmartBill_Withdraw] = useState<smartBill_Withdraw>({
     sbw_id: null,
@@ -81,7 +85,6 @@ export default function PaymentPage() {
   const [smartBill_WithdrawDtl, setSmartBill_WithdrawDtl] = useState<smartBill_Withdraw_Detail[]>([])
   const [smartBill_WithdrawHeader, setSmartBill_WithdrawHeader] = useState<smartBill_Withdraw_Header[]>([])
   
-  // Alert states
   const [alert, setAlert] = useState<{
     show: boolean
     type: 'success' | 'error' | 'warning' | 'info'
@@ -94,10 +97,8 @@ export default function PaymentPage() {
     message: ''
   })
   
-  // Dialog states
   const [openAddExpense, setOpenAddExpense] = useState(false)
 
-  // Alert helper function
   const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
     setAlert({
       show: true,
@@ -110,7 +111,6 @@ export default function PaymentPage() {
     }, 5000)
   }
 
-  //  ฟังก์ชันล้างรายการค่าใช้จ่าย
   const handleClearExpenses = async () => {
     if (smartBill_WithdrawDtl.length === 0) {
       return true
@@ -138,9 +138,7 @@ export default function PaymentPage() {
     }
   }
 
-  //  ฟังก์ชันตรวจสอบก่อนเพิ่มรายการ
   const handleAddExpenseClick = () => {
-    // ตรวจสอบว่าเลือกประเภทรถแล้วหรือยัง
     if (smartBill_Withdraw.condition === null || smartBill_Withdraw.condition === undefined) {
       Swal.fire({
         icon: 'warning',
@@ -151,7 +149,6 @@ export default function PaymentPage() {
       return
     }
 
-    //  ถ้าเป็นรถบริษัท (0) หรือรถส่วนตัว (1) ต้องมีทะเบียนรถ
     if ([0, 1].includes(smartBill_Withdraw.condition)) {
       if (!smartBill_Withdraw.car_infocode || smartBill_Withdraw.car_infocode.trim() === '') {
         Swal.fire({
@@ -164,7 +161,6 @@ export default function PaymentPage() {
       }
     }
 
-    //  ผ่านการตรวจสอบแล้ว เปิด dialog
     setOpenAddExpense(true)
   }
 
@@ -220,44 +216,87 @@ export default function PaymentPage() {
     }
   }
 
+  const fetchDataSilent = async () => {
+    try {
+      setIsRefreshing(true) // ไม่ใช้ setLoading
+      
+      if (sbw_code) {
+        const billRes = await client.post('/SmartBill_Withdraw_SelectAllForms', { sbw_code })
+        
+        if (billRes.data[0] && billRes.data[0].length > 0) {
+          const headerData = billRes.data[0][0]
+          
+          setSmartBill_Withdraw(headerData)
+          setSmartBill_WithdrawHeader(billRes.data[0] || [])
+          setSmartBill_WithdrawDtl(billRes.data[1] || []) // ✅ อัพเดตข้อมูล
+          
+          if (headerData.car_infocode) {
+            try {
+              const carRes = await client.post('/SmartBill_CarInfoSearch', { 
+                car_infocode: headerData.car_infocode 
+              })
+              
+              if (carRes.data && carRes.data.length > 0) {
+                if (headerData.condition === 0) {
+                  setCarInfoDataCompany(carRes.data)
+                } else if (headerData.condition === 1) {
+                  setCarInfoData(carRes.data)
+                }
+                
+                const selectedCar = carRes.data.find((car: CarInfo) => car.car_infocode === headerData.car_infocode)
+                if (selectedCar) {
+                  setCarInfo(selectedCar)
+                }
+              }
+            } catch (carError) {
+              console.error('Error loading car data:', carError)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   useEffect(() => {
     fetchData()
   }, [sbw_code])
 
-  // const calculateTotal = () => {
-  //   if (!smartBill_WithdrawDtl.length) return 0
-  //   const total = smartBill_WithdrawDtl.reduce((sum, item) => {
-  //     return sum + (item.amouthAll || 0)
-  //   }, 0)
-  //   return total - (smartBill_Withdraw.pure_card || 0)
-  // }
+  const handleSaveSuccess = () => {
+    scrollPositionRef.current = window.scrollY
+    
+    fetchDataSilent().then(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPositionRef.current,
+          behavior: 'instant',
+        })
+      })
+    })
+  }
 
   const calculateActualTotal = () => {
     if (!smartBill_WithdrawDtl.length) return 0
     
     return smartBill_WithdrawDtl.reduce((sum, item) => {
       if (item.sb_paystatus === false) return sum
-      // คำนวณค่าน้ำมันตามประเภทรถ
-      // let fuelCost = 0
-      console.log('🚗 ประเภทรถ:', item.car_infostatus_companny, 'ประเภทจ่ายเงิน:', smartBill_WithdrawHeader?.[0]?.car_paytype)
       let amouthActual = 0
       if (item.car_infostatus_companny === true) {
-        // รถบริษัท
         if (smartBill_WithdrawHeader?.[0]?.car_paytype === 0) {
-          // รถบริษัท + เบิกตามไมล์เรท (รถเขต)
           const itemTotal = parseFloat(item.amouthAll?.toString() || '0') || 0
           return sum + itemTotal
         } else {
-          // รถบริษัท + เบิกตามจริง
           amouthActual = parseFloat(item.amouthTrueOil?.toString() || '0') || 0
         }
       }
       else if (item.car_infostatus_companny === false) {
-        // รถส่วนตัว
         const itemTotal = parseFloat(item.amouthAll?.toString() || '0') || 0
         return sum + itemTotal
       }
-      // ค่าใช้จ่ายอื่นๆ - ทุกประเภทรถสามารถเบิกได้
+      
       const allowance = parseFloat(item.amouthAllowance?.toString() || '0') || 0
       const hotel = parseFloat(item.amouthHotel?.toString() || '0') || 0
       const toll = parseFloat(item.amouthRush?.toString() || '0') || 0
@@ -350,13 +389,13 @@ export default function PaymentPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
         {alert.show && (
-          <div className="fixed top-4 right-4 z-50 w-96">
+          <div className="fixed top-4 right-4 z-50 w-80 sm:w-96">
             <Alert className={`
               ${alert.type === 'error' ? 'border-red-500 bg-red-50 text-red-800' : ''}
               ${alert.type === 'success' ? 'border-green-500 bg-green-50 text-green-800' : ''}
               ${alert.type === 'warning' ? 'border-yellow-500 bg-yellow-50 text-yellow-800' : ''}
               ${alert.type === 'info' ? 'border-blue-500 bg-blue-50 text-blue-800' : ''}
-              shadow-lg relative
+              shadow-lg relative text-sm
             `}>
               <button
                 onClick={() => setAlert(prev => ({ ...prev, show: false }))}
@@ -364,15 +403,15 @@ export default function PaymentPage() {
               >
                 <X className="h-4 w-4" />
               </button>
-              <AlertTitle>{alert.title}</AlertTitle>
-              <AlertDescription>{alert.message}</AlertDescription>
+              <AlertTitle className="text-sm font-semibold">{alert.title}</AlertTitle>
+              <AlertDescription className="text-xs">{alert.message}</AlertDescription>
             </Alert>
           </div>
         )}
         
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg font-medium text-muted-foreground">Loading...</p>
+          <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-primary" />
+          <p className="text-base sm:text-lg font-medium text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
@@ -380,15 +419,15 @@ export default function PaymentPage() {
 
   if (!sbw_code) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-3xl mx-auto py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
         {alert.show && (
-          <div className="fixed top-4 right-4 z-50 w-96">
+          <div className="fixed top-4 right-4 z-50 w-80 sm:w-96">
             <Alert className={`
               ${alert.type === 'error' ? 'border-red-500 bg-red-50 text-red-800' : ''}
               ${alert.type === 'success' ? 'border-green-500 bg-green-50 text-green-800' : ''}
               ${alert.type === 'warning' ? 'border-yellow-500 bg-yellow-50 text-yellow-800' : ''}
               ${alert.type === 'info' ? 'border-blue-500 bg-blue-50 text-blue-800' : ''}
-              shadow-lg relative
+              shadow-lg relative text-sm
             `}>
               <button
                 onClick={() => setAlert(prev => ({ ...prev, show: false }))}
@@ -396,21 +435,21 @@ export default function PaymentPage() {
               >
                 <X className="h-4 w-4" />
               </button>
-              <AlertTitle>{alert.title}</AlertTitle>
-              <AlertDescription>{alert.message}</AlertDescription>
+              <AlertTitle className="text-sm font-semibold">{alert.title}</AlertTitle>
+              <AlertDescription className="text-xs">{alert.message}</AlertDescription>
             </Alert>
           </div>
         )}
         
-        <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <Card className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <PaymentHeader 
             smartBill_Withdraw={smartBill_Withdraw}
             setSmartBill_Withdraw={setSmartBill_Withdraw}
             sbw_code={null}
           />
-          
-          <Separator className="my-6" />
-          
+          {sbw_code &&
+            <Separator className="my-4 sm:my-5 lg:my-6" />
+          }
           <VehicleSelection
             smartBill_Withdraw={smartBill_Withdraw}
             setSmartBill_Withdraw={setSmartBill_Withdraw}
@@ -424,13 +463,13 @@ export default function PaymentPage() {
             onClearExpenses={handleClearExpenses}
           />
           
-          <Separator className="my-6" />
+          <Separator className="my-4 sm:my-5 lg:my-6" />
           
           <div className="flex justify-center">
             <Button 
               onClick={handleSave}
               size="lg"
-              className="px-8"
+              className="px-6 sm:px-8 text-sm sm:text-md"
               disabled={smartBill_Withdraw.condition === null}
             >
               สร้างบิล
@@ -444,13 +483,13 @@ export default function PaymentPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       {alert.show && (
-        <div className="fixed top-4 right-4 z-50 w-96">
+        <div className="fixed top-4 right-4 z-50 w-80 sm:w-96">
           <Alert className={`
             ${alert.type === 'error' ? 'border-red-500 bg-red-50 text-red-800' : ''}
             ${alert.type === 'success' ? 'border-green-500 bg-green-50 text-green-800' : ''}
             ${alert.type === 'warning' ? 'border-yellow-500 bg-yellow-50 text-yellow-800' : ''}
             ${alert.type === 'info' ? 'border-blue-500 bg-blue-50 text-blue-800' : ''}
-            shadow-lg relative
+            shadow-lg relative text-sm
           `}>
             <button
               onClick={() => setAlert(prev => ({ ...prev, show: false }))}
@@ -458,25 +497,27 @@ export default function PaymentPage() {
             >
               <X className="h-4 w-4" />
             </button>
-            <AlertTitle>{alert.title}</AlertTitle>
-            <AlertDescription>{alert.message}</AlertDescription>
+            <AlertTitle className="text-sm font-semibold">{alert.title}</AlertTitle>
+            <AlertDescription className="text-xs">{alert.message}</AlertDescription>
           </Alert>
         </div>
       )}
       
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex gap-3 mb-6">
+      <div className="w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto py-3 sm:py-4 md:py-6 lg:py-8 px-3 sm:px-4 md:px-6 lg:px-6">
+        
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4 sm:mb-6">
           <Button 
             variant="outline"
             onClick={() => handleSubmitUpdate()}
             disabled={smartBill_Withdraw.lock_status}
-            className="bg-amber-500 hover:bg-amber-600 text-white border-0"
+            className="bg-amber-500 hover:bg-amber-600 text-white border-0 text-xs sm:text-sm h-9 sm:h-10"
           >
             Save Update
           </Button>
           <Button 
             onClick={() => handleSubmitUpdate('lock')}
             disabled={smartBill_Withdraw.lock_status}
+            className="text-xs sm:text-sm h-9 sm:h-10"
           >
             Save Lock
           </Button>
@@ -484,19 +525,18 @@ export default function PaymentPage() {
             variant="destructive"
             onClick={() => handleSubmitUpdate('unlock')}
             disabled={!smartBill_Withdraw.lock_status}
+            className="text-xs sm:text-sm h-9 sm:h-10"
           >
             UnLock Save
           </Button>
         </div>
 
-        <Card className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xl">
+        <Card className="p-3 sm:p-4 md:p-5 lg:p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xl">
           <PaymentHeader 
             smartBill_Withdraw={smartBill_Withdraw}
             setSmartBill_Withdraw={setSmartBill_Withdraw}
             sbw_code={sbw_code}
           />
-          
-          <Separator className="my-6" />
           
           <VehicleSelection
             smartBill_Withdraw={smartBill_Withdraw}
@@ -511,19 +551,19 @@ export default function PaymentPage() {
             onClearExpenses={handleClearExpenses}
           />
           
-          <Separator className="my-6" />
+          <Separator className="my-4 sm:my-5 lg:my-6" />
           
-          {/*  ปุ่มเพิ่มรายการ - มี validation */}
           {!smartBill_Withdraw.lock_status && (
             <Button 
-              onClick={handleAddExpenseClick} //  เปลี่ยนจาก setOpenAddExpense(true)
+              onClick={handleAddExpenseClick}
               variant="outline"
-              className="w-full mb-4"
+              className="w-full mb-3 sm:mb-4 text-red-600 border-red-600 hover:bg-red-600 hover:text-white font-bold text-xs sm:text-sm h-9 sm:h-10"
             >
               เพิ่มรายการค่าใช้จ่ายที่ต้องการเบิก
             </Button>
           )}
-          <Label className='text-red-500'>
+          
+          <Label className='text-red-500 font-bold text-xs sm:text-sm block mb-3 sm:mb-4'>
             หมายเหตุ: หากต้องการเพิ่มรายการค่าใช้จ่าย กรุณาตรวจสอบให้แน่ใจว่าได้เลือกประเภทรถและทะเบียนรถเรียบร้อยแล้ว และกด ปุ่มเพิ่มรายการ ด้านบนนี้
           </Label>
           
@@ -532,10 +572,11 @@ export default function PaymentPage() {
             smartBill_Withdraw={smartBill_Withdraw}
             smartBill_WithdrawHeader={smartBill_WithdrawHeader}
             fetchData={fetchData}
+            onSaveSuccess={handleSaveSuccess}
           />
           
-          <Separator className="my-6" />
-          
+          <Separator className="my-4 sm:my-5 lg:my-6" />
+
           <SummarySection 
             smartBill_Withdraw={smartBill_Withdraw}
             setSmartBill_Withdraw={setSmartBill_Withdraw}
@@ -547,7 +588,7 @@ export default function PaymentPage() {
           open={openAddExpense}
           onOpenChange={setOpenAddExpense}
           smartBill_Withdraw={smartBill_Withdraw}
-          fetchData={fetchData}
+          onSaveSuccess={handleSaveSuccess}
           sbw_code={sbw_code || ''}
         />
       </div>

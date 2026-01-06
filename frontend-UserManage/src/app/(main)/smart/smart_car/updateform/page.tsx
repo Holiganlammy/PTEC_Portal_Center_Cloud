@@ -237,6 +237,7 @@ export default function FormsUpdate() {
             sb_operationid_endmile: op.sb_operationid_endmile?.toString() || '',
             sb_paystatus: op.sb_paystatus ? '1' : '0',
             sb_operationid_location: op.sb_operationid_location || '',
+            return_parking_location: (op as any).return_parking_location || '', // เพิ่มการจัดการ return_parking_location
             files: opFiles,
           };
         });
@@ -357,6 +358,7 @@ export default function FormsUpdate() {
       sb_paystatus: '',
       sb_operationid_location: '',
       sb_operationid: 0,
+      return_parking_location: '',
     }]);
   };
 
@@ -448,14 +450,12 @@ export default function FormsUpdate() {
     if (
       smartBillHeader.usercode === '' ||
       smartBillHeader.sb_fristName === '' ||
-      smartBillHeader.sb_lastName === '' ||
-      smartBillHeader.reamarks === ''
+      smartBillHeader.sb_lastName === ''
     ) {
       showAlert(
         "แจ้งเตือน",
         (smartBillHeader.sb_fristName === '' || smartBillHeader.sb_lastName === '') ? `ระบุชื่อจริง-นามสกุล` :
-          (smartBillHeader.usercode === '') ? `ระบุผู้ทำรายการ` :
-            smartBillHeader.reamarks === '' ? 'ระบุสถานที่จอดรถหลังการใช้งาน' : 'Error Code #54878584'
+          (smartBillHeader.usercode === '') ? `ระบุผู้ทำรายการ` : 'Error Code #54878584'
       );
       return;
     }
@@ -505,7 +505,8 @@ export default function FormsUpdate() {
         op.sb_operationid_endoil === '' ||
         op.sb_operationid_endmile === '' ||
         op.sb_paystatus === '' ||
-        op.sb_operationid_location === ''
+        op.sb_operationid_location === '' ||
+        !op.return_parking_location || op.return_parking_location === ''
       ) {
         const carOps = operations.filter(o => o.carIndex === op.carIndex);
         const opIndexInCar = carOps.indexOf(op) + 1;
@@ -514,7 +515,8 @@ export default function FormsUpdate() {
             !op.sb_operationid_startdate || !op.sb_operationid_enddate ? 'ระบุวันที่เดินทาง' :
             !op.sb_operationid_startmile || !op.sb_operationid_endmile ? 'ระบุเลขไมลล์เดินทาง' :
             op.sb_operationid_startoil === '' || op.sb_operationid_endoil === '' ? 'ระบุปริมาณน้ำมัน' :
-            op.sb_operationid_location === '' ? 'ระบุกิจกรรมที่ทำ' : 'ระบุข้อมูล Pay (เบิก/ไม่เบิก)'
+            op.sb_operationid_location === '' ? 'ระบุกิจกรรมที่ทำ' :
+            !op.return_parking_location || op.return_parking_location === '' ? 'ระบุสถานที่จอดรถหลังการใช้งาน' : 'ระบุข้อมูล Pay (เบิก/ไม่เบิก)'
           }`);
         return;
       }
@@ -760,22 +762,6 @@ export default function FormsUpdate() {
                   isUpdateMode={true}
                 />
               ))}
-            </div>
-
-            <div className="h-px bg-gray-200"></div>
-
-            {/* Parking Location */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">
-                ระบุสถานที่จอดรถหลังการใช้งาน <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="text"
-                value={smartBillHeader.reamarks}
-                onChange={(e) => setSmartBillHeader(prev => ({ ...prev, reamarks: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                placeholder="ระบุสถานที่จอดรถ"
-              />
             </div>
 
             {/* Car Wash Status */}

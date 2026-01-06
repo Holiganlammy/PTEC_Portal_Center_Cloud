@@ -20,10 +20,14 @@ export default function SummarySection({
   setSmartBill_Withdraw,
   totalAmount
 }: SummarySectionProps) {
+
+  const MAX_PURE_CARD = 100_000_000
   
   const handlePureCardChange = (value: string) => {
-    const numValue = parseFloat(value) || 0
-    setSmartBill_Withdraw({ ...smartBill_Withdraw, pure_card: numValue })
+    const parsed = parseFloat(value)
+    const numValue = Number.isFinite(parsed) ? parsed : 0
+    const clamped = Math.min(Math.max(numValue, 0), MAX_PURE_CARD)
+    setSmartBill_Withdraw({ ...smartBill_Withdraw, pure_card: clamped })
   }
 
   const netAmount = totalAmount - (smartBill_Withdraw.pure_card || 0)
@@ -124,7 +128,33 @@ export default function SummarySection({
               <Input
                 type="number"
                 value={smartBill_Withdraw.pure_card || ''}
-                onChange={(e) => handlePureCardChange(e.target.value)}
+                inputMode="decimal"
+                min={0}
+                max={MAX_PURE_CARD}
+                onKeyDown={(e) => {
+                  // Prevent scientific notation and negative values
+                  if (e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '-') {
+                    e.preventDefault()
+                  }
+                }}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  // Keep only digits and '.'; collapse multiple '.' into a single decimal part.
+                  const cleaned = raw.replace(/[^0-9.]/g, '')
+                  const parts = cleaned.split('.')
+                  const normalized = parts.length <= 1
+                    ? parts[0]
+                    : `${parts[0]}.${parts.slice(1).join('')}`
+
+                  // Clamp at input time as well (helps when pasting big numbers)
+                  const asNumber = parseFloat(normalized)
+                  if (Number.isFinite(asNumber) && asNumber > MAX_PURE_CARD) {
+                    handlePureCardChange(String(MAX_PURE_CARD))
+                    return
+                  }
+
+                  handlePureCardChange(normalized)
+                }}
                 disabled={smartBill_Withdraw.lock_status}
                 className={`text-right font-mono text-xl font-bold h-14 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 ${
                   smartBill_Withdraw.lock_status ? 'opacity-60 cursor-not-allowed' : ''

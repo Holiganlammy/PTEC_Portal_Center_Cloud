@@ -182,7 +182,12 @@ export default function OperationForm({
     
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
+    let year = parseInt(parts[2], 10);
+
+    // รองรับปี พ.ศ. (25xx) -> แปลงเป็น ค.ศ. โดยลบ 543
+    if (year >= 2400) {
+      year = year - 543;
+    }
     
     const date = new Date(year, month, day);
     
@@ -265,6 +270,42 @@ export default function OperationForm({
     setDateTimeError('');
     onValidationChange?.(operationIndex, true);
     return true;
+  };
+
+  // Enforce: วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด (start <= end)
+  const applyStartDateTime = (nextStart: any) => {
+    const start = dayjs(nextStart);
+    const end = operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate) : null;
+
+    if (end && start.isAfter(end)) {
+      onOperationChange(operationIndex, 'sb_operationid_startdate', start);
+      onOperationChange(operationIndex, 'sb_operationid_enddate', start);
+      setEndDateInput(start.format('DD/MM/YYYY'));
+      setEndTimeInput(start.format('HH:mm'));
+      setTimeout(() => validateDateTime(start, start), 0);
+      return;
+    }
+
+    onOperationChange(operationIndex, 'sb_operationid_startdate', start);
+    setTimeout(() => validateDateTime(start, operation.sb_operationid_enddate), 0);
+  };
+
+  // Enforce: วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น (end >= start)
+  const applyEndDateTime = (nextEnd: any) => {
+    const end = dayjs(nextEnd);
+    const start = operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate) : null;
+
+    if (start && end.isBefore(start)) {
+      onOperationChange(operationIndex, 'sb_operationid_startdate', end);
+      onOperationChange(operationIndex, 'sb_operationid_enddate', end);
+      setStartDateInput(end.format('DD/MM/YYYY'));
+      setStartTimeInput(end.format('HH:mm'));
+      setTimeout(() => validateDateTime(end, end), 0);
+      return;
+    }
+
+    onOperationChange(operationIndex, 'sb_operationid_enddate', end);
+    setTimeout(() => validateDateTime(operation.sb_operationid_startdate, end), 0);
   };
 
   //  ตรวจสอบ validation ทั้งหมด
@@ -396,9 +437,7 @@ export default function OperationForm({
                     const date = parseDateInput(formatted);
                     if (date) {
                       const newDateTime = dayjs(`${dayjs(date).format('YYYY-MM-DD')} ${startTimeInput}`);
-                      onOperationChange(operationIndex, 'sb_operationid_startdate', newDateTime);
-                      // ตรวจสอบวันที่และเวลา
-                      setTimeout(() => validateDateTime(newDateTime, operation.sb_operationid_enddate), 0);
+                      applyStartDateTime(newDateTime);
                     }
                   }
                 }}
@@ -421,14 +460,21 @@ export default function OperationForm({
                   <Calendar
                     mode="single"
                     selected={operation.sb_operationid_startdate ? new Date(operation.sb_operationid_startdate) : undefined}
+                    defaultMonth={operation.sb_operationid_startdate ? new Date(operation.sb_operationid_startdate) : new Date()}
+                    disabled={(date) => {
+                      if (!operation.sb_operationid_enddate) return false;
+                      const endDate = new Date(operation.sb_operationid_enddate);
+                      endDate.setHours(0, 0, 0, 0);
+                      const check = new Date(date);
+                      check.setHours(0, 0, 0, 0);
+                      return check.getTime() > endDate.getTime();
+                    }}
                     onSelect={(date) => {
                       if (date) {
                         const newDateTime = dayjs(`${dayjs(date).format('YYYY-MM-DD')} ${startTimeInput}`);
-                        onOperationChange(operationIndex, 'sb_operationid_startdate', newDateTime);
+                        applyStartDateTime(newDateTime);
                         setStartDateInput(dayjs(date).format('DD/MM/YYYY'));
                         setStartDateOpen(false);
-                        // ตรวจสอบวันที่และเวลา
-                        setTimeout(() => validateDateTime(newDateTime, operation.sb_operationid_enddate), 0);
                       }
                     }}
                     captionLayout="dropdown"
@@ -448,9 +494,7 @@ export default function OperationForm({
                   if (validated.length === 5) {
                     const currentDate = operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
                     const newDateTime = dayjs(`${currentDate} ${validated}`);
-                    onOperationChange(operationIndex, 'sb_operationid_startdate', newDateTime);
-                    // ตรวจสอบวันที่และเวลา
-                    setTimeout(() => validateDateTime(newDateTime, operation.sb_operationid_enddate), 0);
+                    applyStartDateTime(newDateTime);
                   }
                 }}
                 placeholder="HH:mm"
@@ -491,9 +535,7 @@ export default function OperationForm({
                                   setStartTimeInput(newTime);
                                   const currentDate = operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
                                   const newDateTime = dayjs(`${currentDate} ${newTime}`);
-                                  onOperationChange(operationIndex, 'sb_operationid_startdate', newDateTime);
-                                  // ตรวจสอบวันที่และเวลา
-                                  setTimeout(() => validateDateTime(newDateTime, operation.sb_operationid_enddate), 0);
+                                  applyStartDateTime(newDateTime);
                                 }}
                               >
                                 {hour}
@@ -519,9 +561,7 @@ export default function OperationForm({
                                   setStartTimeInput(newTime);
                                   const currentDate = operation.sb_operationid_startdate ? dayjs(operation.sb_operationid_startdate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
                                   const newDateTime = dayjs(`${currentDate} ${newTime}`);
-                                  onOperationChange(operationIndex, 'sb_operationid_startdate', newDateTime);
-                                  // ตรวจสอบวันที่และเวลา
-                                  setTimeout(() => validateDateTime(newDateTime, operation.sb_operationid_enddate), 0);
+                                  applyStartDateTime(newDateTime);
                                 }}
                               >
                                 {minute}
@@ -561,9 +601,7 @@ export default function OperationForm({
                     const date = parseDateInput(formatted);
                     if (date) {
                       const newDateTime = dayjs(`${dayjs(date).format('YYYY-MM-DD')} ${endTimeInput}`);
-                      onOperationChange(operationIndex, 'sb_operationid_enddate', newDateTime);
-                      // ตรวจสอบวันที่และเวลา
-                      setTimeout(() => validateDateTime(operation.sb_operationid_startdate, newDateTime), 0);
+                      applyEndDateTime(newDateTime);
                     }
                   }
                 }}
@@ -586,14 +624,21 @@ export default function OperationForm({
                   <Calendar
                     mode="single"
                     selected={operation.sb_operationid_enddate ? new Date(operation.sb_operationid_enddate) : undefined}
+                    defaultMonth={operation.sb_operationid_enddate ? new Date(operation.sb_operationid_enddate) : new Date()}
+                    disabled={(date) => {
+                      if (!operation.sb_operationid_startdate) return false;
+                      const startDate = new Date(operation.sb_operationid_startdate);
+                      startDate.setHours(0, 0, 0, 0);
+                      const check = new Date(date);
+                      check.setHours(0, 0, 0, 0);
+                      return check.getTime() < startDate.getTime();
+                    }}
                     onSelect={(date) => {
                       if (date) {
                         const newDateTime = dayjs(`${dayjs(date).format('YYYY-MM-DD')} ${endTimeInput}`);
-                        onOperationChange(operationIndex, 'sb_operationid_enddate', newDateTime);
+                        applyEndDateTime(newDateTime);
                         setEndDateInput(dayjs(date).format('DD/MM/YYYY'));
                         setEndDateOpen(false);
-                        // ตรวจสอบวันที่และเวลา
-                        setTimeout(() => validateDateTime(operation.sb_operationid_startdate, newDateTime), 0);
                       }
                     }}
                     captionLayout="dropdown"
@@ -613,9 +658,7 @@ export default function OperationForm({
                   if (validated.length === 5) {
                     const currentDate = operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
                     const newDateTime = dayjs(`${currentDate} ${validated}`);
-                    onOperationChange(operationIndex, 'sb_operationid_enddate', newDateTime);
-                    // ตรวจสอบวันที่และเวลา
-                    setTimeout(() => validateDateTime(operation.sb_operationid_startdate, newDateTime), 0);
+                    applyEndDateTime(newDateTime);
                   }
                 }}
                 placeholder="HH:mm"
@@ -656,9 +699,7 @@ export default function OperationForm({
                                   setEndTimeInput(newTime);
                                   const currentDate = operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
                                   const newDateTime = dayjs(`${currentDate} ${newTime}`);
-                                  onOperationChange(operationIndex, 'sb_operationid_enddate', newDateTime);
-                                  // ตรวจสอบวันที่และเวลา
-                                  setTimeout(() => validateDateTime(operation.sb_operationid_startdate, newDateTime), 0);
+                                  applyEndDateTime(newDateTime);
                                 }}
                               >
                                 {hour}
@@ -684,9 +725,7 @@ export default function OperationForm({
                                   setEndTimeInput(newTime);
                                   const currentDate = operation.sb_operationid_enddate ? dayjs(operation.sb_operationid_enddate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
                                   const newDateTime = dayjs(`${currentDate} ${newTime}`);
-                                  onOperationChange(operationIndex, 'sb_operationid_enddate', newDateTime);
-                                  // ตรวจสอบวันที่และเวลา
-                                  setTimeout(() => validateDateTime(operation.sb_operationid_startdate, newDateTime), 0);
+                                  applyEndDateTime(newDateTime);
                                 }}
                               >
                                 {minute}
@@ -714,6 +753,26 @@ export default function OperationForm({
         onFilesChange={(files) => onOperationChange(operationIndex, 'files', files)}
         isUpdateMode={isUpdateMode}
       />
+
+      {/* สถานที่จอดรถหลังการใช้งาน */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-gray-900">
+          ระบุสถานที่จอดรถหลังการใช้งาน <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          type="text"
+          value={operation.return_parking_location}
+          onChange={(e) => onOperationChange(operationIndex, 'return_parking_location', e.target.value)}
+          className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all bg-white"
+          placeholder="ระบุสถานที่จอดรถ"
+        />
+        {(!operation.return_parking_location || operation.return_parking_location.trim() === '') && (
+          <p className="text-xs text-red-600 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" />
+            กรุณาระบุสถานที่จอดรถหลังการใช้งาน
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/*  ไมล์เริ่มต้น */}

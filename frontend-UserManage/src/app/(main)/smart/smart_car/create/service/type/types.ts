@@ -30,6 +30,7 @@ export interface Operation {
   sb_operationid_location: string;
   files?: SmartBillFile[]; 
   active?: boolean;
+  return_parking_location: string;
 }
 export interface SmartBillHeader {
   usercode: string;

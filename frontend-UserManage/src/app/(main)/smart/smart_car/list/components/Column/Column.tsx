@@ -153,13 +153,27 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
     ),
   },
   {
-    accessorKey: "reamarks",
-    header: "สถานที่จอดหลังใช้",
-    cell: ({ row }) => (
-      <div className="text-sm">
-        {row.getValue("reamarks") || "-"}
-      </div>
-    ),
+    accessorKey: "carBand",
+    header: "รายละเอียดรถยนต์",
+    cell: ({ row }) => {
+      const carBand = row.original.car_band;
+      const carTier = row.original.car_tier;
+      const carColor = row.original.car_color;
+      
+      if (carBand && carTier && carColor) {
+        return (
+          <div className="text-sm">
+            {`${carBand} ${carTier} (สี ${carColor})`}
+          </div>
+        );
+      } else {
+        return (
+          <div className="text-sm text-red-600 font-medium">
+            ยังไม่มีรายการรถยนต์
+          </div>
+        );
+      }
+    },
   },
   {
     accessorKey: "car_categary_name",

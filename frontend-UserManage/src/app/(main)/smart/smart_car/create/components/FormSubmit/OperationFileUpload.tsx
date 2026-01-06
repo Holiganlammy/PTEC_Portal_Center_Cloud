@@ -46,41 +46,75 @@ export default function OperationFileUpload({
     setAlertOpen(true);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    event.preventDefault();
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  const maxSize = 5 * 1024 * 1024;
 
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      showAlert('ไฟล์ไม่ถูกต้อง', 'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF, WEBP)', 'error');
-      return;
-    }
+  const addFiles = async (incomingFiles: File[]) => {
+    if (!incomingFiles.length) return;
 
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      showAlert('ไฟล์ใหญ่เกินไป', 'ขนาดไฟล์ต้องไม่เกิน 5MB', 'error');
-      return;
-    }
-
-    const fileBlob = URL.createObjectURL(file);
-    const newFile: SmartBillFile = {
-      fileData: file,
-      isExisting: false,
-      image_url: fileBlob,
-      image_name: file.name,
-      operation_index: 0,
-      sb_operationid: null,
-      sb_image_id: 0,
-      created_at: new Date().toISOString(),
-    };
-
-    if (files.length >= 3) {
+    const remainingSlots = Math.max(0, 3 - files.length);
+    if (remainingSlots === 0) {
       showAlert('ไฟล์เต็มแล้ว', 'สามารถอัพโหลดได้สูงสุด 3 รูป', 'error');
       return;
     }
 
-    onFilesChange([...files, newFile]);
+    const accepted: SmartBillFile[] = [];
+    const rejectedNames: string[] = [];
+
+    for (const file of incomingFiles) {
+      if (accepted.length >= remainingSlots) break;
+
+      if (!validTypes.includes(file.type)) {
+        rejectedNames.push(file.name);
+        continue;
+      }
+
+      if (file.size > maxSize) {
+        rejectedNames.push(file.name);
+        continue;
+      }
+
+      const fileBlob = URL.createObjectURL(file);
+      accepted.push({
+        fileData: file,
+        isExisting: false,
+        image_url: fileBlob,
+        image_name: file.name,
+        operation_index: 0,
+        sb_operationid: null,
+        sb_image_id: 0,
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    if (accepted.length) {
+      onFilesChange([...files, ...accepted]);
+    }
+
+    if (rejectedNames.length) {
+      showAlert(
+        'มีบางไฟล์ถูกปฏิเสธ',
+        'กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF, WEBP) และขนาดไม่เกิน 5MB',
+        'error'
+      );
+    }
+
+    if (incomingFiles.length > remainingSlots) {
+      showAlert('ไฟล์เกินจำนวน', `เพิ่มได้สูงสุด ${remainingSlots} รูปในครั้งนี้`, 'error');
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    const selected = Array.from(event.target.files || []);
+    await addFiles(selected);
+    event.target.value = '';
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    const dropped = Array.from(event.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
+    await addFiles(dropped);
   };
 
   const handleFileRemove = async (index: number) => {
@@ -155,11 +189,17 @@ export default function OperationFileUpload({
 
         {/* Upload Area */}
         {files.length < 3 && (
-          <label className={cn(
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+            }}
+            onDrop={handleDrop}
+            className={cn(
             "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all",
             "hover:bg-gray-50 hover:border-gray-400",
             "border-gray-300 bg-white"
-          )}>
+          )}
+          >
             <div className="flex flex-col items-center justify-center pt-5 pb-6">
               <Upload className="w-8 h-8 mb-2 text-gray-400" />
               <p className="mb-1 text-sm text-gray-600">
@@ -171,6 +211,7 @@ export default function OperationFileUpload({
               type="file"
               className="hidden"
               accept="image/*"
+              multiple
               onChange={handleFileUpload}
             />
           </label>

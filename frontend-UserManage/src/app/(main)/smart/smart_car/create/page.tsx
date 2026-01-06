@@ -72,7 +72,7 @@ export default function FormsStart() {
     sb_lastName: session?.user?.lastName || '',
     clean_status: 0,
     group_status: 0,
-    reamarks: '',
+    reamarks: '', // Keep this for compatibility but won't be used in UI
   });
 
   const [cars, setCars] = useState<CarInfo[]>([{
@@ -164,6 +164,7 @@ export default function FormsStart() {
           sb_operationid_location: '',
           files: [],
           sb_operationid: 0,
+          return_parking_location: '',
         }];
       }
 
@@ -230,6 +231,16 @@ export default function FormsStart() {
         return prevOperations;
       }
 
+      // เช็คสถานที่จอดรถหลังการใช้งาน
+      if (!lastOp.return_parking_location || lastOp.return_parking_location.trim() === '') {
+        showAlert(
+          'กรุณาระบุสถานที่จอดรถ',
+          'กรุณาระบุสถานที่จอดรถหลังการใช้งานของกิจกรรมปัจจุบันก่อนเพิ่มกิจกรรมใหม่',
+          'error'
+        );
+        return prevOperations;
+      }
+
       // เช็ครูปภาพ
       if (!lastOp.files || lastOp.files.length === 0) {
         showAlert(
@@ -269,6 +280,7 @@ export default function FormsStart() {
         sb_operationid_location: '',
         files: [],
         sb_operationid: 0,
+        return_parking_location: '',
       };
 
       console.log(' Adding new operation:', {
@@ -337,14 +349,12 @@ export default function FormsStart() {
     if (
       smartBillHeader.usercode === '' ||
       smartBillHeader.sb_fristName === '' ||
-      smartBillHeader.sb_lastName === '' ||
-      smartBillHeader.reamarks === ''
+      smartBillHeader.sb_lastName === ''
     ) {
       showAlert(
         "แจ้งเตือน",
         (smartBillHeader.sb_fristName === '' || smartBillHeader.sb_lastName === '') ? `ระบุชื่อจริง-นามสกุล` :
-          (smartBillHeader.usercode === '') ? `ระบุผู้ทำรายการ` :
-            smartBillHeader.reamarks === '' ? 'ระบุสถานที่จอดรถหลังการใช้งาน' : 'Error Code #54878584'
+          (smartBillHeader.usercode === '') ? `ระบุผู้ทำรายการ` : 'Error Code #54878584'
       );
       return;
     }
@@ -454,7 +464,8 @@ export default function FormsStart() {
         op.sb_operationid_endoil === '' ||
         op.sb_operationid_endmile === '' ||
         op.sb_paystatus === '' ||
-        op.sb_operationid_location === ''
+        op.sb_operationid_location === '' ||
+        op.return_parking_location === ''
       ) {
         const carOps = operations.filter(o => o.carIndex === op.carIndex);
         const opIndexInCar = carOps.indexOf(op) + 1;
@@ -462,7 +473,8 @@ export default function FormsStart() {
           `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: ${!op.sb_operationid_startdate || !op.sb_operationid_enddate ? 'ระบุวันที่เดินทาง' :
             !op.sb_operationid_startmile || !op.sb_operationid_endmile ? 'ระบุเลขไมลล์เดินทาง' :
               op.sb_operationid_startoil === '' || op.sb_operationid_endoil === '' ? 'ระบุปริมาณน้ำมัน' :
-                op.sb_operationid_location === '' ? 'ระบุกิจกรรมที่ทำ' : 'ระบุข้อมูล Pay (เบิก/ไม่เบิก)'
+                op.sb_operationid_location === '' ? 'ระบุกิจกรรมที่ทำ' :
+                  op.return_parking_location === '' ? 'ระบุสถานที่จอดรถหลังการใช้งาน' : 'ระบุข้อมูล Pay (เบิก/ไม่เบิก)'
           }`);
         return;
       }
@@ -640,21 +652,7 @@ export default function FormsStart() {
               ))}
             </div>
 
-            <div className="h-px bg-gray-200"></div>
 
-            {/* Parking Location */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">
-                ระบุสถานที่จอดรถหลังการใช้งาน <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="text"
-                value={smartBillHeader.reamarks}
-                onChange={(e) => setSmartBillHeader(prev => ({ ...prev, reamarks: e.target.value }))}
-                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
-                placeholder="ระบุสถานที่จอดรถ"
-              />
-            </div>
 
             {/* Car Wash Status */}
             <div className="space-y-3">

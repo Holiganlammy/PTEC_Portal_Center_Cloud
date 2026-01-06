@@ -104,6 +104,10 @@ export class SmartBill_WithdrawDtl_SaveChangesCategoryInput {
 
   @IsString()
   category_name?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  create_by_usercode: string;
 }
 
 export class SmartBill_WithdrawDtl_DeleteCategoryInput {
