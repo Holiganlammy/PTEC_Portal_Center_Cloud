@@ -10,8 +10,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'; //
 async function bootstrap(): Promise<void> {
   try {
     const httpsOptions = {
-      key: fs.readFileSync('./cert/localhost+2-key.pem'),
-      cert: fs.readFileSync('./cert/localhost+2.pem'),
+      key: fs.readFileSync('./cert/localhost.key'),
+      cert: fs.readFileSync('./cert/localhost.crt'),
     };
 
     const app = await NestFactory.create<NestExpressApplication>(

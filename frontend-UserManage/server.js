@@ -10,8 +10,8 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const httpsOptions = {
-  key: fs.readFileSync(path.join(__dirname, "frontend-cert", "localhost+2-key.pem")),
-  cert: fs.readFileSync(path.join(__dirname, "frontend-cert", "localhost+2.pem")),
+  key: fs.readFileSync(path.join(__dirname, "frontend-cert", "localhost.key")),
+  cert: fs.readFileSync(path.join(__dirname, "frontend-cert", "localhost.crt")),
 };
 
 app.prepare().then(() => {

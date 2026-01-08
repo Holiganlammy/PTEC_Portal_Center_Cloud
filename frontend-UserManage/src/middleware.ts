@@ -104,6 +104,7 @@ export async function middleware(req: NextRequest) {
   //  ต้องเช็ค static files ก่อนทุกอย่าง
   if (
     pathname.startsWith('/_next/static') ||
+    pathname.startsWith('/.well-known/appspecific/com.chrome.devtools.json') ||
     pathname.startsWith('/_next/image') ||
     pathname.startsWith('/static') ||
     pathname === '/favicon.ico' ||
@@ -186,6 +187,6 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     //  แก้ matcher ให้ถูกต้อง - ต้อง exclude _next/static และ _next/image
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|\\.well-known/appspecific/com.chrome.devtools.json).*)",
   ],
 };
