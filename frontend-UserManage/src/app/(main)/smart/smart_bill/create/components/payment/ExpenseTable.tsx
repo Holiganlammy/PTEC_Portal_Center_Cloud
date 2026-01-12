@@ -533,6 +533,15 @@ export default function ExpenseTable({
                   <TableCell className="text-right p-0">
                     <div
                       onClick={() => {
+                        if (smartBill_Withdraw.lock_status) {
+                          Swal.fire({
+                            icon: 'warning',
+                            title: 'ไม่สามารถแก้ไขได้',
+                            text: 'เอกสารนี้ถูกล็อคแล้ว ไม่สามารถจัดการค่าใช้จ่ายได้',
+                            confirmButtonText: 'รับทราบ'
+                          })
+                          return
+                        }
                         setTollDialogSbwdtlId(item.sbwdtl_id)
                         setTollDialogOpen(true)
                       }}
