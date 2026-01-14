@@ -25,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Calendar as CalendarIcon, Clock, Check, ChevronsUpDown, Plus, X } from 'lucide-react'
+import { Calendar as CalendarIcon, Clock, Check, ChevronsUpDown, Plus, X, Save } from 'lucide-react'
 import dayjs from 'dayjs'
 import client from '@/lib/axios/interceptors'
 import SuccessDialog from './SuccessDialog'
@@ -47,6 +47,7 @@ interface AllowanceFormDialogProps {
   users: UserHotelWelfare[]
   initialStartDate?: string
   initialEndDate?: string
+  editingItem?: any | null
 }
 
 export default function AllowanceFormDialog({ 
@@ -56,7 +57,8 @@ export default function AllowanceFormDialog({
   onCancel, 
   users,
   initialStartDate,
-  initialEndDate
+  initialEndDate,
+  editingItem = null
 }: AllowanceFormDialogProps) {
   const [usercode, setUsercode] = useState('')
   const [rate, setRate] = useState(0)
@@ -81,19 +83,41 @@ export default function AllowanceFormDialog({
   
 
   useEffect(() => {
-    if (open && initialStartDate) {
-      const start = dayjs(initialStartDate).add(7, 'hour')
-      setStartDateInput(start.format('DD/MM/YYYY'))
-      setStartTimeInput(start.format('HH:mm'))
-      setStartdate(start.format('YYYY-MM-DDTHH:mm:ss'))
+    if (open && editingItem) {
+      // โหลดข้อมูลจาก editingItem
+      setUsercode(editingItem.usercode || '')
+      setRate(editingItem.rate || editingItem.amount / (editingItem.days || editingItem.count || 1) || 0)
+      setFoodStatus(editingItem.foodStatus || false)
+      
+      if (editingItem.startdate) {
+        const start = dayjs(editingItem.startdate)
+        setStartdate(start.format('YYYY-MM-DDTHH:mm:ss'))
+        setStartDateInput(start.format('DD/MM/YYYY'))
+        setStartTimeInput(start.format('HH:mm'))
+      }
+      
+      if (editingItem.enddate) {
+        const end = dayjs(editingItem.enddate)
+        setEnddate(end.format('YYYY-MM-DDTHH:mm:ss'))
+        setEndDateInput(end.format('DD/MM/YYYY'))
+        setEndTimeInput(end.format('HH:mm'))
+      }
+    } else if (open && !editingItem) {
+      // ถ้าไม่ใช่ edit mode ให้โหลดจาก initialStartDate/initialEndDate ตามเดิม
+      if (initialStartDate) {
+        const start = dayjs(initialStartDate).add(7, 'hour')
+        setStartDateInput(start.format('DD/MM/YYYY'))
+        setStartTimeInput(start.format('HH:mm'))
+        setStartdate(start.format('YYYY-MM-DDTHH:mm:ss'))
+      }
+      if (initialEndDate) {
+        const end = dayjs(initialEndDate).add(7, 'hour')
+        setEndDateInput(end.format('DD/MM/YYYY'))
+        setEndTimeInput(end.format('HH:mm'))
+        setEnddate(end.format('YYYY-MM-DDTHH:mm:ss'))
+      }
     }
-    if (open && initialEndDate) {
-      const end = dayjs(initialEndDate).add(7, 'hour')
-      setEndDateInput(end.format('DD/MM/YYYY'))
-      setEndTimeInput(end.format('HH:mm'))
-      setEnddate(end.format('YYYY-MM-DDTHH:mm:ss'))
-    }
-  }, [open, initialStartDate, initialEndDate])
+  }, [open, editingItem, initialStartDate, initialEndDate])
 
   useEffect(() => {
     if (!open) {
@@ -229,7 +253,7 @@ export default function AllowanceFormDialog({
       return
     }
     
-    const baseAmount = rate
+    const baseAmount = days * rate
     const finalAmount = foodStatus ? baseAmount / 2 : baseAmount
     
     // เรียก onSubmit และแสดง SuccessDialog
@@ -268,7 +292,10 @@ export default function AllowanceFormDialog({
     const user = users.find(u => u.UserCode === usercode)
     return user ? `${user.Name} (${user.UserCode})` : usercode
   }
-  
+  const dialogTitle = editingItem ? 'แก้ไขรายการค่าเบี้ยเลี้ยง' : 'เพิ่มรายการค่าเบี้ยเลี้ยง'
+  const submitButtonText = editingItem ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ'
+  const submitButtonIcon = editingItem ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />
+
   return (
     <>
     <Dialog 
@@ -283,7 +310,7 @@ export default function AllowanceFormDialog({
     >
       <DialogContent className="max-w-3xl! w-full! max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>เพิ่มรายการค่าเบี้ยเลี้ยง</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6 py-4">
@@ -716,8 +743,8 @@ export default function AllowanceFormDialog({
             ยกเลิก
           </Button>
           <Button onClick={handleSubmit}>
-            <Plus className="h-4 w-4 mr-2" />
-            เพิ่มรายการ
+            {submitButtonIcon}
+            {submitButtonText}
           </Button>
         </DialogFooter>
       </DialogContent>

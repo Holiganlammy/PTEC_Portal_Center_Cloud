@@ -24,7 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Check, ChevronsUpDown, UserPlus, Plus, X } from 'lucide-react'
+import { Check, ChevronsUpDown, UserPlus, Plus, X, Save } from 'lucide-react'
 import client from '@/lib/axios/interceptors'
 import SuccessDialog from './SuccessDialog'
 import {
@@ -44,6 +44,7 @@ interface HotelFormDialogProps {
   onCancel: () => void
   users: UserHotelWelfare[]
   provinces: Provinces[]
+  editingItem?: any | null
 }
 
 export default function HotelFormDialog({ 
@@ -52,7 +53,8 @@ export default function HotelFormDialog({
   onSubmit, 
   onCancel, 
   users,
-  provinces
+  provinces,
+  editingItem = null
 }: HotelFormDialogProps) {
   const [hotelName, setHotelName] = useState('')
   const [province, setProvince] = useState('')
@@ -66,6 +68,30 @@ export default function HotelFormDialog({
   const [errorTitle, setErrorTitle] = useState('')
   const [errorDescription, setErrorDescription] = useState('')
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (!editingItem) return
+
+    setHotelName(editingItem.hotel_name || editingItem.sbc_hotelname || '')
+    setProvince(editingItem.province || editingItem.sbc_hotelProvince || '')
+    setNights(String(editingItem.nights ?? editingItem.count ?? ''))
+    setAmount(String(editingItem.amount ?? ''))
+
+    const rawGuests = Array.isArray(editingItem.guests) ? editingItem.guests : []
+    if (rawGuests.length > 0) {
+      setGuests(
+        rawGuests.map((g: any, idx: number) => ({
+          id: g.id ?? g.sbc_hotelgroupid ?? `${Date.now()}_${idx}`,
+          usercode: g.usercode || '',
+          hotel_rate: Number(g.hotel_rate ?? g.amount ?? 0) || 0,
+          sbc_hotelgroupid: g.sbc_hotelgroupid
+        }))
+      )
+    } else {
+      setGuests([{ id: Date.now(), usercode: '', hotel_rate: 0 }])
+    }
+  }, [open, editingItem])
   
   useEffect(() => {
     if (!open) {
@@ -231,7 +257,7 @@ export default function HotelFormDialog({
     >
       <DialogContent className="max-w-4xl! max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>เพิ่มรายการค่าที่พัก</DialogTitle>
+          <DialogTitle>{editingItem ? 'แก้ไขรายการค่าที่พัก' : 'เพิ่มรายการค่าที่พัก'}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6 py-4">
@@ -257,7 +283,7 @@ export default function HotelFormDialog({
                   <Command>
                     <CommandInput placeholder="ค้นหา..." />
                     <CommandEmpty>ไม่พบจังหวัด</CommandEmpty>
-                    <CommandGroup className="max-h-[300px] overflow-auto">
+                    <CommandGroup className="max-h-75 overflow-auto">
                       {provinces.map((prov) => (
                         <CommandItem
                           key={prov.id || prov.code}
@@ -342,7 +368,7 @@ export default function HotelFormDialog({
                       <Command>
                         <CommandInput placeholder="ค้นหา..." />
                         <CommandEmpty>ไม่พบผู้พัก</CommandEmpty>
-                        <CommandGroup className="max-h-[300px] overflow-auto">
+                        <CommandGroup className="max-h-75 overflow-auto">
                           {users.map((user) => (
                             <CommandItem
                               key={user.UserCode}
@@ -429,8 +455,17 @@ export default function HotelFormDialog({
             ยกเลิก
           </Button>
           <Button onClick={handleSubmit}>
-            <Plus className="h-4 w-4 mr-2" />
-            เพิ่มรายการ
+            {editingItem ? (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                บันทึกการแก้ไข
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                เพิ่มรายการ
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

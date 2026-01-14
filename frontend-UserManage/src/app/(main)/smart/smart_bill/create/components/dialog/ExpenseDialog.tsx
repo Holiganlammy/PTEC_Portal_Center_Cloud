@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Save, Trash2, X, Loader2, CheckCircle2 } from 'lucide-react'
+import { Plus, Save, Trash2, X, Loader2, CheckCircle2, Edit } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -59,6 +59,10 @@ export default function ExpenseDialogs({
   const { data: session } = useSession()
   const [showListDialog, setShowListDialog] = useState(true)
   const [showFormDialog, setShowFormDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<any | null>(null)
+  const [originalItemsById, setOriginalItemsById] = useState<Record<string, any>>({})
+
+  const getPendingKey = (item: any) => item?.tempId ?? item?.id
 
   //  localStorage key สำหรับ pending items
   const getStorageKey = () => `expense_pending_${categoryType}_${sbwdtl_id}`
@@ -122,6 +126,9 @@ export default function ExpenseDialogs({
   useEffect(() => {
     if (typeof window !== 'undefined' && pendingItems.length > 0) {
       savePendingToStorage(pendingItems)
+    } else if (typeof window !== 'undefined' && pendingItems.length === 0) {
+      // ✅ ลบ localStorage เมื่อไม่มี pending items
+      clearPendingFromStorage()
     }
   }, [pendingItems])
 
@@ -208,9 +215,9 @@ export default function ExpenseDialogs({
   }
 
   // Load Hotel Guests (by hotel id)
-  const loadHotelGuests = async (sbc_hotelid: number) => {
+  const loadHotelGuests = async (sbc_hotelid: number): Promise<smartBill_SelectHotelGroup[]> => {
     const hotelId = parseInt(String(sbc_hotelid))
-    if (!Number.isFinite(hotelId)) return
+    if (!Number.isFinite(hotelId)) return []
 
     setHotelGuestsLoadingByHotelId(prev => ({ ...prev, [hotelId]: true }))
     try {
@@ -226,9 +233,11 @@ export default function ExpenseDialogs({
         }
       }
       setHotelGuestsByHotelId(prev => ({ ...prev, [hotelId]: guestData }))
+      return guestData
     } catch (error) {
       console.error('Error loading hotel guests:', error)
       setHotelGuestsByHotelId(prev => ({ ...prev, [hotelId]: [] }))
+      return []
     }
     finally {
       setHotelGuestsLoadingByHotelId(prev => ({ ...prev, [hotelId]: false }))
@@ -240,6 +249,29 @@ export default function ExpenseDialogs({
     if (Object.prototype.hasOwnProperty.call(hotelGuestsByHotelId, hotelId)) return
     if (hotelGuestsLoadingByHotelId[hotelId]) return
     await loadHotelGuests(hotelId)
+  }
+
+  const handleOpenHotelEdit = async (itemToEdit: any) => {
+    const hotelId = Number(itemToEdit?.sbc_hotelid ?? itemToEdit?.id)
+    let guestRows: smartBill_SelectHotelGroup[] = []
+    if (Number.isFinite(hotelId)) {
+      if (Object.prototype.hasOwnProperty.call(hotelGuestsByHotelId, hotelId)) {
+        guestRows = hotelGuestsByHotelId[hotelId] || []
+      } else {
+        guestRows = await loadHotelGuests(hotelId)
+      }
+    }
+
+    const guests: HotelGuestItem[] = Array.isArray(guestRows)
+      ? guestRows.map((g) => ({
+        id: g.sbc_hotelgroupid ? String(g.sbc_hotelgroupid) : Date.now(),
+        sbc_hotelgroupid: g.sbc_hotelgroupid,
+        usercode: g.usercode,
+        hotel_rate: Number(g.amount || 0)
+      }))
+      : []
+
+    handleOpenForm({ ...itemToEdit, guests })
   }
 
   // Prefetch all hotel guest groups when opening the hotel list.
@@ -284,28 +316,85 @@ export default function ExpenseDialogs({
   }
 
   // Handle Add Button (ปิด List → เปิด Form)
-  const handleOpenForm = () => {
+  const handleOpenForm = (itemToEdit?: any) => {
+    if (itemToEdit) {
+      const key = String(itemToEdit?.id)
+      // Keep a snapshot of original data so we can discard edits later.
+      // Only snapshot once (first time entering edit for this row).
+      setOriginalItemsById((prev) => {
+        if (!key || key === 'undefined' || key === 'null') return prev
+        if (prev[key]) return prev
+        if (itemToEdit?.isModified) return prev
+        return { ...prev, [key]: itemToEdit }
+      })
+      setEditingItem(itemToEdit)
+    } else {
+      setEditingItem(null)
+    }
     setShowListDialog(false)
     setShowFormDialog(true)
   }
 
+  const handleDiscardExistingEdits = (itemId: any) => {
+    const key = String(itemId)
+    const original = originalItemsById[key]
+    if (!original) {
+      // Fallback: if we don't have a snapshot, just clear the modified flag.
+      setExistingItems((prev) => prev.map((it) => (String(it?.id) === key ? { ...it, isModified: false } : it)))
+      return
+    }
+
+    setExistingItems((prev) => prev.map((it) => (String(it?.id) === key ? { ...original, isModified: false } : it)))
+    setOriginalItemsById((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
   // Handle Form Submit (เพิ่มใน pending → ปิด Form → เปิด List)
   const handleFormSubmit = (newItem: any) => {
-    setPendingItems([...pendingItems, { ...newItem, id: Date.now(), isNew: true }])
+    if (editingItem) {
+      // ✅ EDIT MODE: อัปเดตรายการที่มีอยู่
+      setExistingItems(prev => 
+        prev.map(item => 
+          item.id === editingItem.id 
+            ? { 
+                ...item, 
+                ...newItem, 
+                id: editingItem.id, 
+                cost_id: editingItem.cost_id,
+                isModified: true  // ✅ Mark ว่าถูกแก้ไข
+              } 
+            : item
+        )
+      )
+    } else {
+      // NOTE: New items must NOT have a backend `id` yet.
+      // Use `tempId` for client-side list key & remove actions.
+      const newPendingItem = {
+        ...newItem,
+        tempId: Date.now(),
+        isNew: true
+      }
+      setPendingItems(prev => [...prev, newPendingItem])
+    }
+    
+    setEditingItem(null)
     setShowFormDialog(false)
     setShowListDialog(true)
   }
-
   // Handle Form Cancel (ปิด Form → เปิด List)
   const handleFormCancel = () => {
+    setEditingItem(null)
     setShowFormDialog(false)
     setShowListDialog(true)
   }
 
 
   // Remove Pending Item
-  const handleRemovePending = (itemId: number) => {
-    const updatedItems = pendingItems.filter(item => item.id !== itemId)
+  const handleRemovePending = (pendingKey: number) => {
+    const updatedItems = pendingItems.filter(item => getPendingKey(item) !== pendingKey)
     setPendingItems(updatedItems)
 
     // 🔄 Update localStorage
@@ -353,7 +442,10 @@ export default function ExpenseDialogs({
 
   // Save All Pending Items
   const handleSaveAll = async () => {
-    if (pendingItems.length === 0) {
+    const modifiedItems = existingItems.filter(i => i.isModified)
+    
+    // ✅ ต้องมีรายการอย่างน้อย 1 รายการ
+    if (pendingItems.length === 0 && modifiedItems.length === 0) {
       return
     }
 
@@ -362,31 +454,41 @@ export default function ExpenseDialogs({
 
     try {
       const categoryId = getCategoryId(categoryType)
+      
+      // ✅ รวมรายการทั้งหมดที่ต้อง save
+      const itemsToSave = [
+        ...pendingItems.map(item => ({ ...item, isNew: true })),
+        ...modifiedItems.map(item => ({ ...item, isModified: true }))
+      ]
 
       const buildPayload = (item: any) => {
+        const isNew = !!item?.isNew
+        const existingId = item?.id ?? item?.sbc_allowanceid ?? item?.sbc_hotelid ?? null
         switch (categoryType) {
           case 'allowance':
             return {
               sbwdtl_id: parseInt(sbwdtl_id),
-              cost_id: null,
+              cost_id: isNew ? null : (item.cost_id || null),
+              id: isNew ? null : existingId,
               category_id: categoryId,
               count: item.days,
               startdate: dayjs(item.startdate).format('YYYY-MM-DD HH:mm:ss'),
               enddate: dayjs(item.enddate).format('YYYY-MM-DD HH:mm:ss'),
               usercode: item.usercode,
               foodStatus: item.foodStatus,
-              amount: item.amount,
+              amount: item.amount / item.days,
               create_by_usercode: session?.user?.UserCode
             }
 
           case 'hotel':
             return {
               sbwdtl_id: parseInt(sbwdtl_id),
-              cost_id: null,
+              cost_id: isNew ? null : (item.cost_id || null),
+              id: isNew ? null : existingId,
               category_id: categoryId,
               count: parseInt(item.nights.toString()),
-              sbc_hotelProvince: item.province,
-              sbc_hotelname: item.hotel_name,
+              sbc_hotelProvince: item.province || item.sbc_hotelProvince,
+              sbc_hotelname: item.hotel_name || item.sbc_hotelname,
               usercode: session?.user?.UserCode,
               amount: item.amount,
               max_allowance: item.max_allowance,
@@ -394,18 +496,18 @@ export default function ExpenseDialogs({
               smartBill_CostHotelGroup: (item.guests || [])
                 .filter((g: any) => !!g?.usercode)
                 .map((g: any) => ({
-                sbc_hotelid: null,
-                // Make group id stable/unique per guest to avoid backend overwriting when blank.
-                sbc_hotelgroupid: g.sbc_hotelgroupid || String(g.id),
-                usercode: g.usercode,
-                amount: g.hotel_rate || 0
-              }))
+                  sbc_hotelid: null,
+                  // Keep existing group id when editing; fallback to guest row id for new rows.
+                  sbc_hotelgroupid: g.sbc_hotelgroupid ?? String(g.id),
+                  usercode: g.usercode,
+                  amount: g.hotel_rate || 0
+                }))
             }
 
           case 'other':
             return {
               sbwdtl_id: parseInt(sbwdtl_id),
-              cost_id: null,
+              cost_id: item.cost_id || null,
               amount: item.amount,
               category_name: item.category_name,
               create_by_usercode: session?.user?.UserCode
@@ -415,6 +517,7 @@ export default function ExpenseDialogs({
             return null
         }
       }
+
       const normalizeRows = (raw: any): any[] => {
         if (raw == null) return []
         if (Array.isArray(raw)) {
@@ -437,7 +540,6 @@ export default function ExpenseDialogs({
           return Number.isFinite(n) ? n : NaN
         }
 
-        // Prefer exact match on key hotel fields (name+province+amount+count)
         const matches = rows.filter((r) => {
           if (!r || typeof r !== 'object') return false
           return (
@@ -450,7 +552,6 @@ export default function ExpenseDialogs({
 
         const candidates = matches.length > 0 ? matches : rows
 
-        // If we still have multiple candidates, choose the largest numeric id (latest insert)
         const numericIdCandidates = candidates.filter((r) => r?.id != null && !Number.isNaN(toNumber(r.id)))
         if (numericIdCandidates.length > 0) {
           return numericIdCandidates.reduce(
@@ -462,13 +563,12 @@ export default function ExpenseDialogs({
         return candidates[candidates.length - 1]
       }
 
-      const payloads = pendingItems.map((item) => buildPayload(item)).filter(Boolean)
-
+      const payloads = itemsToSave.map((item) => buildPayload(item)).filter(Boolean)
       const savedItems: any[] = []
 
       for (let i = 0; i < payloads.length; i++) {
         const payload = payloads[i]
-        const originalItem = pendingItems[i]
+        const originalItem = itemsToSave[i]
         
         const response = await client.post(
           '/SmartBill_WithdrawDtl_SaveChangesCategory',
@@ -490,9 +590,10 @@ export default function ExpenseDialogs({
 
         const savedItem = {
           ...originalItem,
-          id: responseData.id || Date.now() + i,
-          cost_id: responseData.cost_id || null,
-          isNew: false
+          id: responseData.id || originalItem.id || Date.now() + i,
+          cost_id: responseData.cost_id || originalItem.cost_id || null,
+          isNew: false,
+          isModified: false
         }
 
         if (categoryType === 'hotel' && payload?.smartBill_CostHotelGroup) {
@@ -510,7 +611,6 @@ export default function ExpenseDialogs({
                 hotelGroupData
               )
             } catch (groupError) {
-              // Best-effort rollback: avoid leaving a hotel record without guests.
               try {
                 if (responseData?.cost_id && responseData?.id) {
                   await client.post('/SmartBill_WithdrawDtl_DeleteCategory', {
@@ -526,21 +626,50 @@ export default function ExpenseDialogs({
             }
             
             savedItem.sbc_hotelid = responseData.id
-            savedItem.sbc_hotelname = originalItem.hotel_name
-            savedItem.sbc_hotelProvince = originalItem.province
-            savedItem.count = originalItem.nights
+            savedItem.sbc_hotelname = originalItem.hotel_name || originalItem.sbc_hotelname
+            savedItem.sbc_hotelProvince = originalItem.province || originalItem.sbc_hotelProvince
+            savedItem.count = originalItem.nights || originalItem.count
           }
         }
 
         savedItems.push(savedItem)
       }
-      setExistingItems(prev => [...prev, ...savedItems])
+
+      // ✅ อัปเดต existingItems
+      setExistingItems(prev => {
+        const updatedItems = [...prev]
+        
+        savedItems.forEach(saved => {
+          const idx = updatedItems.findIndex(i => i.id === saved.id)
+          if (idx >= 0) {
+            // อัปเดตรายการที่มีอยู่
+            updatedItems[idx] = saved
+          } else {
+            // เพิ่มรายการใหม่
+            updatedItems.push(saved)
+          }
+        })
+        
+        return updatedItems
+      })
+      
+      // ✅ Clear pending items
       setPendingItems([])
       
-      //  clear localStorage
+      // ✅ Clear localStorage
       clearPendingFromStorage()
 
-      //  แสดง Success Dialog
+      // ✅ Clear edit snapshots (reloaded data will be fresh)
+      setOriginalItemsById({})
+
+      // ✅ Refresh from API so UI shows newly saved rows immediately
+      // (prevents needing to close/reopen the dialog)
+      if (categoryType === 'hotel') {
+        setHotelGuestsByHotelId({})
+        setHotelGuestsLoadingByHotelId({})
+      }
+      await loadExistingItems()
+
       setTimeout(() => {
         setSuccessTitle(`บันทึก ${payloads.length} รายการสำเร็จ!`)
         setSuccessDescription(`บันทึกรายการทั้งหมดเรียบร้อยแล้ว`)
@@ -743,7 +872,7 @@ export default function ExpenseDialogs({
                   รายการที่มีอยู่: <strong>{existingItems.length}</strong> |
                   รายการใหม่: <strong className="text-orange-600">{pendingItems.length}</strong>
                 </div>
-                <Button onClick={handleOpenForm} className="gap-2">
+                <Button onClick={() => handleOpenForm()} className="gap-2">
                   <Plus className="h-4 w-4" />
                   เพิ่มรายการ
                 </Button>
@@ -755,20 +884,68 @@ export default function ExpenseDialogs({
                   <h4 className="font-semibold text-sm flex items-center gap-2">
                     <Badge className="bg-green-600">บันทึกแล้ว</Badge>
                     รายการที่บันทึกแล้ว
+                    {/* ✅ แสดงจำนวนรายการที่แก้ไข */}
+                    {existingItems.filter(i => i.isModified).length > 0 && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">
+                        {existingItems.filter(i => i.isModified).length} รายการถูกแก้ไข
+                      </Badge>
+                    )}
                   </h4>
                   {existingItems.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-4 border rounded-lg bg-green-50 border-green-200">
+                    <div 
+                      key={idx} 
+                      className={`flex items-center justify-between p-4 border rounded-lg ${
+                        item.isModified 
+                          ? 'bg-blue-50 border-blue-300 border-2'  // ✅ สีฟ้าสำหรับรายการที่แก้ไข
+                          : 'bg-green-50 border-green-200'
+                      }`}
+                    >
                       <div className="flex-1">
+                        {/* ✅ แสดง Badge สำหรับรายการที่แก้ไข */}
+                        {item.isModified && (
+                          <Badge variant="outline" className="mb-2 bg-blue-100 text-blue-800 border-blue-300">
+                            รอบันทึก
+                          </Badge>
+                        )}
                         {renderItemPreview(item)}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteItem(item)}
-                        className="text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {item.isModified && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDiscardExistingEdits(item.id)}
+                            className="text-slate-700 hover:bg-slate-100"
+                            title="ยกเลิกการแก้ไข"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {(categoryType === 'allowance' || categoryType === 'hotel') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (categoryType === 'hotel') {
+                                void handleOpenHotelEdit(item)
+                              } else {
+                                handleOpenForm(item)
+                              }
+                            }}
+                            className="text-blue-600 hover:bg-blue-50"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteItem(item)}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -784,14 +961,14 @@ export default function ExpenseDialogs({
                     รายการใหม่
                   </h4>
                   {pendingItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border-2 border-dashed rounded-lg bg-yellow-50 border-yellow-300">
+                    <div key={getPendingKey(item)} className="flex items-center justify-between p-4 border-2 border-dashed rounded-lg bg-yellow-50 border-yellow-300">
                       <div className="flex-1">
                         {renderItemPreview(item)}
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRemovePending(item.id)}
+                        onClick={() => handleRemovePending(getPendingKey(item))}
                         className="text-red-600 hover:bg-red-50"
                       >
                         <X className="h-4 w-4" />
@@ -814,25 +991,33 @@ export default function ExpenseDialogs({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               ปิด
             </Button>
-            {pendingItems.length > 0 && (
-              <Button
-                onClick={handleSaveAll}
-                disabled={isSaving || isLoading}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    กำลังบันทึก...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    บันทึกทั้งหมด ({pendingItems.length})
-                  </>
-                )}
-              </Button>
-            )}
+            
+            {(() => {
+              const modifiedCount = existingItems.filter(i => i.isModified).length
+              const totalCount = pendingItems.length + modifiedCount
+              
+              if (totalCount === 0) return null
+              
+              return (
+                <Button
+                  onClick={handleSaveAll}
+                  disabled={isSaving || isLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      กำลังบันทึก...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      บันทึกทั้งหมด ({totalCount})
+                    </>
+                  )}
+                </Button>
+              )
+            })()}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -863,6 +1048,7 @@ export default function ExpenseDialogs({
           users={users}
           initialStartDate={withdrawDetail?.sbwdtl_operationid_startdate}
           initialEndDate={withdrawDetail?.sbwdtl_operationid_enddate}
+          editingItem={editingItem}
         />
       )}
 
@@ -874,6 +1060,7 @@ export default function ExpenseDialogs({
           onCancel={handleFormCancel}
           users={users}
           provinces={provinces}
+          editingItem={editingItem}
         />
       )}
 
