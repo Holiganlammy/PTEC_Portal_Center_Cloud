@@ -229,7 +229,7 @@ export default function AllowanceFormDialog({
       return
     }
     
-    const baseAmount = days * rate
+    const baseAmount = rate
     const finalAmount = foodStatus ? baseAmount / 2 : baseAmount
     
     // เรียก onSubmit และแสดง SuccessDialog
