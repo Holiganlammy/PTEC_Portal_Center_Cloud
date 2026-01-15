@@ -66,7 +66,7 @@ export default function SmartBillFilter({
   return (
         <Form {...form}>
             <form
-                onSubmit={form.handleSubmit(form.getValues)}
+                onSubmit={form.handleSubmit(() => {})}
                 className="grid grid-cols-2 gap-x-5 sm:flex sm:gap-x-0 mt-4 space-x-4 justify-end"
             >
                 <div className="w-full max-w-[200px]">

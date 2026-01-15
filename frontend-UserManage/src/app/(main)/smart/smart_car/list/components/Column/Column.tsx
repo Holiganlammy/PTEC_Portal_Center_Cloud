@@ -63,23 +63,26 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
     header: ({ column }) => {
       return (
         <Button
+          className="text-[13px] 3xl:text-sm p-1!"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           เลขที่ดำเนินการ
-          <ArrowUpDown />
+          <ArrowUpDown className="w-3! h-3!" />
         </Button>
       )
     },
     cell: ({ row }) => (
-      <div className="font-medium text-primary">
+      <div className=" text-[13px] 3xl:text-sm font-medium text-primary">
         {row.getValue("sb_code")}
       </div>
     ),
   },
   {
     accessorKey: "sb_name",
-    header: "Company",
+    header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">บริษัท</div>
+    ),
     cell: ({ row }) => {
       const originalCompany = row.getValue("sb_name") as string
       
@@ -100,7 +103,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
 
       return (
         <div className="flex items-center gap-2 w-[100px] justify-center">
-          <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="relative w-7 h-7 rounded-full overflow-hidden bg-white shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
             <Image
               src={logo}
               alt={company}
@@ -108,7 +111,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               className="object-contain p-1"
             />
           </div>
-          <span className="font-medium text-sm">
+          <span className="font-medium text-[13px] 3xl:text-sm">
             {company}
           </span>
         </div>
@@ -117,9 +120,11 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
   },
   {
     accessorKey: "usercode",
-    header: "ผู้ทำรายการ",
+    header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">ผู้ทำรายการ</div>
+    ),
     cell: ({ row }) => (
-      <div className="max-w-[300px] truncate" title={row.getValue("usercode")}>
+      <div className="max-w-[300px] truncate text-[13px] 3xl:text-sm font-semibold text-center" title={row.getValue("usercode")}>
         {row.getValue("usercode")}
       </div>
     ),
@@ -129,32 +134,37 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
     header: ({ column }) => {
       return (
         <Button
+          className="text-[13px] 3xl:text-sm p-1!"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           วันที่ทำรายการ
-          <ArrowUpDown />
+          <ArrowUpDown className="w-3! h-3!" />
         </Button>
       )
     },
     cell: ({ row }) => (
-      <div className="text-sm text-gray-600 dark:text-gray-400">
+      <div className="text-[13px] 3xl:text-sm font-semibold">
         {row.getValue("createdate") || "-"}
       </div>
     ),
   },
   {
     accessorKey: "car_infocode",
-    header: "ทะเบียนรถ",
+    header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">ทะเบียนรถ</div>
+    ),
     cell: ({ row }) => (
-      <div className="text-sm">
+      <div className="text-[13px] 3xl:text-sm font-semibold text-center">
         {row.getValue("car_infocode") || "-"}
       </div>
     ),
   },
   {
     accessorKey: "carBand",
-    header: "รายละเอียดรถยนต์",
+    header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">รายละเอียดรถยนต์</div>
+    ),
     cell: ({ row }) => {
       const carBand = row.original.car_band;
       const carTier = row.original.car_tier;
@@ -162,13 +172,13 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
       
       if (carBand && carTier && carColor) {
         return (
-          <div className="text-sm">
+          <div className="text-[13px] 3xl:text-sm font-semibold whitespace-normal break-words">
             {`${carBand} ${carTier} (สี ${carColor})`}
           </div>
         );
       } else {
         return (
-          <div className="text-sm text-red-600 font-medium">
+          <div className="text-[13px] 3xl:text-sm font-semibold whitespace-normal break-words text-red-600">
             ยังไม่มีรายการรถยนต์
           </div>
         );
@@ -178,7 +188,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
   {
     accessorKey: "car_categary_name",
     header: ({ column }) => (
-      <div className="text-center">ประเภทรถ</div>
+      <div className="text-[13px] 3xl:text-sm text-center">ประเภทรถ</div>
     ),
     cell: ({ row }) => {
       const category = row.getValue("car_categary_name") as string
@@ -186,27 +196,27 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
       return (
         <div className="flex justify-center">
           {category === "รถยนต์ประจำตำแหน่ง" ? (
-            <div className="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-sm hover:shadow-md">
+            <div className="w-30 inline-flex justify-center items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-sm hover:shadow-md">
               <span>รถประจำตำแหน่ง</span>
             </div>
           ) : category === "รถยนต์ประจำหน้าที่" ? (
-            <div className="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm hover:shadow-md">
+            <div className="w-30 inline-flex justify-center items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm hover:shadow-md">
               <span>รถประจำหน้าที่</span>
             </div>
           ) : category === "รถยนต์ส่วนกลาง" ? (
-            <div className="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-sm hover:shadow-md">
+            <div className="w-30 inline-flex justify-center items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-sm hover:shadow-md">
               <span>รถส่วนกลาง</span>
             </div>
           ) : category === "รถยนต์ประจำหน่วยงาน" ? (
-            <div className="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-violet-600 to-violet-700 text-white shadow-sm hover:shadow-md">
+            <div className="w-30 inline-flex justify-center items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-violet-600 to-violet-700 text-white shadow-sm hover:shadow-md">
               <span>รถประจำหน่วยงาน</span>
             </div>
           ) : category === "รถยนต์ส่วนตัวของพนักงาน" ? (
-            <div className="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-sm hover:shadow-md">
+            <div className="w-30 inline-flex justify-center items-center px-3 py-1.5 rounded-md font-semibold text-xs transition-all duration-200 bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-sm hover:shadow-md">
               <span>รถส่วนตัวพนักงาน</span>
             </div>
           ) : (
-            <div className="text-sm text-gray-500">
+            <div className="text-xs 3xl:text-sm text-gray-500">
               {category || "-"}
             </div>
           )}
@@ -217,7 +227,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
   {
     accessorKey: "sb_status_name",
     header: ({ column }) => (
-      <div className="text-center">สถานะ</div>
+      <div className="text-center text-[13px] 3xl:text-sm">สถานะ</div>
     ),
     cell: ({ row }) => {
       const status = row.getValue("sb_status_name") as string
@@ -240,7 +250,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               <div className="flex flex-col items-start">
                 <span className="leading-tight">Admin ตรวจสอบแล้ว</span>
                 {username && (
-                  <span className="text-[10px] text-purple-500 dark:text-purple-400">
+                  <span className="text-xs 3xl:text-sm text-purple-500 dark:text-purple-400">
                     โดย {username}
                   </span>
                 )}
@@ -253,7 +263,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               <div className="flex flex-col items-start">
                 <span className="leading-tight">ตรวจสอบแล้ว</span>
                 {username && (
-                  <span className="text-[10px] text-blue-500 dark:text-blue-400">
+                  <span className="text-xs 3xl:text-sm text-blue-500 dark:text-blue-400">
                     โดย {username}
                   </span>
                 )}
@@ -271,7 +281,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               <span>{status}</span>
             </div>
           ) : (
-            <div className="text-sm text-gray-500">
+            <div className="text-[13px] 3xl:text-sm text-gray-500">
               {status || "-"}
             </div>
           )}
@@ -281,14 +291,16 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">การจัดการ</div>
+    ),
     cell: ({ row }) => {
       const smartCar = row.original
       const { data: session } = useSession()
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
+            <Button variant="ghost" className="h-8 w-8 p-0 mx-auto">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>

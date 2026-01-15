@@ -52,23 +52,26 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
     header: ({ column }) => {
       return (
         <Button
+         className="text-[13px] 3xl:text-sm p-1!"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
             เลขที่ดำเนินการ
-          <ArrowUpDown />
+          <ArrowUpDown className="w-3! h-3!" />
         </Button>
       )
     },
     cell: ({ row }) => (
-      <div className="font-medium text-primary">
+      <div className="text-[13px] 3xl:text-sm font-medium text-primary">
         {row.getValue("sbw_code")}
       </div>
     ),
   },
   {
     accessorKey: "typePay",
-    header: "Company",
+    header: ({ column }) => (
+      <div className="text-center text-[13px] 3xl:text-sm font-semibold">บริษัท</div>
+    ),
     cell: ({ row }) => {
       const company = row.getValue("typePay") as string
       
@@ -85,7 +88,7 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
       return (
         <div className="flex items-center gap-2 w-[100px] justify-center">
           {logo && (
-            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="relative w-7 h-7 rounded-full overflow-hidden bg-white shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
               <Image
                 src={logo}
                 alt={company}
@@ -94,7 +97,7 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
               />
             </div>
           )}
-          <span className="font-medium text-sm">
+          <span className="text-[13px] 3xl:text-sm font-semibold">
             {company || "-"}
           </span>
         </div>
@@ -108,62 +111,70 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="max-w-[100px] mx auto"
+          className="max-w-[100px] mx-auto text-[13px] 3xl:text-sm p-1!"
         >
             ผู้ทำรายการ
-          <ArrowUpDown />
+          <ArrowUpDown className="w-3! h-3!" />
         </Button>
       )
     },
     cell: ({ row }) => (
-      <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
+      <div className="text-[13px] 3xl:text-sm font-semibold text-center">
         {row.getValue("ownercode") || "-"}
       </div>
     ),
   },
   {
     accessorKey: "createdate",
-    header: "วันที่ทำรายการ",
+    header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">วันที่ทำรายการ</div>
+    ),
     cell: ({ row }) => (
-      <div className="text-sm">
+      <div className="text-[13px] 3xl:text-sm font-semibold">
         {row.getValue("createdate") || "-"}
       </div>
     ),
   },
   {
     accessorKey: "car_infocode",
-    header: "ทะเบียนรถ",
+        header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">ทะเบียนรถ</div>
+    ),
     cell: ({ row }) => (
-      <div className="text-sm">
+      <div className="text-[13px] 3xl:text-sm font-semibold">
         {row.getValue("car_infocode") || "-"}
       </div>
     ),
   },
   {
     accessorKey: "car_band",
-    header: "ยี่ห้อรถ",
+    header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">ยี่ห้อรถ</div>
+    ),
     cell: ({ row }) => (
-      <div className="text-sm">
+      <div className="text-[13px] 3xl:text-sm font-semibold">
         {row.getValue("car_band") || "-"}
       </div>
     ),
   },
   {
     accessorKey: "car_tier",
-    header: "รุ่นรถ",
+        header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">รุ่นรถ</div>
+    ),
     cell: ({ row }) => {
       const carTier = row.getValue("car_tier") as string;
       
       if (!carTier || carTier === "" || carTier === "-") {
         return (
-          <div className="text-sm text-red-600 font-medium">
+          <div className="text-[13px] 3xl:text-sm text-red-600 font-semibold">
             ยังไม่มีรายการรถยนต์
           </div>
         );
       }
       
       return (
-        <div className="text-sm">
+        <div className="text-[13px] 3xl:text-sm font-semibold">
           {carTier}
         </div>
       );
@@ -174,6 +185,7 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
     header: ({ column }) => {
       return (
         <Button
+          className="text-[13px] 3xl:text-sm p-1!"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
@@ -186,7 +198,7 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
       const isLocked = row.getValue("lock_status")
       
       return (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center text-[13px] 3xl:text-sm font-semibold">
           {isLocked ? (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-sm">
               <div className="relative flex h-2 w-2">
@@ -194,7 +206,7 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-100"></span>
               </div>
               <Lock className="h-3.5 w-3.5" />
-              <span className="text-xs font-semibold">ล็อค</span>
+              <span className="text-[13px] 3xl:text-sm font-semibold">ล็อค</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-sm">
@@ -203,7 +215,7 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-100"></span>
               </div>
               <LockOpen className="h-3.5 w-3.5" />
-              <span className="text-xs font-semibold">ปลดล็อค</span>
+              <span className="text-[13px] 3xl:text-sm font-semibold">ปลดล็อค</span>
             </div>
           )}
         </div>
@@ -212,7 +224,9 @@ export const SmartBillColumns: ColumnDef<SmartBillData>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: ({ column }) => (
+      <div className="text-[13px] 3xl:text-sm text-center">การจัดการ</div>
+    ),
     cell: ({ row }) => {
       const smartCar = row.original
 

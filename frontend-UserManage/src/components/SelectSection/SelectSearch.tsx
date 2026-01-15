@@ -254,7 +254,7 @@ export default function CustomSelect<T extends FieldValues, K extends FieldPath<
 
   return (
     <FormItem className="flex flex-col">
-      <FormLabel>{formLabel}</FormLabel>
+      <FormLabel className="font-bold text-[13px] 3xl:text-sm">{formLabel}</FormLabel>
       <FormControl>
         <div className="relative w-full">
           <Popover open={open} onOpenChange={setOpen} modal={true}>
@@ -270,7 +270,7 @@ export default function CustomSelect<T extends FieldValues, K extends FieldPath<
                     errorString && "border-red-600 focus:outline-none focus:ring-red-0 focus:border-red"
                   )}
                 >
-                  <span className={cn("truncate block min-w-0 flex-1", errorString && "text-red-600")}>
+                  <span className={cn("text-[13px] 3xl:text-sm truncate block min-w-0 flex-1", errorString && "text-red-600")}>
                     {isMulti
                       ? Array.isArray(selectedOption)
                         ? selectedOption.map((o: Option) => o.label).join(", ")
@@ -300,7 +300,7 @@ export default function CustomSelect<T extends FieldValues, K extends FieldPath<
               <Command className="w-full" shouldFilter={false}>
                 <CommandInput
                   placeholder={`ค้นหา ${formLabel}...`}
-                  className="h-9"
+                  className="h-9 text-xs"
                   value={searchValue}
                   onValueChange={(val) => {
                     setSearchValue(val ?? "");

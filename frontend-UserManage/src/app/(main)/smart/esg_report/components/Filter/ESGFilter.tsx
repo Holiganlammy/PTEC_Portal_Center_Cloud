@@ -275,7 +275,7 @@ export default function ESGFilter({
             
             <Form {...form}>
                 <form
-                    onSubmit={form.handleSubmit(form.getValues)}
+                    onSubmit={form.handleSubmit(() => {})}
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full"
                 >
                     <div className="w-full">

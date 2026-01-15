@@ -132,7 +132,7 @@ export function EbookFilterBar({
             {/* 🎛️ Filters */}
             <Form {...form}>
                <form
-                  onSubmit={form.handleSubmit(form.getValues)}
+                  onSubmit={form.handleSubmit(() => {})}
                   className=""
                >
                   {/* Responsive Grid Layout */}
