@@ -160,7 +160,12 @@ export default function FormsUpdate() {
           car_tier: record.car_tier || '',
           car_color: record.car_color || '',
           car_remarks: record.car_remarks || '',
-          car_milerate: 0,
+          // เติมเลขไมล์เดิมจากข้อมูลที่โหลดมา (สำหรับหน้าแก้ไข)
+          // fallback ไปที่ startmile (บาง API ส่งมาใน record)
+          car_milerate:
+            parseFloat(
+              (record.car_milerate ?? record.sb_operationid_startmile ?? '0').toString()
+            ) || 0,
         }));
         
         setCars(carsData);
