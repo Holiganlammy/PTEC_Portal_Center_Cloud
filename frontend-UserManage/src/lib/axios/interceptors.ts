@@ -4,7 +4,26 @@ import { getSession, signOut } from "next-auth/react";
 import { Toast } from "../alert/toast";
 import { showTokenExpiredAlert, cleanupGlobalAlert } from "../alert/globalAlertService";
 
-const http = process.env.NEXT_PUBLIC_API_URL;
+// const http = process.env.NEXT_PUBLIC_API_URL;
+const getHttp = (): string => {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'https://portal.purethai.co.th/api';
+  }
+  
+  const hostname = window.location.hostname;
+  
+  if (hostname.includes('smartbill')) {
+    return 'https://smartbill.purethai.co.th/api';
+  }
+  
+  if (hostname.includes('portal')) {
+    return 'https://portal.purethai.co.th/api';
+  }
+  
+  return process.env.NEXT_PUBLIC_API_URL || 'https://portal.purethai.co.th/api';
+};
+
+const http = getHttp()
 
 let isTokenExpired = false;
 let isSigningOut = false;
