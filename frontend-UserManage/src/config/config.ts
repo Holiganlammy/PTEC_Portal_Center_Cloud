@@ -2,8 +2,6 @@ const http = process.env.NEXT_PUBLIC_API_URL;
 // export const httpPortalDomain = process.env.NEXT_PUBLIC_PORTAL_DOMAIN;
 // export const httpSmartBillDomain = process.env.NEXT_PUBLIC_SMARTBILL_DOMAIN;
 
-// const PORTAL_ORIGIN = 'https://portal.purethai.co.th';
-// const SMARTBILL_ORIGIN = 'https://smartbill.purethai.co.th';
 
 // function safeGetOrigin(url: string): string {
 //   try {
@@ -13,12 +11,20 @@ const http = process.env.NEXT_PUBLIC_API_URL;
 //   }
 // }
 
+// const portalOrigin = process.env.NEXT_PUBLIC_PORTAL_ORIGIN
+//   ? safeGetOrigin(process.env.NEXT_PUBLIC_PORTAL_ORIGIN)
+//   : undefined;
+
+// const smartbillOrigin = process.env.NEXT_PUBLIC_SMARTBILL_ORIGIN
+//   ? safeGetOrigin(process.env.NEXT_PUBLIC_SMARTBILL_ORIGIN)
+//   : undefined;
+
 // export function getDomainByUrl(url?: string): string | undefined {
 //   if (!url) return undefined;
 
 //   const origin = safeGetOrigin(url);
-//   if (origin === SMARTBILL_ORIGIN) return httpSmartBillDomain;
-//   if (origin === PORTAL_ORIGIN) return httpPortalDomain;
+//   if (smartbillOrigin && origin === smartbillOrigin) return httpSmartBillDomain;
+//   if (portalOrigin && origin === portalOrigin) return httpPortalDomain;
 //   return undefined;
 // }
 
@@ -35,7 +41,6 @@ function dataConfig(access_token?: string) {
       'Content-Type': 'application/json; charset=utf-8',
       'Authorization': headerDetail,
       'Accept': 'application/json',
-      credentials: "include",
     },
     headerUploadFile: {
       'Content-Type': 'multipart/form-data',
