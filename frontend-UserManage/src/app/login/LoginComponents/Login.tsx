@@ -12,12 +12,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Link from "next/link";
 import { signIn } from 'next-auth/react';
 import MfaDialog from "./MFAVerify/MFA";
+import PasswordExpireDialog from "./PasswordExpired/PasswordExpireDialog";
 import dataConfig from "@/config/config";
 import client, { isTokenExpiredAlertVisible, resetAxiosState } from "@/lib/axios/interceptors";
 
 export default function Login() {
   const router = useRouter();
   const [showMfaDialog, setShowMfaDialog] = useState(false);
+  const [showPasswordExpireDialog, setShowPasswordExpireDialog] = useState(false);
   const [userLogin, setUserLogin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
@@ -90,18 +92,29 @@ export default function Login() {
       })
       const data = await res.data;
 
-      
+      // Check if password expired
+      if (data?.passwordExpired === true) {
+        setUserLogin(values.loginname);
+        setShowPasswordExpireDialog(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if MFA required
       if (data?.request_Mfa === true) {
         setOtpExpiresAt(data.expiresAt);
         setUserLogin(values.loginname);
         setShowMfaDialog(true);
+        setIsLoading(false);
         return;
       }
+
       const response = await signIn('credentials', {
         redirect: false,
         responseCondition: 'pass',
         responseLogin: JSON.stringify(data),
       });
+      
       if (!response?.ok) {
         if (response?.status == 401) {
           throw new Error('Invalid credentials');
@@ -109,13 +122,20 @@ export default function Login() {
         throw new Error('api fail');
       } else {
         resetAxiosState();
-        
         router.push(redirectPath);
         setIsLoading(false);
         setDisableSubmit(false);
       }
 
-    } catch (error) {
+    } catch (error: any) {
+      // Check if error response contains passwordExpired
+      if (error?.response?.data?.passwordExpired === true) {
+        setUserLogin(values.loginname);
+        setShowPasswordExpireDialog(true);
+        setIsLoading(false);
+        return;
+      }
+
       setError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
       setTimeout(() => setShowError(true), 100);
     } finally {
@@ -257,12 +277,20 @@ export default function Login() {
         </Form>
       </div>
     
+      {/* MFA Dialog */}
       <MfaDialog
         showMfaDialog={showMfaDialog}
         setShowMfaDialog={setShowMfaDialog}
         redirectPath={redirectPath}
         userLogin={userLogin}
         otpExpiresAt={otpExpiresAt}
+      />
+
+      {/* Password Expire Dialog */}
+      <PasswordExpireDialog
+        showPasswordExpireDialog={showPasswordExpireDialog}
+        setShowPasswordExpireDialog={setShowPasswordExpireDialog}
+        userLogin={userLogin}
       />
     </>
   );
