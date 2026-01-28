@@ -355,7 +355,7 @@ export default function ExpenseDialogs({
   // Handle Form Submit (เพิ่มใน pending → ปิด Form → เปิด List)
   const handleFormSubmit = (newItem: any) => {
     if (editingItem) {
-      // ✅ EDIT MODE: อัปเดตรายการที่มีอยู่
+      // EDIT MODE: อัปเดตรายการที่มีอยู่
       setExistingItems(prev => 
         prev.map(item => 
           item.id === editingItem.id 
@@ -364,7 +364,7 @@ export default function ExpenseDialogs({
                 ...newItem, 
                 id: editingItem.id, 
                 cost_id: editingItem.cost_id,
-                isModified: true  // ✅ Mark ว่าถูกแก้ไข
+                isModified: true  // Mark ว่าถูกแก้ไข
               } 
             : item
         )
@@ -410,15 +410,23 @@ export default function ExpenseDialogs({
     setIsDeleting(true)
     const scrollY = window.scrollY
     try {
+      // สำหรับ 'other' ใช้ category_id จาก item, ประเภทอื่นใช้จาก getCategoryId
+      const categoryIdToUse = categoryType === 'other' ? item.category_id : getCategoryId(categoryType)
+      
       await client.post('/SmartBill_WithdrawDtl_DeleteCategory', {
         cost_id: item.cost_id,
         id: Number(item.id),
-        category_id: getCategoryId(categoryType)
+        category_id: categoryIdToUse
       })
-
-      setExistingItems(prev =>
-        prev.filter(i => i.id !== item.id)
-      )
+      if (categoryType === 'other') {
+        setExistingItems(prev =>
+          prev.filter(i => i.category_id !== item.category_id)
+        )
+      }else {
+        setExistingItems(prev =>
+          prev.filter(i => i.id !== item.id)
+        )
+      }
 
       setTimeout(() => {
         setSuccessTitle('ลบรายการสำเร็จ!')
