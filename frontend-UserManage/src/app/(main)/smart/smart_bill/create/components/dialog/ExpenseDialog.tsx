@@ -30,7 +30,7 @@ import {
 import dayjs from 'dayjs'
 import client from '@/lib/axios/interceptors'
 import { useSession } from 'next-auth/react'
-import SuccessDialog from './SuccessDialog'
+import SuccessDialog from '../AlertDialog/SuccessDialog'
 
 // Import Form Components
 // import FuelFormDialog from './FuelForm'

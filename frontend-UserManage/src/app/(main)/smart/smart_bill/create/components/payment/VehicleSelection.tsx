@@ -5,14 +5,16 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Car, Info, Building2, User as UserIcon, ChevronsUpDown, Check, X, AlertTriangle } from 'lucide-react' //  เพิ่ม X, AlertTriangle
+import { Car, Info, Building2, User as UserIcon, ChevronsUpDown, Check, X, AlertTriangle } from 'lucide-react'
 import client from '@/lib/axios/interceptors'
 import { CarInfo } from '@/app/(main)/smart/smart_car/create/service/type/types'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
-import Swal from 'sweetalert2'
+import ConfirmDialog from '../AlertDialog/confirmDialog'
+import SuccessDialog from '../AlertDialog/SuccessDialog'
+import ErrorDialog from '../AlertDialog/errorDialog'
 
 interface VehicleSelectionProps {
   smartBill_Withdraw: smartBill_Withdraw
@@ -40,41 +42,43 @@ export default function VehicleSelection({
 }: VehicleSelectionProps) {
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
+  
+  // Dialog states
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [confirmTitle, setConfirmTitle] = useState('')
+  const [confirmDescription, setConfirmDescription] = useState('')
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
+  
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false)
+  const [successTitle, setSuccessTitle] = useState('')
+  const [successDescription, setSuccessDescription] = useState('')
+  
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false)
+  const [errorTitle, setErrorTitle] = useState('')
+  const [errorDescription, setErrorDescription] = useState('')
 
   const handleConditionChange = async (value: string) => {
     const newCondition = parseInt(value)
 
     if (smartBill_Withdraw.car_infocode) {
-      const result = await Swal.fire({
-        title: 'ยืนยันการเปลี่ยนประเภทรถ',
-        html: `
-          <div class="text-left">
-            <p class="text-gray-600 mb-3">การเปลี่ยนประเภทรถจะทำให้:</p>
-            <ul class="text-sm text-gray-700 space-y-2">
-              <li class="flex items-start gap-2">
-                <span class="text-red-500">•</span>
-                <span>ข้อมูลทะเบียนรถถูกล้าง</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-red-500">•</span>
-                <span>รายการค่าใช้จ่ายทั้งหมดถูกลบ</span>
-              </li>
-            </ul>
-          </div>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'ยืนยัน',
-        cancelButtonText: 'ยกเลิก',
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280'
+      // แสดง ConfirmDialog แทน SweetAlert2
+      setConfirmTitle('ยืนยันการเปลี่ยนประเภทรถ')
+      setConfirmDescription(
+        'การเปลี่ยนประเภทรถจะทำให้:\n\n' +
+        '• ข้อมูลทะเบียนรถถูกล้าง\n' +
+        '• รายการค่าใช้จ่ายทั้งหมดถูกลบ'
+      )
+      setConfirmAction(() => async () => {
+        await proceedConditionChange(newCondition)
       })
-
-      if (!result.isConfirmed) {
-        return
-      }
+      setConfirmDialogOpen(true)
+      return
     }
 
+    await proceedConditionChange(newCondition)
+  }
+
+  const proceedConditionChange = async (newCondition: number) => {
     const clearSuccess = await onClearExpenses()
     if (!clearSuccess) {
       return
@@ -118,47 +122,27 @@ export default function VehicleSelection({
         }
       } catch (error) {
         console.error('Error fetching car data:', error)
-        Swal.fire({
-          icon: 'error',
-          title: 'เกิดข้อผิดพลาด',
-          text: 'ไม่สามารถโหลดข้อมูลรถได้'
-        })
+        setErrorTitle('เกิดข้อผิดพลาด')
+        setErrorDescription('ไม่สามารถโหลดข้อมูลรถได้')
+        setErrorDialogOpen(true)
       }
     }
   }
 
-  // ฟังก์ชันล้างทะเบียนรถ
   const handleClearVehicle = async () => {
-    const result = await Swal.fire({
-      title: 'ยืนยันการล้างทะเบียนรถ',
-      html: `
-      <div class="text-left">
-        <p class="text-gray-600 mb-3">การล้างทะเบียนรถจะทำให้:</p>
-        <ul class="text-sm text-gray-700 space-y-2">
-          <li class="flex items-start gap-2">
-            <span class="text-red-500">•</span>
-            <span>ข้อมูลทะเบียนรถถูกล้าง</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <span class="text-red-500">•</span>
-            <span>รายการค่าใช้จ่ายทั้งหมดถูกลบ</span>
-          </li>
-        </ul>
-      </div>
-    `,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'ยืนยัน',
-      cancelButtonText: 'ยกเลิก',
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#6b7280'
+    setConfirmTitle('ยืนยันการล้างทะเบียนรถ')
+    setConfirmDescription(
+      'การล้างทะเบียนรถจะทำให้:\n\n' +
+      '• ข้อมูลทะเบียนรถถูกล้าง\n' +
+      '• รายการค่าใช้จ่ายทั้งหมดถูกลบ'
+    )
+    setConfirmAction(() => async () => {
+      await proceedClearVehicle()
     })
+    setConfirmDialogOpen(true)
+  }
 
-    if (!result.isConfirmed) {
-      return
-    }
-
-    // ล้างรายการค่าใช้จ่าย
+  const proceedClearVehicle = async () => {
     const clearSuccess = await onClearExpenses()
     if (!clearSuccess) {
       return
@@ -166,7 +150,6 @@ export default function VehicleSelection({
 
     const currentCondition = smartBill_Withdraw.condition
 
-    // ล้างข้อมูลรถ
     setCarInfo({
       car_infocode: '',
       car_infostatus_companny: false,
@@ -184,40 +167,33 @@ export default function VehicleSelection({
       car_infocode: null,
       car_infoid: null
     })
+
     if (currentCondition !== null && currentCondition !== undefined && currentCondition <= 1) {
       try {
         const body = { car_infocode: null }
         const response = await client.post('/SmartBill_CarInfoSearch', body)
 
         if (currentCondition === 0) {
-          // รถบริษัท
           const companyData = response.data.filter((res: any) => res.car_infostatus_companny === true)
           setCarInfoDataCompany(companyData)
-          console.log(' โหลดรถบริษัทใหม่:', companyData.length, 'คัน')
+          console.log('โหลดรถบริษัทใหม่:', companyData.length, 'คัน')
         } else if (currentCondition === 1) {
-          // รถส่วนตัว
           const personalData = response.data.filter((res: any) => res.car_infostatus_companny === false)
           setCarInfoData(personalData)
-          console.log(' โหลดรถส่วนตัวใหม่:', personalData.length, 'คัน')
+          console.log('โหลดรถส่วนตัวใหม่:', personalData.length, 'คัน')
         }
       } catch (error) {
         console.error('❌ Error reloading car data:', error)
-        Swal.fire({
-          icon: 'error',
-          title: 'เกิดข้อผิดพลาด',
-          text: 'ไม่สามารถโหลดข้อมูลรถใหม่ได้'
-        })
+        setErrorTitle('เกิดข้อผิดพลาด')
+        setErrorDescription('ไม่สามารถโหลดข้อมูลรถใหม่ได้')
+        setErrorDialogOpen(true)
         return
       }
     }
 
-    Swal.fire({
-      icon: 'success',
-      title: 'ล้างข้อมูลสำเร็จ',
-      text: 'ล้างทะเบียนรถและรายการค่าใช้จ่ายเรียบร้อย',
-      timer: 1500,
-      showConfirmButton: false
-    })
+    setSuccessTitle('ล้างข้อมูลสำเร็จ')
+    setSuccessDescription('ล้างทะเบียนรถและรายการค่าใช้จ่ายเรียบร้อย')
+    setSuccessDialogOpen(true)
   }
 
   const handleCarSelect = (carCode: string) => {
@@ -245,6 +221,33 @@ export default function VehicleSelection({
 
   return (
     <div className="space-y-6">
+      {/* Dialogs */}
+      <ConfirmDialog
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        title={confirmTitle}
+        description={confirmDescription}
+        onConfirm={() => {
+          if (confirmAction) {
+            confirmAction()
+          }
+        }}
+      />
+
+      <SuccessDialog
+        open={successDialogOpen}
+        onOpenChange={setSuccessDialogOpen}
+        title={successTitle}
+        description={successDescription}
+      />
+
+      <ErrorDialog
+        open={errorDialogOpen}
+        onOpenChange={setErrorDialogOpen}
+        title={errorTitle}
+        description={errorDescription}
+      />
+
       {/* Section Title */}
       <div className="flex items-center gap-3 px-1">
         <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
@@ -409,7 +412,7 @@ export default function VehicleSelection({
         <>
           <Separator />
 
-          {/*  หมายเหตุการแก้ไข */}
+          {/* หมายเหตุการแก้ไข */}
           {smartBill_Withdraw.car_infocode && (
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
               <div className="flex items-start gap-3">
@@ -432,7 +435,7 @@ export default function VehicleSelection({
               <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
                 รายละเอียดยานพาหนะ
               </h4>
-              {/*  ปุ่มล้างทะเบียนรถ */}
+              {/* ปุ่มล้างทะเบียนรถ */}
               {smartBill_Withdraw.car_infocode && !smartBill_Withdraw.lock_status && (
                 <Button
                   variant="outline"

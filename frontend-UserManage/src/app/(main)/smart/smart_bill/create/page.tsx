@@ -26,8 +26,10 @@ import AddExpenseDialog from './components/dialog/AddExpenseDialog'
 import client from '@/lib/axios/interceptors'
 import { CarInfo } from '../../smart_car/create/service/type/types'
 import { useSession } from 'next-auth/react'
-import Swal from 'sweetalert2'
 import { Label } from '@/components/ui/label'
+import WarningDialog from './components/AlertDialog/wanningdialog'
+import ErrorDialog from './components/AlertDialog/errorDialog'
+import { set } from 'date-fns'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -98,6 +100,12 @@ export default function PaymentPage() {
   })
   
   const [openAddExpense, setOpenAddExpense] = useState(false)
+  const [openWarningDialog, setOpenWarningDialog] = useState(false)
+  const [warningTitle, setWarningTitle] = useState('')
+  const [warningDescription, setWarningDescription] = useState('')
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false)
+  const [errorDialogTitle, setErrorDialogTitle] = useState('')
+  const [errorDialogDescription, setErrorDialogDescription] = useState('')
 
   const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
     setAlert({
@@ -129,34 +137,26 @@ export default function PaymentPage() {
       return true
     } catch (error) {
       console.error('❌ Error clearing expenses:', error)
-      Swal.fire({
-        icon: 'error',
-        title: 'เกิดข้อผิดพลาด',
-        text: 'ไม่สามารถลบรายการค่าใช้จ่ายได้'
-      })
+      setErrorDialogTitle('เกิดข้อผิดพลาด')
+      setErrorDialogDescription('ไม่สามารถลบรายการค่าใช้จ่ายได้')
+      setErrorDialogOpen(true)
       return false
     }
   }
 
   const handleAddExpenseClick = () => {
     if (smartBill_Withdraw.condition === null || smartBill_Withdraw.condition === undefined) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'กรุณาเลือกประเภทรถ',
-        text: 'กรุณาเลือกประเภทการเดินทางก่อนเพิ่มรายการค่าใช้จ่าย',
-        confirmButtonText: 'ตรวจสอบ'
-      })
+      setWarningTitle('กรุณาเลือกประเภทรถ')
+      setWarningDescription('กรุณาเลือกประเภทการเดินทางก่อนเพิ่มรายการค่าใช้จ่าย')
+      setOpenWarningDialog(true)
       return
     }
 
     if ([0, 1].includes(smartBill_Withdraw.condition)) {
       if (!smartBill_Withdraw.car_infocode || smartBill_Withdraw.car_infocode.trim() === '') {
-        Swal.fire({
-          icon: 'warning',
-          title: 'กรุณาเลือกทะเบียนรถ',
-          text: 'กรุณาเลือกหมายเลขทะเบียนรถก่อนเพิ่มรายการค่าใช้จ่าย',
-          confirmButtonText: 'ตรวจสอบ'
-        })
+        setWarningTitle('กรุณาใส่เลขทะเบียนรถ')
+        setWarningDescription('กรุณาใส่เลขทะเบียนรถก่อนเพิ่มรายการค่าใช้จ่าย')
+        setOpenWarningDialog(true)
         return
       }
     }
@@ -384,7 +384,38 @@ export default function PaymentPage() {
       showAlert('error', 'Error', error.response?.data || errorMessage)
     }
   }
-
+  useEffect(() => {
+    if (!sbw_code) {
+      console.log('🔄 No code - clearing vehicle state...')
+      
+      // เคลียร์ข้อมูลรถ
+      setCarInfo({
+        car_infocode: '',
+        car_infostatus_companny: false,
+        car_categaryid: 0,
+        car_typeid: 0,
+        car_band: '',
+        car_tier: '',
+        car_color: '',
+        car_remarks: '',
+        car_payname: undefined,
+      })
+      
+      // เคลียร์รายการรถ
+      setCarInfoData([])
+      setCarInfoDataCompany([])
+      
+      // ✅ เคลียร์ smartBill_Withdraw
+      setSmartBill_Withdraw(prev => ({
+        ...prev,
+        condition: null,
+        car_infocode: null,
+        car_infoid: null
+      }))
+      
+      console.log('✅ Cleared all vehicle state')
+    }
+  }, [sbw_code])
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -590,6 +621,20 @@ export default function PaymentPage() {
           smartBill_Withdraw={smartBill_Withdraw}
           onSaveSuccess={handleSaveSuccess}
           sbw_code={sbw_code || ''}
+        />
+
+        <WarningDialog
+          open={openWarningDialog}
+          onOpenChange={setOpenWarningDialog}
+          title={warningTitle}
+          description={warningDescription}
+        />
+
+        <ErrorDialog
+          open={errorDialogOpen}
+          onOpenChange={setErrorDialogOpen}
+          title={errorDialogTitle}
+          description={errorDialogDescription}
         />
       </div>
     </div>

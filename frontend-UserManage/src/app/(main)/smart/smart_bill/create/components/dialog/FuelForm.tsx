@@ -15,7 +15,7 @@ import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import dayjs from 'dayjs'
 import client from '@/lib/axios/interceptors'
-import SuccessDialog from './SuccessDialog'
+import SuccessDialog from '../AlertDialog/SuccessDialog'
 import { useSession } from 'next-auth/react'
 
 interface FuelFormDialogProps {

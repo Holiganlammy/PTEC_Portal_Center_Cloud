@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/popover'
 import { Check, ChevronsUpDown, UserPlus, Plus, X, Save } from 'lucide-react'
 import client from '@/lib/axios/interceptors'
-import SuccessDialog from './SuccessDialog'
+import SuccessDialog from '../AlertDialog/SuccessDialog'
 import {
   AlertDialog,
   AlertDialogContent,

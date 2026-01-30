@@ -15,7 +15,7 @@ import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import client from '@/lib/axios/interceptors'
 import { useSession } from 'next-auth/react'
-import SuccessDialog from './SuccessDialog'
+import SuccessDialog from '../AlertDialog/SuccessDialog'
 
 interface TollFormDialogProps {
   open: boolean
@@ -221,7 +221,7 @@ export default function TollFormDialog({
         open={showSuccessDialog}
         onOpenChange={setShowSuccessDialog}
         title="บันทึกค่าทางด่วนสำเร็จ!"
-        description={`บันทึกค่าทางด่วน ${parseFloat(amount || '0').toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท เรียบร้อยแล้ว`}
+        description={`บันทึกค่าทางด่วน ${amount} บาท เรียบร้อยแล้ว`}
       />
     </>
   )

@@ -23,17 +23,20 @@ import {
   Hotel,
   MoreHorizontal,
   Info,
+  InfoIcon,
 } from 'lucide-react'
 import dayjs from 'dayjs'
-import Swal from 'sweetalert2'
 import client from '@/lib/axios/interceptors'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import React, { useState, useRef } from 'react'
-
 //  Import ExpenseDialogs
 import ExpenseDialogs from '../dialog/ExpenseDialog'
 import TollFormDialog from '../dialog/TollForm'
 import FuelFormDialog from '../dialog/FuelForm'
+import ConfirmDialog from '../AlertDialog/confirmDialog'
+import SuccessDialog from '../AlertDialog/SuccessDialog'
+import ErrorDialog from '../AlertDialog/errorDialog'
+import WarningDialog from '../AlertDialog/wanningdialog'
 
 interface ExpenseTableProps {
   smartBill_WithdrawDtl: smartBill_Withdraw_Detail[]
@@ -55,6 +58,23 @@ export default function ExpenseTable({
   const [tollDialogOpen, setTollDialogOpen] = useState(false)
   const [fuelDialogSbwdtlId, setFuelDialogSbwdtlId] = useState<string>('')
   const [tollDialogSbwdtlId, setTollDialogSbwdtlId] = useState<string>('')
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [confirmTitle, setConfirmTitle] = useState('')
+  const [confirmDescription, setConfirmDescription] = useState('')
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null)
+  //success dialog state
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false) //ตรงนี้
+  const [successTitle, setSuccessTitle] = useState('')
+  const [successDescription, setSuccessDescription] = useState('')
+  //error dialog state
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false)
+  const [errorTitle, setErrorTitle] = useState('')
+  const [errorDescription, setErrorDescription] = useState('')
+  //warning dialog state
+  const [warningDialogOpen, setWarningDialogOpen] = useState(false)
+  const [warningTitle, setWarningTitle] = useState('')
+  const [warningDescription, setWarningDescription] = useState('')
+
   
   //  State สำหรับ ExpenseDialogs
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -67,52 +87,56 @@ export default function ExpenseTable({
 
   const handleDelete = async (index: number) => {
     if (smartBill_Withdraw.lock_status) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'ไม่สามารถแก้ไขได้',
-        text: 'เอกสารนี้ถูกล็อคแล้ว ไม่สามารถลบรายการได้',
-        confirmButtonText: 'รับทราบ'
-      })
+      setWarningTitle('ไม่สามารถแก้ไขได้')
+      setWarningDescription('เอกสารนี้ถูกล็อคแล้ว ไม่สามารถลบรายการได้')
+      setWarningDialogOpen(true)
       return
     }
     
-    const result = await Swal.fire({
-      title: 'ยืนยันการลบ',
-      text: 'คุณต้องการลบรายการนี้หรือไม่?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'ลบ',
-      cancelButtonText: 'ยกเลิก',
-      confirmButtonColor: '#ef4444'
-    })
+    setPendingDeleteIndex(index)
+    setConfirmTitle('ยืนยันการลบ')
+    setConfirmDescription('คุณต้องการลบรายการนี้หรือไม่?')
+    setConfirmDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (pendingDeleteIndex === null) return
     
     const scrollY = window.scrollY
     
-    if (result.isConfirmed) {
-      try {
-        await client.post('/SmartBill_WithdrawDtl_Delete', { 
-          sbwdtl_id: smartBill_WithdrawDtl[index].sbwdtl_id 
-        })
-        Swal.fire('สำเร็จ!', 'ลบรายการเรียบร้อย', 'success')
-        setTimeout(() => {
-          window.scrollTo({ top: scrollY, behavior: 'instant' })
-        }, 0)
-        fetchData()
-      } catch (error) {
-        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถลบรายการได้', 'error')
-      }
+    try {
+      await client.post('/SmartBill_WithdrawDtl_Delete', { 
+        sbwdtl_id: smartBill_WithdrawDtl[pendingDeleteIndex].sbwdtl_id 
+      })
+      setSuccessTitle('สำเร็จ!')
+      setSuccessDescription('ลบรายการเรียบร้อย')
+      setSuccessDialogOpen(true)
+      setTimeout(() => {
+        window.scrollTo({ top: scrollY, behavior: 'instant' })
+      }, 0)
+      fetchData()
+    } catch (error) {
+      setErrorTitle('ข้อผิดพลาด')
+      setErrorDescription('ไม่สามารถลบรายการได้')
+      setErrorDialogOpen(true)
+    } finally {
+      setPendingDeleteIndex(null)
+    }
+  }
+
+  const handleCloseConfirmDialog = (open: boolean) => {
+    setConfirmDialogOpen(open)
+    if (!open) {
+      setPendingDeleteIndex(null)
     }
   }
 
   //  handleCategoryClick เปิด ExpenseDialogs
   const handleCategoryClick = async (index: number, type: string, sbwdtl_id: string) => {
     if (smartBill_Withdraw.lock_status) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'ไม่สามารถแก้ไขได้',
-        text: 'เอกสารนี้ถูกล็อคแล้ว ไม่สามารถจัดการค่าใช้จ่ายได้',
-        confirmButtonText: 'รับทราบ'
-      })
+      setWarningTitle('ไม่สามารถแก้ไขได้')
+      setWarningDescription('เอกสารนี้ถูกล็อคแล้ว ไม่สามารถจัดการค่าใช้จ่ายได้')
+      setWarningDialogOpen(true)
       return
     }
     
@@ -124,12 +148,9 @@ export default function ExpenseTable({
 
       // เงื่อนไขห้ามเพิ่มเบิกตามบิล: รถเขต หรือ รถส่วนตัว
       if (isDistrictCompanyCar || isPrivateCar) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'ไม่สามารถเบิกได้',
-          text: 'รายการนี้ไม่สามารถเพิ่มเบิกตามบิลได้ (รถเขต/รถส่วนตัว)',
-          confirmButtonText: 'รับทราบ'
-        })
+        setWarningTitle('ไม่สามารถเบิกได้')
+        setWarningDescription('รายการนี้ไม่สามารถเพิ่มเบิกตามบิลได้ (รถเขต/รถส่วนตัว)')
+        setWarningDialogOpen(true)
         return
       }
     }
@@ -205,6 +226,7 @@ export default function ExpenseTable({
   }
 
   return (
+    <>
     <div className="space-y-6">
       <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
         <div className={`px-6 py-3 border-b border-slate-200 dark:border-slate-800 ${
@@ -377,12 +399,9 @@ export default function ExpenseTable({
                     <div
                       onClick={() => {
                         if (smartBill_Withdraw.lock_status) {
-                          Swal.fire({
-                            icon: 'warning',
-                            title: 'ไม่สามารถแก้ไขได้',
-                            text: 'เอกสารนี้ถูกล็อคแล้ว ไม่สามารถจัดการค่าใช้จ่ายได้',
-                            confirmButtonText: 'รับทราบ'
-                          })
+                          setWarningTitle('ไม่สามารถแก้ไขได้')
+                          setWarningDescription('เอกสารนี้ถูกล็อคแล้ว ไม่สามารถจัดการค่าใช้จ่ายได้')
+                          setWarningDialogOpen(true)
                           return
                         }
 
@@ -392,12 +411,9 @@ export default function ExpenseTable({
 
                         // เงื่อนไขห้ามเพิ่มเบิกตามบิล: รถเขต หรือ รถส่วนตัว
                         if (isDistrictCompanyCar || isPrivateCar) {
-                          Swal.fire({
-                            icon: 'warning',
-                            title: 'ไม่สามารถเบิกได้',
-                            text: 'รายการนี้ไม่สามารถเพิ่มเบิกตามบิลได้ (รถเขต/รถส่วนตัว)',
-                            confirmButtonText: 'รับทราบ'
-                          })
+                          setWarningTitle('ไม่สามารถเบิกได้')
+                          setWarningDescription('รายการนี้ไม่สามารถเพิ่มเบิกตามบิลได้ (รถเขต/รถส่วนตัว)')
+                          setWarningDialogOpen(true)
                           return
                         }
 
@@ -534,12 +550,9 @@ export default function ExpenseTable({
                     <div
                       onClick={() => {
                         if (smartBill_Withdraw.lock_status) {
-                          Swal.fire({
-                            icon: 'warning',
-                            title: 'ไม่สามารถแก้ไขได้',
-                            text: 'เอกสารนี้ถูกล็อคแล้ว ไม่สามารถจัดการค่าใช้จ่ายได้',
-                            confirmButtonText: 'รับทราบ'
-                          })
+                          setWarningTitle('ไม่สามารถแก้ไขได้')
+                          setWarningDescription('เอกสารนี้ถูกล็อคแล้ว ไม่สามารถจัดการค่าใช้จ่ายได้')
+                          setWarningDialogOpen(true)
                           return
                         }
                         setTollDialogSbwdtlId(item.sbwdtl_id)
@@ -762,5 +775,35 @@ export default function ExpenseTable({
         onSaveSuccess={onSaveSuccess}
       />
     </div>
+    
+    <ConfirmDialog
+      open={confirmDialogOpen}
+      onOpenChange={handleCloseConfirmDialog}
+      title={confirmTitle}
+      description={confirmDescription}
+      onConfirm={handleConfirmDelete}
+    />
+
+    <SuccessDialog //ตรงนี้
+      open={successDialogOpen}
+      onOpenChange={setSuccessDialogOpen}
+      title={successTitle}
+      description={successDescription}
+    />
+
+    <ErrorDialog
+      open={errorDialogOpen}
+      onOpenChange={setErrorDialogOpen}
+      title={errorTitle}
+      description={errorDescription}
+    />
+
+    <WarningDialog
+      open={warningDialogOpen}
+      onOpenChange={setWarningDialogOpen}
+      title={warningTitle}
+      description={warningDescription}
+    />
+    </>
   )
 }

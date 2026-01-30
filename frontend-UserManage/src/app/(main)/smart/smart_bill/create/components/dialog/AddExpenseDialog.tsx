@@ -29,12 +29,13 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Calendar } from '@/components/ui/calendar'
 import { CalendarIcon, MapPin, Gauge, AlertCircle, Check, ChevronsUpDown, Ban, Clock } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, set } from 'date-fns'
 import dayjs from 'dayjs'
-import axios from 'axios'
-import Swal from 'sweetalert2'
 import client from '@/lib/axios/interceptors'
 import { cn } from "@/lib/utils"
+import WarningDialog from '../AlertDialog/wanningdialog'
+import SuccessDialog from '../AlertDialog/SuccessDialog'
+import ErrorDialog from '../AlertDialog/errorDialog'
 
 interface AddExpenseDialogProps {
   open: boolean
@@ -56,6 +57,15 @@ export default function AddExpenseDialog({
   const [selectedOperation, setSelectedOperation] = useState<any>(null)
   const [openCombobox, setOpenCombobox] = useState(false)
   const [searchValue, setSearchValue] = useState("")
+  const [openWarningDialog, setOpenWarningDialog] = useState(false)
+  const [warningTitle, setWarningTitle] = useState('')
+  const [warningDescription, setWarningDescription] = useState('')
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false)
+  const [successDialogTitle, setSuccessDialogTitle] = useState('')
+  const [successDialogDescription, setSuccessDialogDescription] = useState('')
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false)
+  const [errorDialogTitle, setErrorDialogTitle] = useState('')
+  const [errorDialogDescription, setErrorDialogDescription] = useState('')
   
   const [formData, setFormData] = useState({
     sbw_code: smartBill_Withdraw.sbw_code,
@@ -147,20 +157,24 @@ export default function AddExpenseDialog({
   const handleSave = async () => {
     // Validation
     if (!formData.remark) {
-      Swal.fire('แจ้งเตือน', 'กรุณากรอกรายละเอียดกิจกรรม', 'warning')
+      setWarningTitle('กรุณากรอกรายละเอียดกิจกรรม')
+      setWarningDescription('กรุณากรอกรายละเอียดกิจกรรมก่อนบันทึก')
+      setOpenWarningDialog(true)
       return
     }
 
     //  ข้ามการตรวจสอบไมล์ถ้าเป็นรถสาธารณะ/อื่นๆ
     if (!isPublicOrOther && (!formData.sbwdtl_operationid_startmile || !formData.sbwdtl_operationid_endmile)) {
-      Swal.fire('แจ้งเตือน', 'กรุณากรอกระยะทางเริ่มต้นและสิ้นสุด', 'warning')
+      setWarningTitle('กรุณากรอกระยะทาง')
+      setWarningDescription('กรุณากรอกระยะทางเริ่มต้นและสิ้นสุดก่อนบันทึก')
+      setOpenWarningDialog(true)
       return
     }
 
     try {
       setIsLoading(true)
       
-      console.log('🚗 Updating vehicle info...')
+      // console.log('🚗 Updating vehicle info...')
       
       await client.post('/SmartBill_Withdraw_updateSBW', {
         car_infocode: smartBill_Withdraw.car_infocode || '',
@@ -171,11 +185,11 @@ export default function AddExpenseDialog({
         usercode: smartBill_Withdraw.ownercode || smartBill_Withdraw.UserCode
       })
       
-      console.log(' Vehicle updated')
+      // console.log(' Vehicle updated')
       
       await new Promise(resolve => setTimeout(resolve, 300))
       
-      console.log('📝 Adding activity...')
+      // console.log('📝 Adding activity...')
       
       //  ส่งข้อมูลถูกต้องตามประเภทรถ
       await client.post('/SmartBill_Withdraw_AddrowDtl', {
@@ -194,15 +208,11 @@ export default function AddExpenseDialog({
       // รีเฟรชข้อมูลลง ExpenseTable ทันที
       onSaveSuccess?.()
       
-      console.log(' Activity added')
+      // console.log(' Activity added')
       
-      await Swal.fire({
-        icon: 'success',
-        title: 'สำเร็จ',
-        text: 'เพิ่มกิจกรรมเรียบร้อย',
-        timer: 1500,
-        showConfirmButton: false
-      })
+      setSuccessDialogTitle('การทำรายการสำเร็จ')
+      setSuccessDialogDescription('เพิ่มกิจกรรมเรียบร้อย')
+      setSuccessDialogOpen(true)
       
       onOpenChange(false)
       resetForm()
@@ -210,11 +220,9 @@ export default function AddExpenseDialog({
     } catch (error: any) {
       console.error('❌ Error:', error)
       
-      Swal.fire({
-        icon: 'error',
-        title: 'เกิดข้อผิดพลาด',
-        text: error.response?.data?.message || 'ไม่สามารถเพิ่มกิจกรรมได้'
-      })
+      setErrorDialogTitle('เกิดข้อผิดพลาด')
+      setErrorDialogDescription(error.response?.data?.message || 'ไม่สามารถเพิ่มกิจกรรมได้')
+      setErrorDialogOpen(true)
     } finally {
       setIsLoading(false)
     }
@@ -364,6 +372,7 @@ export default function AddExpenseDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(isOpen) => {
       onOpenChange(isOpen)
       if (!isOpen) resetForm()
@@ -1012,5 +1021,24 @@ export default function AddExpenseDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <WarningDialog
+      open={openWarningDialog}
+      onOpenChange={setOpenWarningDialog}
+      title={warningTitle}
+      description={warningDescription}
+    />
+    <SuccessDialog
+      open={successDialogOpen}
+      onOpenChange={setSuccessDialogOpen}
+      title={successDialogTitle}
+      description={successDialogDescription}
+    />
+    <ErrorDialog
+      open={errorDialogOpen}
+      onOpenChange={setErrorDialogOpen}
+      title={errorDialogTitle}
+      description={errorDialogDescription}
+    />
+    </>
   )
 }

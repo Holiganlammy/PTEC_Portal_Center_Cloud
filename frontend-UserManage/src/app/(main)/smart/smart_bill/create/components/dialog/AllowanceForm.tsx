@@ -28,7 +28,7 @@ import {
 import { Calendar as CalendarIcon, Clock, Check, ChevronsUpDown, Plus, X, Save } from 'lucide-react'
 import dayjs from 'dayjs'
 import client from '@/lib/axios/interceptors'
-import SuccessDialog from './SuccessDialog'
+import SuccessDialog from '../AlertDialog/SuccessDialog'
 import {
   AlertDialog,
   AlertDialogContent,
