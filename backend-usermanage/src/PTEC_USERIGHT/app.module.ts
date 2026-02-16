@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './controller/ptec_useright.controller';
 import { AppService } from './service/ptec_useright.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
 // import { jwtConstants } from './config/jwt.config';
 // import { JwtModule } from '@nestjs/jwt';
 // import { ConfigModule } from '@nestjs/config';
@@ -8,13 +9,26 @@ import { AppService } from './service/ptec_useright.service';
 // import { JwtStrategy } from '../auth/jwt.strategy';
 // import { APP_GUARD } from '@nestjs/core';
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AuthModule } from '../auth/auth.module'; // ✅ เพิ่มบรรทัดนี้
+import { AuthSessionService } from './service/auth-session.service';
+import { AuthSession } from './domain/model/auth-session.entity';
+import { AuthModule } from '../auth/auth.module';
 import { redisProvider } from '../redis/redis.provider';
 import { DatabaseManagerModule } from 'src/database/database-manager.module';
+import { SessionCleanupService } from './service/session-cleanup.service';
 
 @Module({
-  imports: [DatabaseManagerModule, AuthModule],
+  imports: [
+    DatabaseManagerModule,
+    AuthModule,
+    TypeOrmModule.forFeature([AuthSession], 'auth'),
+  ],
   controllers: [AppController],
-  providers: [AppService, redisProvider],
+  providers: [
+    AppService,
+    AuthSessionService,
+    redisProvider,
+    SessionCleanupService,
+  ],
+  exports: [AppService, AuthSessionService],
 })
 export class PTEC_USERRIGHT_Module {}

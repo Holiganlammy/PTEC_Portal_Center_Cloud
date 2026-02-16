@@ -6,6 +6,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from '../common/guards/jwt-auth-guard';
 import { JwtStrategy } from './jwt.strategy';
 import { jwtConstants } from '../PTEC_USERIGHT/config/jwt.config';
+import { AuthSession } from 'src/PTEC_USERIGHT/domain/model/auth-session.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Global()
 @Module({
@@ -15,6 +17,7 @@ import { jwtConstants } from '../PTEC_USERIGHT/config/jwt.config';
       secret: jwtConstants.secret,
       signOptions: { expiresIn: '4h' },
     }),
+    TypeOrmModule.forFeature([AuthSession], 'auth'),
   ],
   providers: [
     JwtStrategy,

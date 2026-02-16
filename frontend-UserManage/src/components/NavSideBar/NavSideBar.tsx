@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState, useRef, JSX } from "react"
 import { Button } from '@/components/ui/button'
+import { logout } from "@/lib/auth/logout"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -150,8 +151,13 @@ export default function SiteHeader({ children }: SiteHeaderProps) {
   const menuTree = useMemo(() => buildMenuTree(visibleMenus as MenuItem[]), [visibleMenus])
   const hasFetchedMenus = useRef(false)
 
-  const handleLogout = () => {
-    signOut({ redirect: false })
+  const handleLogout = async () => {
+    // signOut({ redirect: false })
+    try {
+      await logout(session?.user?.access_token);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   }
 
   const toggleCollapse = () => {

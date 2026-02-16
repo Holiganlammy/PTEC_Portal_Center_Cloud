@@ -29,6 +29,7 @@ async function bootstrap(): Promise<void> {
       origin: [
         'http://localhost:3000',
         'https://localhost:3000',
+        'http://localhost:3001',
         'https://203.150.63.138:33002',
         'http://10.81.234.6:3000',
         'http://192.168.247.71:33002',
@@ -74,7 +75,11 @@ async function bootstrap(): Promise<void> {
     app.useGlobalFilters(new AllExceptionsFilter());
     app.setGlobalPrefix('api');
     app.enableCors({
-      origin: 'http://localhost:3000',
+      origin: [
+        'http://localhost:3000',
+        'https://localhost:3000',
+        'http://localhost:3001',
+      ],
       credentials: true,
     });
 

@@ -39,11 +39,13 @@ import * as crypto from 'crypto';
 import { sendOtpWithGmailAPI } from 'src/utils/sendEmailOTPLoginGmailAPI';
 import { sendResetPasswordWithGmailAPI } from 'src/utils/sendEmailForgetPasswordGmailAPI';
 import { GetWelfareDto } from '../dto/ptec_useright.dto';
+import { AuthSessionService } from '../service/auth-session.service';
 
 @Controller('')
 export class AppController {
   constructor(
     private readonly appService: AppService,
+    private readonly authSessionService: AuthSessionService,
     @Inject('REDIS') private readonly redis: Redis,
   ) {}
 
@@ -81,7 +83,23 @@ export class AppController {
       }
       const resultLogin = await this.appService.getUserLogin(loginDto);
       const user = resultLogin[0] as User;
+      // console.log(resultLogin);
       console.log('User fetched on login:', user);
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials',
+          credentials: false,
+        });
+      }
+      if (!user || user.password === 9) {
+        return res.status(401).json({
+          success: false,
+          passwordExpired: true,
+          message: 'Password expired, please reset your password',
+          credentials: false,
+        });
+      }
       if (!user || user.password !== 1) {
         return res.status(401).json({
           success: false,
@@ -121,14 +139,13 @@ export class AppController {
         });
 
         if (isTrusted === true) {
-          const payload = {
-            sub: user.UserCode, // ✅ เพิ่ม sub field
-            userId: user.UserID,
-            username: user.UserCode,
-            role: user.role_id, // 1.Admin 2.User 3.Moderator FA 4.Moderator SM 5.Guest 6.Moderrator Reservation Sys 7.Mockup User
-          };
-
-          const token = this.appService['jwtService'].sign(payload);
+          const token = await this.authSessionService.createSession(
+            user,
+            'portal',
+            userAgent,
+            ipAddress,
+            userAgent,
+          );
           return res.status(200).json({
             success: true,
             access_token: token,
@@ -220,11 +237,11 @@ export class AppController {
   @Public()
   @Post('/verify-otp')
   async verifyOtp(
-    @Body() body: VerifyOtpDto,
+    @Body() body: VerifyOtpDto & { source?: string },
     @Res() res: Response,
     @Req() req: Request,
   ) {
-    const { usercode, otpCode, trustDevice } = body;
+    const { usercode, otpCode, trustDevice, source = 'portal' } = body;
     const key = `mfa:${usercode.toUpperCase()}`;
     // console.log('Verifying OTP for key on verify-otp:', key);
 
@@ -244,13 +261,20 @@ export class AppController {
     const resultLogin: User[] =
       await this.appService.getUsersFromProcedure(usercode);
     const user = resultLogin[0];
-    const payload = {
-      sub: user.UserCode, // ✅ เพิ่ม sub field
-      userId: user.UserID,
-      username: user.UserCode,
-      role: user.role_id,
-    };
-    const token = this.appService['jwtService'].sign(payload);
+    // Get device info
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ipAddress =
+      req.ip ||
+      (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0] ||
+      'unknown';
+
+    const token = await this.authSessionService.createSession(
+      user,
+      source,
+      userAgent,
+      ipAddress,
+      userAgent,
+    );
     if (trustDevice === true || trustDevice === 'true') {
       const trustedId = crypto.randomUUID();
       const userAgent = req.headers['user-agent'] || 'unknown';
@@ -321,7 +345,155 @@ export class AppController {
       success: true,
       access_token: token,
       user,
+      message: 'OTP verified successfully',
     });
+  }
+
+  @Public()
+  @Post('/validate')
+  async validateToken(
+    @Body() body: { access_token: string },
+    @Res() res: Response,
+  ): Promise<Response> {
+    try {
+      const { access_token } = body;
+
+      if (!access_token) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          message: 'Token is required',
+        });
+      }
+
+      //ใช้ AuthSessionService ตรวจสอบ token
+      const sessionData =
+        await this.authSessionService.validateSession(access_token);
+
+      if (!sessionData) {
+        return res.status(HttpStatus.UNAUTHORIZED).json({
+          success: false,
+          message: 'Token not found or expired',
+        });
+      }
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        valid: true,
+        user: sessionData,
+      });
+    } catch (error) {
+      console.error('Validate token error:', error);
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Token validation failed',
+      });
+    }
+  }
+
+  @Post('/logout')
+  async logout(
+    @Body() body: { access_token: string },
+    @Res() res: Response,
+  ): Promise<Response> {
+    try {
+      const { access_token } = body;
+
+      if (!access_token) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          message: 'Token is required',
+        });
+      }
+
+      await this.authSessionService.revokeSession(access_token);
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: 'Logout successful',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Logout failed',
+      });
+    }
+  }
+
+  @Post('/auth/logout-all')
+  async logoutAll(
+    @Body() body: { userCode: string; source?: string },
+    @Res() res: Response,
+  ): Promise<Response> {
+    try {
+      await this.authSessionService.revokeAllUserSessions(
+        body.userCode,
+        body.source,
+      );
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: 'All sessions logged out',
+      });
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Logout all failed',
+      });
+    }
+  }
+
+  @Post('/auth/sessions')
+  async getSessions(
+    @Body() body: { userCode: string },
+    @Res() res: Response,
+  ): Promise<Response> {
+    try {
+      const sessions = await this.authSessionService.getActiveSessions(
+        body.userCode,
+      );
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        sessions,
+      });
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message:
+          error instanceof Error ? error.message : 'Failed to get sessions',
+      });
+    }
+  }
+
+  @Post('/auth/me')
+  async getMe(
+    @Body() body: { access_token: string },
+    @Res() res: Response,
+  ): Promise<Response> {
+    try {
+      const sessionData = await this.authSessionService.validateSession(
+        body.access_token,
+      );
+
+      if (!sessionData) {
+        return res.status(HttpStatus.UNAUTHORIZED).json({
+          success: false,
+          message: 'Token not found',
+        });
+      }
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        user: sessionData,
+      });
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message:
+          error instanceof Error ? error.message : 'Failed to get user info',
+      });
+    }
   }
 
   @Post('/user/create')
@@ -495,6 +667,7 @@ export class AppController {
     }
   }
 
+  @Public()
   @Post('/user/change-password')
   async changePassword(@Body() req: ChangPasswordDto, @Res() res: Response) {
     try {

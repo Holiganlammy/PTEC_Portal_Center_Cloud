@@ -1,4 +1,4 @@
-// middleware.ts
+// middleware.ts PortalWeb
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
