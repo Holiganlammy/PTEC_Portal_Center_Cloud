@@ -7,11 +7,11 @@ import {
   UserWithRoles,
   UserAssets,
   Province,
-} from '../domain/model/ptec_useright.entity';
-import { Branch } from '../domain/model/ptec_useright.entity';
-import { Department } from '../domain/model/ptec_useright.entity';
-import { Section } from '../domain/model/ptec_useright.entity';
-import { Position } from '../domain/model/ptec_useright.entity';
+} from '../domain/model/ptec_useright.interface';
+import { Branch } from '../domain/model/ptec_useright.interface';
+import { Department } from '../domain/model/ptec_useright.interface';
+import { Section } from '../domain/model/ptec_useright.interface';
+import { Position } from '../domain/model/ptec_useright.interface';
 import { databaseConfig } from '../config/database.config';
 import * as sql from 'mssql';
 import {
@@ -40,10 +40,10 @@ export class AppService {
 
   signToken(user: User): string {
     const payload = {
-      sub: user.UserCode, // ✅ เพิ่ม sub field
+      sub: user.UserCode,
       userId: user.UserID,
-      username: user.UserCode,
-      role: user.PositionCode,
+      UserCode: user.UserCode,
+      role: user.role_id,
     };
     return this.jwtService.sign(payload);
   }
@@ -61,12 +61,14 @@ export class AppService {
   async getUsersFromProcedure(
     usercode?: string | null,
     UserID?: number | null,
+    email?: string | null,
   ): Promise<User[]> {
-    return this.dbManager.executeStoredProcedure(
+    return await this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.User_Infomation`,
       [
         { name: 'usercode', type: sql.NVarChar(20), value: usercode },
         { name: 'UserID', type: sql.Int(), value: UserID },
+        { name: 'email', type: sql.NVarChar(100), value: email },
       ],
     );
   }

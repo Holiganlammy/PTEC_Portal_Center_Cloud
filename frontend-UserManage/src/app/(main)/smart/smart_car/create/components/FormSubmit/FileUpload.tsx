@@ -40,15 +40,15 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
       </label>
 
       {files.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
           {files.map((item: any, index: number) => (
             <div key={index} className="relative group cursor-pointer">
               <Image
                 src={item.file}
                 alt={item.filename}
-                width={200}
-                height={200}
-                className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                width={300}
+                height={300}
+                className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-gray-400 transition-all"
                 onClick={() => handleOpenDialog(index)}
               />
               <button

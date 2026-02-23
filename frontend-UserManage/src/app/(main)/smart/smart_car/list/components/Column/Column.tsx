@@ -334,13 +334,13 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               <Link href={`/smart/smart_car/updateform?code=${smartCar.sb_code}`}>
                 <DropdownMenuItem>
                   <Edit className="mr-2 h-4 w-4" />
-                  Edit Asset
+                  Edit Document Car
                 </DropdownMenuItem>
               </Link>
             )}
             <DropdownMenuItem disabled className="text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Asset
+              Delete Document Car
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

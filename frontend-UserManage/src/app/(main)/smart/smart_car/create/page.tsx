@@ -31,14 +31,12 @@ import CarTypeSelection from '@/app/(main)/smart/smart_car/create/components/Car
 import CarForm from '@/app/(main)/smart/smart_car/create/components/CarForm/CarForm';
 import FileUpload from '@/app/(main)/smart/smart_car/create/components/FormSubmit/FileUpload';
 
-// Import types
 import { UserData, CarInfo, Operation, SmartBillHeader } from '@/app/(main)/smart/smart_car/create/service/type/types';
 
-// Type for uploaded file data
 interface UploadedFile {
-  file: string;      // URL.createObjectURL result
-  fileData: File;    // Original File object
-  filename: string;  // File name
+  file: string;
+  fileData: File;
+  filename: string;
 }
 
 export default function FormsStart() {
@@ -72,7 +70,7 @@ export default function FormsStart() {
     sb_lastName: session?.user?.lastName || '',
     clean_status: 0,
     group_status: 0,
-    reamarks: '', // Keep this for compatibility but won't be used in UI
+    reamarks: '',
   });
 
   const [cars, setCars] = useState<CarInfo[]>([{
@@ -95,7 +93,7 @@ export default function FormsStart() {
     sb_associate_enddate: ''
   }]);
 
-  // const [dataFilesCount, setDataFilesCount] = useState<UploadedFile[] | null>(null);
+  const [dataFilesCount, setDataFilesCount] = useState<UploadedFile[] | null>(null);
 
   const handleCompanyChange = (value: string) => {
     setSmartBillHeader(prev => ({ ...prev, sb_name: value }));
@@ -145,7 +143,6 @@ export default function FormsStart() {
   };
 
   const handleAddOperation = (carIndex: number) => {
-    //  ใช้ functional update เพื่อดึงค่าล่าสุด
     setOperations(prevOperations => {
       const carOperations = prevOperations.filter(op => op.carIndex === carIndex);
 
@@ -170,21 +167,18 @@ export default function FormsStart() {
 
       const lastOp = carOperations[carOperations.length - 1];
 
-      //  Validate กิจกรรมล่าสุดก่อนเพิ่มใหม่
       const lastEndMile = parseFloat(lastOp.sb_operationid_endmile || '0');
       const lastStartMile = parseFloat(lastOp.sb_operationid_startmile?.toString() || '0');
 
-      // เช็คว่ากรอกไมล์สิ้นสุดหรือยัง
       if (!lastOp.sb_operationid_endmile || lastEndMile <= 0) {
         showAlert(
           'กรุณากรอกข้อมูลให้ครบ',
           'กรุณากรอกไมล์สิ้นสุดของกิจกรรมปัจจุบันก่อนเพิ่มกิจกรรมใหม่',
           'error'
         );
-        return prevOperations; // ไม่เพิ่มกิจกรรมใหม่
+        return prevOperations;
       }
 
-      // เช็คว่าไมล์สิ้นสุดมากกว่าไมล์เริ่มต้นหรือไม่
       if (lastEndMile < lastStartMile) {
         showAlert(
           'ข้อมูลไมล์ไม่ถูกต้อง',
@@ -310,32 +304,32 @@ export default function FormsStart() {
     setOperations(newOperations);
   };
 
-  // const handleFileUpload = async (event: any) => {
-  //   event.preventDefault();
-  //   const file = event.target.files[0];
-  //   if (!file) return;
+  const handleFileUpload = async (event: any) => {
+    event.preventDefault();
+    const file = event.target.files[0];
+    if (!file) return;
 
-  //   const fileBolb = URL.createObjectURL(file);
-  //   const newFile = {
-  //     file: fileBolb,
-  //     fileData: file,
-  //     filename: file.name,
-  //   };
+    const fileBolb = URL.createObjectURL(file);
+    const newFile = {
+      file: fileBolb,
+      fileData: file,
+      filename: file.name,
+    };
 
-  //   if (!dataFilesCount) {
-  //     setDataFilesCount([newFile]);
-  //   } else {
-  //     setDataFilesCount([...dataFilesCount, newFile]);
-  //   }
-  // };
+    if (!dataFilesCount) {
+      setDataFilesCount([newFile]);
+    } else {
+      setDataFilesCount([...dataFilesCount, newFile]);
+    }
+  };
 
-  // const handleFileRemove = (index: number) => {
-  //   if (!dataFilesCount) return;
+  const handleFileRemove = (index: number) => {
+    if (!dataFilesCount) return;
 
-  //   const list = [...dataFilesCount];
-  //   list.splice(index, 1);
-  //   setDataFilesCount(list.length > 0 ? list : null);
-  // };
+    const list = [...dataFilesCount];
+    list.splice(index, 1);
+    setDataFilesCount(list.length > 0 ? list : null);
+  };
 
   const handleSubmit = async () => {
     if (typeCar === '') {
@@ -524,6 +518,7 @@ export default function FormsStart() {
         throw new Error('ไม่ได้รับ sb_code หรือ operation_ids จาก server');
       }
 
+      // Upload operation files
       for (let opIndex = 0; opIndex < operations.length; opIndex++) {
         const op = operations[opIndex];
 
@@ -563,7 +558,7 @@ export default function FormsStart() {
               },
             });
 
-            console.log(` Upload success:`, uploadRes.data);
+            console.log(`✅ Upload success:`, uploadRes.data);
           } catch (uploadErr: any) {
             console.error(`❌ Upload error for operation ${opIndex}, file ${fileIndex}:`, uploadErr);
             throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${fileIndex + 1} ของกิจกรรมที่ ${opIndex + 1}: ${uploadErr.message}`);
@@ -571,7 +566,43 @@ export default function FormsStart() {
         }
       }
 
+      // Upload SmartBill files (dataFilesCount)
+      if (dataFilesCount && dataFilesCount.length > 0) {
+        console.log(`📤 Uploading SmartBill files (${dataFilesCount.length} files)`);
+        
+        for (let i = 0; i < dataFilesCount.length; i++) {
+          // Validate file data before upload
+          if (!dataFilesCount[i].fileData || !(dataFilesCount[i].fileData instanceof File)) {
+            throw new Error(`ไฟล์ที่ ${i + 1} ไม่ถูกต้อง กรุณาเลือกไฟล์ใหม่`);
+          }
+
+          console.log(`📤 Uploading SmartBill file ${i + 1}/${dataFilesCount.length}`);
+          console.log('File data:', dataFilesCount[i].fileData);
+          console.log('File type:', typeof dataFilesCount[i].fileData);
+          console.log('Is File instance:', dataFilesCount[i].fileData instanceof File);
+
+          let formData_1 = new FormData();
+          formData_1.append('file', dataFilesCount[i].fileData);
+          formData_1.append('sb_code', sb_code);
+
+          try {
+            const uploadRes = await client.post('/SmartBill_files', formData_1, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+            console.log(`✅ SmartBill file ${i + 1} uploaded successfully:`, uploadRes.data);
+          } catch (uploadErr: any) {
+            console.error(`❌ Upload error for SmartBill file ${i + 1}:`, uploadErr);
+            throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${i + 1} ได้: ${uploadErr.message}`);
+          }
+        }
+      }
+
       showAlert("สำเร็จ", 'บันทึกรายการแล้ว', 'success');
+      setTimeout(() => {
+        router.push(`/FormUpdate?${sb_code}`);
+      }, 1500);
 
     } catch (error: any) {
       console.error('❌ Submit error:', error);
@@ -684,11 +715,11 @@ export default function FormsStart() {
             {/* <div className="h-px bg-gray-200"></div> */}
 
             {/* File Upload */}
-            {/* <FileUpload 
+            <FileUpload 
               dataFilesCount={dataFilesCount}
               onFileUpload={handleFileUpload}
               onFileRemove={handleFileRemove}
-            /> */}
+            /> 
 
             {/* Submit Button */}
             <div className="flex justify-center sm:justify-end pt-6 border-t border-gray-200">
@@ -697,13 +728,10 @@ export default function FormsStart() {
                 className="w-full sm:w-auto px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-all text-sm sm:text-base"
               >
                 {(() => {
-                  // Check if all cars are existing cars (not new ones)
                   const allCarsAreExisting = cars.every(car =>
                     (typeCar === '1' ? carInfoDataCompanny : carInfoData)
                       .some((existingCar) => existingCar.car_infocode === car.car_infocode)
                   );
-
-                  // If all cars are existing, show "ส่งฟอร์ม"
                   if (allCarsAreExisting) {
                     return 'ส่งฟอร์ม';
                   }

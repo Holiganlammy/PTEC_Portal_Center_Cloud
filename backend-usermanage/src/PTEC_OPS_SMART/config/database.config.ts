@@ -1,6 +1,3 @@
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
-
-export const databaseConfig = {
-  database: process.env.DB_NAME_OF_OPS || '',
-};
+// ใช้ defaultServerConfig สำหรับ PTEC_OPS_SMART module
+import { defaultServerConfig } from '../../config/multi-database.config';
+export const databaseConfig = defaultServerConfig;

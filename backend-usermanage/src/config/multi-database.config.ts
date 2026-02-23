@@ -11,3 +11,27 @@ export const defaultServerConfig = {
     trustServerCertificate: true,
   },
 };
+
+// เพิ่ม config สำหรับฐานข้อมูล PTEC_USERSRIGHT
+export const userRightServerConfig = {
+  user: process.env.DB_USER || '',
+  password: process.env.DB_PASSWORD || '',
+  server: process.env.DB_SERVER || '',
+  database: process.env.DB_NAME_OF_USERS || '',
+  options: {
+    encrypt: false,
+    trustServerCertificate: true,
+  },
+};
+
+// เพิ่ม config สำหรับฐานข้อมูล AUTH
+export const authServerConfig = {
+  user: process.env.DB_USER || '',
+  password: process.env.DB_PASSWORD || '',
+  server: process.env.DB_SERVER || '',
+  database: process.env.DB_NAME_OF_AUTH || '',
+  options: {
+    encrypt: false,
+    trustServerCertificate: true,
+  },
+};

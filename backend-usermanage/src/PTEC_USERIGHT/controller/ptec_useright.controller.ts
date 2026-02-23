@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AppService } from '../service/ptec_useright.service';
+import { JwtService } from '@nestjs/jwt';
 import {
   ChangPasswordDto,
   CheckUserPermissionDto,
@@ -32,7 +33,7 @@ import {
   Section,
   User,
   CreateUserResult,
-} from '../domain/model/ptec_useright.entity';
+} from '../domain/model/ptec_useright.interface';
 import { Redis } from 'ioredis';
 import * as crypto from 'crypto';
 // import { sendResetPasswordEmail } from 'src/utils/sendEmailForgetPassword';
@@ -46,17 +47,21 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly authSessionService: AuthSessionService,
+    private readonly jwtService: JwtService,
     @Inject('REDIS') private readonly redis: Redis,
   ) {}
 
+  @Public()
   @Get('/users')
   async getUser(
     @Query('usercode') usercode?: string | null,
     @Query('UserID') UserID?: string | null,
+    @Query('email') email?: string | null,
   ) {
     const users = await this.appService.getUsersFromProcedure(
       usercode ? usercode : null,
       UserID ? Number(UserID) : null,
+      email ? email : null,
     );
     const filterOutUsers = users.map(({ ...user }) => user);
     return filterOutUsers;
@@ -85,14 +90,16 @@ export class AppController {
       const user = resultLogin[0] as User;
       // console.log(resultLogin);
       console.log('User fetched on login:', user);
+
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials',
+          message: 'User not found',
           credentials: false,
         });
       }
-      if (!user || user.password === 9) {
+
+      if (user.password === 9) {
         return res.status(401).json({
           success: false,
           passwordExpired: true,
@@ -100,10 +107,11 @@ export class AppController {
           credentials: false,
         });
       }
-      if (!user || user.password !== 1) {
+
+      if (user.password !== 1) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials',
+          message: 'Password wrong, please try again',
           credentials: false,
         });
       }
@@ -258,10 +266,10 @@ export class AppController {
 
     await this.redis.del(key);
 
-    const resultLogin: User[] =
-      await this.appService.getUsersFromProcedure(usercode);
+    const resultLogin = await this.appService.getUsersFromProcedure(usercode);
     const user = resultLogin[0];
-    // Get device info
+    // console.log('User fetched on OTP verification:', user);
+    // // Get device info
     const userAgent = req.headers['user-agent'] || 'unknown';
     const ipAddress =
       req.ip ||
@@ -945,6 +953,56 @@ export class AppController {
       res.status(500).send({
         success: false,
         message: 'Error fetching welfare data',
+      });
+    }
+  }
+
+  @Public()
+  @Post('/login/microsoft')
+  async loginMicrosoft(
+    @Body() body: { UserCode: string; source?: string },
+    @Res() res: Response,
+  ): Promise<Response> {
+    try {
+      const { UserCode } = body;
+
+      const users = await this.appService.getUsersFromProcedure(UserCode);
+      const user = users?.[0];
+
+      if (!user || user.Actived === false || user.Actived !== true) {
+        return res.status(403).json({
+          success: false,
+          message: 'User not found or inactive',
+        });
+      }
+
+      const access_token = this.authSessionService.createSession(
+        user,
+        body.source || 'portal',
+        'Microsoft SSO',
+        'N/A',
+        'Microsoft SSO',
+      );
+
+      return res.status(200).json({
+        success: true,
+        access_token,
+        user: {
+          UserID: user.UserID,
+          UserCode: user.UserCode,
+          fristName: user.fristName,
+          lastName: user.lastName,
+          Email: user.Email,
+          role_id: user.role_id,
+          branchid: user.BranchID,
+          depid: user.DepID,
+        },
+      });
+    } catch (error: unknown) {
+      console.error('Microsoft login error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Login failed',
       });
     }
   }

@@ -1,5 +1,5 @@
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
-import { User } from 'src/PTEC_USERIGHT/domain/model/ptec_useright.entity';
+import { User } from 'src/PTEC_USERIGHT/domain/model/ptec_useright.interface';
 import * as path from 'path';
 
 export function getOtpMailOptions(

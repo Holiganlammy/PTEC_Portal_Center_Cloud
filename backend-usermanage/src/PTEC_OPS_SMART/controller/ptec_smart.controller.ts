@@ -149,23 +149,26 @@ export class AppController {
     }
   }
 
-  // @Post('SmartBill_files')
-  // @HttpCode(200)
-  // async uploadSmartBill(@Req() req: ExpressRequest, @Res() res: Response) {
-  //   try {
-  //     const result = await this.service.handleFileUpload(req);
-  //     res.status(HttpStatus.OK).json(result);
-  //   } catch (error: unknown) {
-  //     let errorMessage = 'Unexpected error';
-  //     if (error && typeof error === 'object' && 'message' in error) {
-  //       errorMessage =
-  //         String((error as { message?: unknown }).message) || errorMessage;
-  //     }
-  //     res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-  //       message: errorMessage,
-  //     });
-  //   }
-  // }
+  @Post('SmartBill_files')
+  @HttpCode(200)
+  async uploadSmartBillHeader(
+    @Req() req: ExpressRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.service.handleFileUpload(req);
+      res.status(HttpStatus.OK).json(result);
+    } catch (error: unknown) {
+      let errorMessage = 'Unexpected error';
+      if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage =
+          String((error as { message?: unknown }).message) || errorMessage;
+      }
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: errorMessage,
+      });
+    }
+  }
 
   @Post('SmartCar_files_save_image')
   @HttpCode(200)

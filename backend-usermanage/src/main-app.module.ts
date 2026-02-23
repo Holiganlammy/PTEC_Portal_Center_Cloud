@@ -100,7 +100,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         database: configService.get<string>('DB_NAME_OF_USERS'),
         entities: [
           __dirname +
-            '/PTEC_USERIGHT/domain/model/ptec_useright.entity{.ts,.js}',
+            '/PTEC_USERIGHT/domain/model/ptec_useright.interface{.ts,.js}',
         ],
 
         synchronize: false,

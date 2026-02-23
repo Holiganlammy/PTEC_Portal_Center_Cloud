@@ -276,7 +276,7 @@ export class AppService {
         value: body.sb_Code,
       },
     ];
-    return this.dbManager.executeStoredProcedureMultiple(
+    return this.dbManager.executeMultipleStoredProcedures(
       `${databaseConfig.database}.dbo.SmartBill_SelectAllForms_Cloud`,
       params,
     );
@@ -359,7 +359,7 @@ export class AppService {
       },
     ];
 
-    return this.dbManager.executeStoredProcedureMultiple(
+    return this.dbManager.executeMultipleStoredProcedures(
       `${databaseConfig.database}.dbo.SmartBill_Withdraw_SelectAllForms_Cloud`,
       params,
     );
@@ -705,7 +705,7 @@ export class AppService {
         value: body.sbwdtl_operationid_startmile,
       },
     ];
-    return this.dbManager.executeStoredProcedureMultiple(
+    return this.dbManager.executeMultipleStoredProcedures(
       `${databaseConfig.database}.dbo.SmartBill_Withdraw_AddrowDtl_Cloud`,
       params,
     );
@@ -1064,5 +1064,75 @@ export class AppService {
       `${databaseConfig.database}.dbo.SmartBill_AcceptHeader_Cloud`,
       params,
     );
+  }
+
+  async NonPO_Attatch_Save(req: {
+    nonpocode: string;
+    url: string;
+    user: string;
+    description: string;
+  }) {
+    const params = [
+      { name: 'nonpocode', type: sql.NVarChar(255), value: req.nonpocode },
+      { name: 'url', type: sql.NVarChar(255), value: req.url },
+      { name: 'user', type: sql.NVarChar(255), value: req.user },
+      { name: 'description', type: sql.NVarChar(255), value: req.description },
+    ];
+
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.NonPO_Attatch_Save`,
+      params,
+    );
+  }
+
+  async handleFileUpload(req: Request) {
+    const file = req.files?.file as UploadedFile;
+    const reqBody = req.body as { sb_code?: string };
+    const st_code = reqBody.sb_code;
+
+    if (!file) throw new Error('No file uploaded');
+
+    console.log('📦 req.files:', req.files);
+    console.log('📂 TEMP FILE PATH:', file.tempFilePath);
+
+    const filename = file.name;
+    const extension = path.extname(filename);
+    const attach = 'ATT';
+    const newPath = await this.FA_Control_Running_NO(attach);
+
+    if (!newPath) throw new Error('Cannot generate running number');
+
+    const newFileName = `${newPath}/${extension}`;
+    const savePath = path.join(this.uploadDir, newFileName);
+    fs.mkdirSync(this.uploadDir, { recursive: true });
+
+    // Copy file
+    await fs.promises.copyFile(file.tempFilePath, savePath);
+    await fs.promises.unlink(file.tempFilePath);
+    const fileExists = fs.existsSync(savePath);
+    console.log('📄 File exists?', fileExists);
+
+    if (fileExists) {
+      const stats = fs.statSync(savePath);
+      console.log('📊 File size:', stats.size, 'bytes');
+    }
+
+    const fileUrl = `${this.baseUrl}${newFileName}`;
+
+    const attachBody = {
+      nonpocode: st_code ?? '',
+      url: fileUrl,
+      user: this.usercode,
+      description: st_code ?? '',
+    };
+
+    await this.NonPO_Attatch_Save(attachBody);
+
+    return {
+      message: 'successfully',
+      code: newPath,
+      url: fileUrl,
+      filePath: savePath, // เพิ่ม path จริง
+    };
   }
 }

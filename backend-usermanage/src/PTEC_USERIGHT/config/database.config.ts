@@ -1,6 +1,4 @@
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+// ใช้ userRightServerConfig สำหรับ PTEC_USERIGHT module
+import { userRightServerConfig } from '../../config/multi-database.config';
 
-export const databaseConfig = {
-  database: process.env.DB_NAME_OF_USERS || '',
-};
+export const databaseConfig = userRightServerConfig;

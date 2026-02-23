@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { google } from 'googleapis';
-import { User } from 'src/PTEC_USERIGHT/domain/model/ptec_useright.entity';
+import { User } from 'src/PTEC_USERIGHT/domain/model/ptec_useright.interface';
 
 interface GoogleCredentials {
   installed: {

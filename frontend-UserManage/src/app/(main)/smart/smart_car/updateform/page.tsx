@@ -33,6 +33,7 @@ import CarForm from '@/app/(main)/smart/smart_car/create/components/CarForm/CarF
 // Import types
 import { UserData, CarInfo, Operation, SmartBillHeader } from '@/app/(main)/smart/smart_car/create/service/type/types';
 import { Button } from '@/components/ui/button';
+import FileUpload from '../create/components/FormSubmit/FileUpload';
 
 export default function FormsUpdate() {
   const { data: session } = useSession();
@@ -136,7 +137,7 @@ export default function FormsUpdate() {
         if (!canAccess) {
           setIsCheckingAccess(false);
           setIsLoading(false);
-          return; // ออกจากฟังก์ชัน ไม่โหลดข้อมูล
+          return;
         }
         
         // ตั้งค่า Header
@@ -191,8 +192,27 @@ export default function FormsUpdate() {
         })));
       }
 
-      // Index 3: Files
+      // Index 3: Files (Operation files)
       const filesData = response.data[3];
+      
+      // Index 4: SmartBill Files
+      const smartBillFilesData = response.data[4];
+      if (smartBillFilesData && smartBillFilesData.length > 0) {
+        const loadedFiles = smartBillFilesData.map((file: any) => {
+          // แยกชื่อไฟล์จาก URL
+          const urlParts = file.url.split('/');
+          const filenameFromUrl = urlParts[urlParts.length - 1] || 'file';
+          
+          return {
+            file: file.url,
+            fileData: null,
+            filename: filenameFromUrl,
+            isExisting: true,
+            fileId: file.NonPO_attatchid,
+          };
+        });
+        setDataFilesCount(loadedFiles);
+      }
       
       // ประมวลผล operations พร้อม files
       if (operationsData && operationsData.length > 0) {
@@ -406,12 +426,14 @@ export default function FormsUpdate() {
   };
 
   const handleFileRemove = async (index: number) => {
+    if (!dataFilesCount) return;
+    
     const list = [...dataFilesCount];
     const fileToRemove = list[index];
     
     if (fileToRemove.isExisting && fileToRemove.fileId) {
       try {
-        const response = await client.post('/SmartBill_Operation_DeleteImage', {
+        const response = await client.post('/SmartBill_DeleteAttachment', {
           attachid: fileToRemove.fileId
         });
         
@@ -602,6 +624,45 @@ export default function FormsUpdate() {
           } catch (uploadErr: any) {
             console.error(`❌ Upload error for operation ${opIndex}, file ${fileIndex}:`, uploadErr);
             throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${fileIndex + 1} ของกิจกรรมที่ ${opIndex + 1}: ${uploadErr.message}`);
+          }
+        }
+      }
+
+      // Upload SmartBill files (dataFilesCount)
+      if (dataFilesCount && dataFilesCount.length > 0) {
+        console.log(`📤 Uploading SmartBill files (${dataFilesCount.length} files)`);
+        
+        for (let i = 0; i < dataFilesCount.length; i++) {
+          // Skip existing files that haven't been newly added
+          if (dataFilesCount[i].isExisting && !dataFilesCount[i].fileData) {
+            console.log(`⚠️ Skipping existing SmartBill file ${i + 1}`);
+            continue;
+          }
+
+          // Validate file data before upload
+          if (!dataFilesCount[i].fileData || !(dataFilesCount[i].fileData instanceof File)) {
+            throw new Error(`ไฟล์ที่ ${i + 1} ไม่ถูกต้อง กรุณาเลือกไฟล์ใหม่`);
+          }
+
+          console.log(`📤 Uploading SmartBill file ${i + 1}/${dataFilesCount.length}`);
+          console.log('File data:', dataFilesCount[i].fileData);
+          console.log('File type:', typeof dataFilesCount[i].fileData);
+          console.log('Is File instance:', dataFilesCount[i].fileData instanceof File);
+
+          let formData_1 = new FormData();
+          formData_1.append('file', dataFilesCount[i].fileData);
+          formData_1.append('sb_code', sb_code);
+
+          try {
+            const uploadRes = await client.post('/SmartBill_files', formData_1, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+            console.log(`✅ SmartBill file ${i + 1} uploaded successfully:`, uploadRes.data);
+          } catch (uploadErr: any) {
+            console.error(`❌ Upload error for SmartBill file ${i + 1}:`, uploadErr);
+            throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${i + 1} ได้: ${uploadErr.message}`);
           }
         }
       }
@@ -797,6 +858,13 @@ export default function FormsUpdate() {
             </div>
 
             <div className="h-px bg-gray-200"></div>
+                
+            {/* File Upload */}
+            <FileUpload 
+              dataFilesCount={dataFilesCount}
+              onFileUpload={handleFileUpload}
+              onFileRemove={handleFileRemove}
+            />
 
             {/* Submit Button */}
             <div className="flex justify-end pt-6 border-t border-gray-200">

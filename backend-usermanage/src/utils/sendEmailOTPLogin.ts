@@ -2,7 +2,7 @@ import { createTransport } from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { getOtpMailOptions } from './emailTemplate';
-import { User } from 'src/PTEC_USERIGHT/domain/model/ptec_useright.entity';
+import { User } from 'src/PTEC_USERIGHT/domain/model/ptec_useright.interface';
 
 export async function sendOtpEmail(
   to: string,

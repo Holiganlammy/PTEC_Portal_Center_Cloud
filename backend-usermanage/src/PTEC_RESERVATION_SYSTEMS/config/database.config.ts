@@ -1,10 +1,4 @@
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+// ใช้ defaultServerConfig สำหรับ PTEC_RESERVATION_SYSTEMS module
+import { defaultServerConfig } from '../../config/multi-database.config';
 
-export const databaseConfig = {
-  user: process.env.DB_USER || '',
-  password: process.env.DB_PASSWORD || '',
-  server: process.env.DB_SERVER || '',
-  database: process.env.DB_NAME_OF_OPS || '',
-  options: { encrypt: false },
-};
+export const databaseConfig = defaultServerConfig;

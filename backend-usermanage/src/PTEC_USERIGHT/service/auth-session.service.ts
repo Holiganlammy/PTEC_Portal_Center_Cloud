@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { AuthSession } from '../domain/model/auth-session.entity';
-import { User } from '../domain/model/ptec_useright.entity';
+import { User } from '../domain/model/ptec_useright.interface';
 
 // interface User {
 //   UserID: number;

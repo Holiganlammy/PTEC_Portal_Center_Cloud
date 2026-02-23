@@ -16,7 +16,12 @@ export class AuthSession {
   @PrimaryGeneratedColumn({ name: 'SessionID' })
   sessionId: number;
 
-  @Column({ name: 'AccessToken', type: 'nvarchar', length: 1000, unique: true })
+  @Column({
+    name: 'AccessToken',
+    type: 'nvarchar',
+    length: 'MAX',
+    unique: true,
+  })
   accessToken: string;
 
   @Column({ name: 'UserID', type: 'int' })

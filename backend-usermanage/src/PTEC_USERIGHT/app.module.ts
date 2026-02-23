@@ -15,6 +15,8 @@ import { AuthModule } from '../auth/auth.module';
 import { redisProvider } from '../redis/redis.provider';
 import { DatabaseManagerModule } from 'src/database/database-manager.module';
 import { SessionCleanupService } from './service/session-cleanup.service';
+import { MicrosoftSessionController } from './controller/microsoft-session.controller';
+import { MicrosoftSessionService } from './service/Microsoft-session.service';
 
 @Module({
   imports: [
@@ -22,12 +24,13 @@ import { SessionCleanupService } from './service/session-cleanup.service';
     AuthModule,
     TypeOrmModule.forFeature([AuthSession], 'auth'),
   ],
-  controllers: [AppController],
+  controllers: [AppController, MicrosoftSessionController],
   providers: [
     AppService,
     AuthSessionService,
     redisProvider,
     SessionCleanupService,
+    MicrosoftSessionService,
   ],
   exports: [AppService, AuthSessionService],
 })
