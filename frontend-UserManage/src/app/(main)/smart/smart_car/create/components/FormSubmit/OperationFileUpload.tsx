@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useState } from 'react';
 import ImageDialog from '@/components/ImageDialog/ImageDialog';
+import Image from 'next/image';
 
 interface OperationFileUploadProps {
   files: SmartBillFile[];
@@ -224,10 +225,12 @@ export default function OperationFileUpload({
               <div key={index} className="relative group">
                 {/*  Image Container with View Button */}
                 <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 relative">
-                  <img
-                    src={file.image_url}
-                    alt={file.image_name}
+                  <Image
+                    src={`/api/images/${file.image_name}`}
+                    alt={file.image_name || `Image ${index + 1}`}
                     className="w-full h-full object-cover"
+                    width={500}
+                    height={500}
                   />
                   
                   {/*  Hover Overlay with View Button */}

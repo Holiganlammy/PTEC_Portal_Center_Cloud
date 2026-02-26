@@ -23,6 +23,7 @@ import {
   Search
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import Image from 'next/image'
 
 interface VideoGuide {
   id: string
@@ -218,7 +219,7 @@ export default function ToolDocumentationPage() {
                   <CardContent className="p-0">
                     {/* Thumbnail */}
                     <div className="relative aspect-video bg-gray-200 dark:bg-gray-800 rounded-t-lg overflow-hidden">
-                      <img
+                      <Image
                         src={`https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`}
                         alt={video.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"

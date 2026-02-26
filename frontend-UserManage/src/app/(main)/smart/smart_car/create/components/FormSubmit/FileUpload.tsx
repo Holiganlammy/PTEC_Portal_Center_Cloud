@@ -44,8 +44,8 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
           {files.map((item: any, index: number) => (
             <div key={index} className="relative group cursor-pointer">
               <Image
-                src={item.file}
-                alt={item.filename}
+                src={`/api/images/${item.filename}`}
+                alt={item.filename || `Image ${index + 1}`}
                 width={300}
                 height={300}
                 className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-gray-400 transition-all"
