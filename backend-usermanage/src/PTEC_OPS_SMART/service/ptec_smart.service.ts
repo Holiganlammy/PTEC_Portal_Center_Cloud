@@ -1117,7 +1117,7 @@ export class AppService {
       console.log('📊 File size:', stats.size, 'bytes');
     }
 
-    const fileUrl = `${this.baseUrl}${newFileName}`;
+    const fileUrl = `${this.baseUrl}/${newFileName}`;
 
     const attachBody = {
       nonpocode: st_code ?? '',
@@ -1134,5 +1134,17 @@ export class AppService {
       url: fileUrl,
       filePath: savePath, // เพิ่ม path จริง
     };
+  }
+
+  async NonPO_Attatch_Delete_By_attachid(attachid: number, UserID: number) {
+    const params = [
+      { name: 'NonPO_attatchid', type: sql.Int(), value: attachid },
+      { name: 'UpdateBy', type: sql.Int(), value: UserID },
+    ];
+
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.SmartBill_Attatch_Header_Delete`,
+      params,
+    );
   }
 }

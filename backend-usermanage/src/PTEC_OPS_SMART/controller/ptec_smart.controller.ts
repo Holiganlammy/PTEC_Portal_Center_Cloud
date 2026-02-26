@@ -1193,4 +1193,28 @@ export class AppController {
       } as SmartBillAcceptErrorResponse);
     }
   }
+
+  @Post('SmartBill_Attatch_Header_Delete')
+  @HttpCode(200)
+  async deleteSmartBillAttachment(
+    @Body() body: { attachid: number; UserID: number },
+    @Res() res: Response,
+  ) {
+    try {
+      if (!body.attachid) {
+        throw new HttpException('กรุณาระบุ attachid', HttpStatus.BAD_REQUEST);
+      }
+      const data = await this.service.NonPO_Attatch_Delete_By_attachid(
+        body.attachid,
+        body.UserID,
+      );
+      console.log('Delete Attachment Result:', data);
+      res.status(200).send(data);
+    } catch (error: unknown) {
+      throw new HttpException(
+        error instanceof Error ? error.message : 'Unknown error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

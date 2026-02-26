@@ -43,8 +43,8 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
           {files.map((item: any, index: number) => (
             <div key={index} className="relative group cursor-pointer">
-              <Image
-                src={`/api/images/${item.filename}`}
+              <img
+                src={item.file}
                 alt={item.filename || `Image ${index + 1}`}
                 width={300}
                 height={300}

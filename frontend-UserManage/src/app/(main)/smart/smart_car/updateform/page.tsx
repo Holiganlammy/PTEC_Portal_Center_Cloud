@@ -433,9 +433,20 @@ export default function FormsUpdate() {
     
     if (fileToRemove.isExisting && fileToRemove.fileId) {
       try {
-        const response = await client.post('/SmartBill_DeleteAttachment', {
-          attachid: fileToRemove.fileId
+        const response = await client.post('/SmartBill_Attatch_Header_Delete', {
+          // ส่งหลาย key เพื่อรองรับ backend ที่รับชื่อ field ไม่เหมือนกัน
+          attachid: fileToRemove.fileId,
+          UserID: session?.user?.UserID || null,
         });
+
+        const status = response?.data?.[0]?.status || response?.data?.status;
+        if (status && status !== 'SUCCESS' && status !== 'OK') {
+          showAlert(
+            "เกิดข้อผิดพลาด",
+            response?.data?.[0]?.message || response?.data?.message || 'ไม่สามารถลบไฟล์ได้'
+          );
+          return;
+        }
         
         showAlert(
           "ลบไฟล์สำเร็จ", 
@@ -447,7 +458,7 @@ export default function FormsUpdate() {
         console.error('Error deleting file from backend:', error);
         showAlert(
           "เกิดข้อผิดพลาด", 
-          `ไม่สามารถลบไฟล์ ${fileToRemove.filename} จากระบบได้: ${error.message || 'กรุณาลองใหม่อีกครั้ง'}`
+          `ไม่สามารถลบไฟล์ ${fileToRemove.filename} จากระบบได้: ${error.response?.data?.message || error.message || 'กรุณาลองใหม่อีกครั้ง'}`
         );
         return;
       }

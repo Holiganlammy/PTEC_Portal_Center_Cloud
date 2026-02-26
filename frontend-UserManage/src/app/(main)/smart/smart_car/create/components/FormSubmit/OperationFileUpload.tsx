@@ -225,8 +225,8 @@ export default function OperationFileUpload({
               <div key={index} className="relative group">
                 {/*  Image Container with View Button */}
                 <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 relative">
-                  <Image
-                    src={`/api/images/${file.image_name}`}
+                  <img
+                    src={file.image_url}
                     alt={file.image_name || `Image ${index + 1}`}
                     className="w-full h-full object-cover"
                     width={500}
