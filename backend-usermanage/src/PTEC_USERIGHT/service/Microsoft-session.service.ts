@@ -34,7 +34,11 @@ export class MicrosoftSessionService {
     email: string;
     name: string;
     source: string;
-  }): Promise<{ success: boolean; sessionId: number }> {
+  }): Promise<{
+    success: boolean;
+    sessionId: number;
+    userData: string;
+  }> {
     try {
       const { microsoftToken, email, source } = data;
 
@@ -80,22 +84,26 @@ export class MicrosoftSessionService {
         loginAt: new Date().toISOString(),
       };
 
-      // เช็คว่ามี session เดิมของ user นี้หรือยัง (ถ้ามีให้ลบ)
-      const existingSessions = await this.sessionRepo.find({
-        where: {
-          userId: user.UserID,
-          source,
-        },
-      });
+      // // ลบเฉพาะ sessions ที่ยัง active อยู่ (ไม่ลบตัวที่ถูก revoke)
+      // const existingSessions = await this.sessionRepo.find({
+      //   where: {
+      //     userId: user.UserID,
+      //     source,
+      //     isRevoked: false, // ลบเฉพาะที่ยัง active
+      //   },
+      // });
 
-      if (existingSessions.length > 0) {
-        await this.sessionRepo.remove(existingSessions);
-        console.log('[Microsoft Session] Removed old sessions');
-      }
+      // if (existingSessions.length > 0) {
+      //   await this.sessionRepo.remove(existingSessions);
+      //   console.log(
+      //     '[Microsoft Session] Removed old active sessions:',
+      //     existingSessions.length,
+      //   );
+      // }
 
       // สร้าง session ใหม่
       const session = this.sessionRepo.create({
-        accessToken: microsoftToken, // ← เก็บ Microsoft token ตรงนี้
+        accessToken: microsoftToken,
         userId: user.UserID,
         userCode: user.UserCode,
         userData: JSON.stringify(sessionData),
@@ -110,13 +118,14 @@ export class MicrosoftSessionService {
       const savedSession = await this.sessionRepo.save(session);
 
       console.log(
-        '[Microsoft Session] ✅ Session saved, ID:',
+        '[Microsoft Session] Session saved, ID:',
         savedSession.sessionId,
       );
 
       return {
         success: true,
         sessionId: savedSession.sessionId,
+        userData: JSON.stringify(sessionData),
       };
     } catch (error) {
       console.error(
@@ -288,30 +297,56 @@ export class MicrosoftSessionService {
       return false;
     }
   }
-  async validateSession(sessionId: string): Promise<boolean> {
+  async validateSession(accept_token: string): Promise<{
+    valid: boolean;
+    reason?: string;
+    expired?: boolean;
+    revoked?: boolean;
+  }> {
     const session = await this.sessionRepo.findOne({
-      where: { sessionId: Number(sessionId) },
+      where: { accessToken: accept_token },
     });
 
     if (!session) {
-      return false;
+      return {
+        valid: false,
+        reason: 'Session not found',
+      };
+    }
+
+    // เช็คว่าถูก revoke หรือยัง
+    if (session.isRevoked) {
+      return {
+        valid: false,
+        reason: 'Session has been revoked',
+        revoked: true,
+      };
     }
 
     // เช็คว่าหมดเวลาหรือยัง
     const now = new Date();
     if (now > session.expiresAt) {
       console.log('[Microsoft Session] ⏰ Session expired');
-      return false;
+      return {
+        valid: false,
+        reason: 'Session has expired',
+        expired: true,
+      };
     }
 
-    return true;
+    return {
+      valid: true,
+    };
   }
 
   /**
    * Logout - ลบ session
    */
   async revokeSession(sessionId: string): Promise<void> {
-    await this.sessionRepo.delete({ sessionId: Number(sessionId) });
+    await this.sessionRepo.update(
+      { sessionId: Number(sessionId) },
+      { isRevoked: true },
+    );
     console.log('[Microsoft Session] 🚪 Session revoked:', sessionId);
   }
 

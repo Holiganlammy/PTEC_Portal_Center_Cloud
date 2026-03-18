@@ -17,6 +17,17 @@ interface ESGMapFilter{
     car_color: string;
 }
 
+interface ESGData {
+    car_infocode: string;
+    car_band: string;
+    car_tier: string;
+    car_color: string;
+    car_remarks: string;
+    rateoil: number;
+    mile: number;
+    oil: number;
+}
+
 export default function ESGReportPage() {
     const [pagination, setPagination] = useState({
         pageIndex: 0,
@@ -82,9 +93,9 @@ export default function ESGReportPage() {
             );
   
             const data = response.data;
-            const items = data.data || [];
+            const items = (data.data || []) as unknown as EsgReport[];
             
-            setESGData(items.map((item: any) => ({
+            setESGData(items.map((item: EsgReport) => ({
                 ...item,
                 TotalCount: data.pagination?.total || 0
             })));

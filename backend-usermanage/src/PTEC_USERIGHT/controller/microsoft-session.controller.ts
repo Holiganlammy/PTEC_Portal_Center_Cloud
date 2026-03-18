@@ -3,15 +3,17 @@ import {
   Controller,
   Post,
   Get,
-  Delete,
+  // Delete,
   Body,
   Headers,
   HttpStatus,
   Res,
+  Query,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { MicrosoftSessionService } from '../service/Microsoft-session.service';
 import { Public } from 'src/auth/decorators/public.decorator';
+import { User } from '../dto/ptec_useright.dto';
 
 @Controller('microsoft-session')
 export class MicrosoftSessionController {
@@ -60,9 +62,13 @@ export class MicrosoftSessionController {
         source,
       });
 
+      // Parse userData เพื่อส่งกลับไป frontend
+      const sessionData = JSON.parse(result.userData) as User;
+
       return res.status(HttpStatus.OK).json({
         success: true,
         sessionId: result.sessionId,
+        userData: sessionData,
       });
     } catch (error) {
       console.error('Save session error:', error);
@@ -126,19 +132,20 @@ export class MicrosoftSessionController {
   @Public()
   @Get('/check')
   async checkSession(
-    @Headers('x-session-id') sessionId: string,
+    // @Headers('x-session-id') sessionId: string,
+    @Query('accept_token') accept_token: string,
     @Res() res: Response,
   ) {
     try {
-      if (!sessionId) {
+      if (!accept_token) {
         return res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
-          message: 'Session ID is required',
+          message: 'Accept token is required',
         });
       }
 
       const isValid =
-        await this.microsoftSessionService.validateSession(sessionId);
+        await this.microsoftSessionService.validateSession(accept_token);
 
       return res.status(HttpStatus.OK).json({
         success: true,
@@ -156,32 +163,32 @@ export class MicrosoftSessionController {
   /**
    * Logout - ลบ session
    */
-  @Public()
-  @Delete('/logout')
-  async logout(
-    @Headers('x-session-id') sessionId: string,
-    @Res() res: Response,
-  ) {
-    try {
-      if (!sessionId) {
-        return res.status(HttpStatus.BAD_REQUEST).json({
-          success: false,
-          message: 'Session ID is required',
-        });
-      }
+  // @Public()
+  // @Delete('/logout')
+  // async logout(
+  //   @Headers('x-session-id') sessionId: string,
+  //   @Res() res: Response,
+  // ) {
+  //   try {
+  //     if (!sessionId) {
+  //       return res.status(HttpStatus.BAD_REQUEST).json({
+  //         success: false,
+  //         message: 'Session ID is required',
+  //       });
+  //     }
 
-      await this.microsoftSessionService.revokeSession(sessionId);
+  //     await this.microsoftSessionService.revokeSession(sessionId);
 
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        message: 'Logged out successfully',
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: 'Internal server error',
-      });
-    }
-  }
+  //     return res.status(HttpStatus.OK).json({
+  //       success: true,
+  //       message: 'Logged out successfully',
+  //     });
+  //   } catch (error) {
+  //     console.error('Logout error:', error);
+  //     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+  //       success: false,
+  //       message: 'Internal server error',
+  //     });
+  //   }
+  // }
 }

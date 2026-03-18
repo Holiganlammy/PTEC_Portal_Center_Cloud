@@ -152,7 +152,7 @@ export default function ImageDialog({
               transitionProperty: isDragging ? 'none' : 'transform'
             }}
           >
-            <Image
+            <img
               src={images[safeIndex].file}
               alt={images[safeIndex].filename}
               width={1200}

@@ -1,15 +1,29 @@
-// utils/authOptions.ts
+// utils/authOptions.ts - เก็บแค่ session ID (แก้ไข cookie ใหญ่เกิน)
 import type { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import AzureADProvider from "next-auth/providers/azure-ad";
 import type { User } from "next-auth";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { randomUUID } from "crypto";
 
 let isTokenExpired = false;
+
+// กำหนดเวลาหมดอายุ (นาที)
+const SESSION_MAX_AGE = 240; // 4 ชั่วโมง = 240 นาที
 
 export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
+    AzureADProvider({
+      clientId: process.env.AZURE_AD_CLIENT_ID!,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+      tenantId: process.env.AZURE_AD_TENANT_ID!,
+      authorization: {
+        params: {
+          scope: "openid profile email User.Read",
+        },
+      },
+    }),
+
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -36,9 +50,7 @@ export const authOptions: AuthOptions = {
                 depid: number;
               };
             };
-            
-            if (!credentials?.response) return null;
-            
+
             const parsedResponse = JSON.parse(credentials.response) as OTPResponse;
             const user = parsedResponse.user;
             const token = parsedResponse.access_token;
@@ -57,6 +69,7 @@ export const authOptions: AuthOptions = {
               role_id: user.role_id,
               branchid: user.branchid,
               depid: user.depid,
+              loginMethod: 'credentials',
             };
           }
 
@@ -76,7 +89,7 @@ export const authOptions: AuthOptions = {
                 depid: number;
               };
             };
-            
+
             const parsedResponse = JSON.parse(credentials.responseLogin) as ResponseLogin;
             const user = parsedResponse.user;
             const token = parsedResponse.access_token;
@@ -94,6 +107,7 @@ export const authOptions: AuthOptions = {
               role_id: user.role_id,
               branchid: user.branchid,
               depid: user.depid,
+              loginMethod: 'credentials',
             };
           }
 
@@ -102,13 +116,78 @@ export const authOptions: AuthOptions = {
           console.error("Authorize error:", error);
           throw error;
         }
-      }
-    })
+      },
+    }),
   ],
 
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'azure-ad') {
+        try {
+          const email = user.email;
+          const name = user.name;
+          const microsoftToken = account.access_token;
+
+          console.log('[Microsoft] ✅ Login successful');
+          console.log('[Microsoft] Email:', email);
+
+          const sessionId = randomUUID();
+          
+          // เรียก backend เพื่อเก็บ Microsoft token และดึงข้อมูล user
+          const response = await fetch(`${process.env.Localhost_API}/microsoft-session/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId,
+              microsoftToken,
+              email,
+              name,
+              source: 'portal',
+            }),
+          });
+
+          if (!response.ok) {
+            console.error('[Microsoft] ❌ Failed to save session');
+            return false;
+          }
+
+          const data = await response.json();
+          console.log('[Microsoft] ✅ Session saved:', data);
+
+          // Parse userData จาก response
+          const userData = data.userData;
+
+          // เก็บข้อมูลจาก userData ลง user object
+          user.UserID = userData.userId;
+          user.UserCode = userData.userCode;
+          user.fristName = userData.fristName;
+          user.lastName = userData.lastName;
+          user.Email = userData.email;
+          user.img_profile = userData.img_profile;
+          user.role_id = userData.role;
+          user.branchid = userData.branchid;
+          user.depid = userData.depid;
+          user.access_token = microsoftToken || '';
+          user.sessionId = data.sessionId;
+          user.loginMethod = 'microsoft';
+          user.expiresAt = Date.now() + (SESSION_MAX_AGE * 60 * 1000);
+
+          isTokenExpired = false;
+          return true;
+
+        } catch (error) {
+          console.error('[Microsoft] ❌ SignIn error:', error);
+          return false;
+        }
+      }
+
+      return true;
+    },
+
+    async jwt({ token, user }) {
+      // Initial sign in
       if (user) {
+        // เก็บข้อมูลเหมือนกันทั้ง Microsoft และ Credentials
         token.UserID = user.UserID;
         token.UserCode = user.UserCode;
         token.fristName = user.fristName;
@@ -119,14 +198,18 @@ export const authOptions: AuthOptions = {
         token.role_id = user.role_id;
         token.branchid = user.branchid;
         token.depid = user.depid;
-        token.accessTokenExpires = Date.now() + 240 * 60 * 1000; // 4 ชั่วโมง
+        token.loginMethod = user.loginMethod;
+        token.expiresAt = Date.now() + (SESSION_MAX_AGE * 60 * 1000);
+
+        if (user.loginMethod === 'microsoft') {
+          token.sessionId = user.sessionId;
+        }
       }
 
-      if (token.accessTokenExpires && Date.now() > (token.accessTokenExpires as number)) {
-        if (!isTokenExpired) {
-          console.log("⚠️ Token expired in JWT callback");
-          isTokenExpired = true;
-        }
+      // เช็คเวลาหมดอายุ
+      if (token.expiresAt && Date.now() > (token.expiresAt as number)) {
+        console.log('⚠️ Session expired');
+        isTokenExpired = true;
         return {};
       }
 
@@ -134,70 +217,11 @@ export const authOptions: AuthOptions = {
         return {};
       }
 
-      if (trigger === "update" && token.UserCode) { //update trigger จาก useSession().update() (NEXTAUTH Module)
-        const lastRefresh = token.lastRefresh as number | undefined;
-        const now = Date.now();
-        
-        if (lastRefresh && (now - lastRefresh) < 30000) {
-          console.log("⏭️ Skip refresh (too soon)");
-          return token;
-        }
-
-        try {
-          console.log("🔄 Refreshing user data from backend...");
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-          const response = await fetch(
-            `${process.env.Localhost_API}/GetUserWithRoles?UserCode=${token.UserCode}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token.access_token}`,
-              },
-              cache: 'no-store',
-              signal: controller.signal
-            }
-          );
-
-          clearTimeout(timeoutId);
-          
-          if (response.status === 401) {
-            console.log("❌ Token invalid (401)");
-            isTokenExpired = true;
-            return {};
-          }
-          
-          if (response.ok) {
-            const result = await response.json();
-            
-            if (result.success && result.data && result.data.length > 0) {
-              const userData = result.data[0];
-              
-              token.fristName = userData.fristName;
-              token.lastName = userData.lastName;
-              token.Email = userData.Email;
-              token.img_profile = userData.img_profile;
-              token.role_id = userData.role_id;
-              token.branchid = userData.branchid;
-              token.depid = userData.depid;
-              token.lastRefresh = now;
-              
-              console.log(" User data refreshed successfully");
-            }
-          }
-        } catch (error) {
-          console.error("❌ Error refreshing user data:", error);
-        }
-      }
-      
       return token;
     },
 
     async session({ session, token }) {
       if (!token || Object.keys(token).length === 0) {
-        console.log("⚠️ Empty token in session callback");
         return {
           ...session,
           user: undefined,
@@ -206,6 +230,7 @@ export const authOptions: AuthOptions = {
       }
 
       if (typeof token === 'object') {
+        // Session เหมือนกันทุก login method
         session.user = {
           ...(session.user || {}),
           UserID: token.UserID as number,
@@ -218,9 +243,16 @@ export const authOptions: AuthOptions = {
           role_id: token.role_id as number,
           branchid: token.branchid as number,
           depid: token.depid as number,
+          loginMethod: token.loginMethod as string,
+          expiresAt: token.expiresAt as number,
         };
+
+        // เพิ่ม sessionId ถ้าเป็น Microsoft login
+        if (token.loginMethod === 'microsoft') {
+          session.user.sessionId = token.sessionId as string;
+        }
       }
-      
+
       return session;
     },
   },
@@ -234,10 +266,11 @@ export const authOptions: AuthOptions = {
 
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 60, // 30 นาที
+    maxAge: SESSION_MAX_AGE * 60, // วินาที
   },
 
   pages: {
     signIn: '/login',
+    error: '/login',
   },
 };

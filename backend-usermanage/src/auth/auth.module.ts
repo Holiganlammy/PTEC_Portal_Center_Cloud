@@ -21,9 +21,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   ],
   providers: [
     JwtStrategy,
+    JwtAuthGuard, // เพิ่มเป็น provider เพื่อให้ inject dependencies ได้
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useExisting: JwtAuthGuard, // เปลี่ยนจาก useClass เป็น useExisting
     },
   ],
   exports: [JwtModule, PassportModule],

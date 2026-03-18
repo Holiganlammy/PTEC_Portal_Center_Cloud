@@ -7,6 +7,14 @@ if (process.env.NODE_ENV === 'development' || process.env.NODE_TLS_REJECT_UNAUTH
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
+interface MenuItem {
+  id: number;
+  name: string;
+  path: string;
+  parent_id: number;
+  order_no: number;
+}
+
 const secret = process.env.NEXTAUTH_SECRET;
 
 const menuCache = new Map<string, { paths: string[]; timestamp: number }>();
@@ -54,8 +62,8 @@ async function fetchUserAccessiblePaths(
     console.log(`[RBAC] 📋 Raw menus response:`, JSON.stringify(menus).substring(0, 200));
     
     const accessiblePaths = (menus || [])
-      .filter((m: any) => m.path !== null && m.path !== undefined && m.path !== "")
-      .map((m: any) => m.path);
+      .filter((m: MenuItem) => m.path !== null && m.path !== undefined && m.path !== "")
+      .map((m: MenuItem) => m.path);
 
     menuCache.set(cacheKey, {
       paths: accessiblePaths,

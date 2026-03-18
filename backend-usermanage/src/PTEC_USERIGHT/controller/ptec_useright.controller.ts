@@ -51,7 +51,7 @@ export class AppController {
     @Inject('REDIS') private readonly redis: Redis,
   ) {}
 
-  @Public()
+  // @Public()
   @Get('/users')
   async getUser(
     @Query('usercode') usercode?: string | null,
@@ -451,6 +451,7 @@ export class AppController {
     }
   }
 
+  @Public()
   @Post('/auth/sessions')
   async getSessions(
     @Body() body: { userCode: string },

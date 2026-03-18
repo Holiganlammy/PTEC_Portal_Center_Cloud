@@ -7,23 +7,40 @@ import {
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../../auth/decorators/public.decorator';
-import { Observable } from 'rxjs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { AuthSession } from 'src/PTEC_USERIGHT/domain/model/auth-session.entity';
+import * as jwt from 'jsonwebtoken';
+import { jwtConstants } from '../../PTEC_USERIGHT/config/jwt.config';
+import { Request } from 'express';
 
 interface JwtInfo {
   name?: string;
   message?: string;
 }
 
+interface SessionData {
+  userId: number;
+  userCode: string;
+  username: string;
+  role: number;
+  email: string;
+  branchid: number;
+  depid: number;
+  source: string;
+}
+
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  constructor(private reflector: Reflector) {
+  constructor(
+    private reflector: Reflector,
+    @InjectRepository(AuthSession, 'auth')
+    private readonly sessionRepo: Repository<AuthSession>,
+  ) {
     super();
   }
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
-    // เช็คว่าเป็น public endpoint หรือไม่
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -31,6 +48,59 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (isPublic) {
       return true;
     }
+
+    // ดึง token จาก request
+    const request = context.switchToHttp().getRequest<Request>();
+    const authHeader = request.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '') || '';
+
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    // ตรวจสอบว่าเป็น JWT ของระบบหรือไม่
+    const isSystemJwt = this.isSystemJwtToken(token);
+
+    if (!isSystemJwt) {
+      // กรณีเป็น Microsoft Token - ตรวจสอบจาก session
+      const session = await this.sessionRepo
+        .createQueryBuilder()
+        .where('accessToken = :token', { token })
+        .andWhere('isRevoked = :revoked', { revoked: false })
+        .andWhere('expiresAt > :now', { now: new Date() })
+        .getOne();
+      // .findOne({
+      //   where: {
+      //     accessToken: token,
+      //     isRevoked: false,
+      //     expiresAt: MoreThan(new Date()),
+      //   },
+      // });
+
+      if (!session) {
+        throw new UnauthorizedException(
+          'Microsoft token And Token Credentials not found or expired',
+        );
+      }
+
+      session.lastAccessAt = new Date();
+      await this.sessionRepo.save(session);
+      const userData = JSON.parse(session.userData) as SessionData;
+      request.user = {
+        userId: userData.userId,
+        username: userData.username,
+        userCode: userData.userCode,
+        role: userData.role,
+        email: userData.email,
+        branchid: userData.branchid,
+        depid: userData.depid,
+        source: userData.source,
+      } as Express.User;
+
+      return true;
+    }
+
+    // กรณีเป็น JWT ของระบบ - ทำงานแบบเดิม
     const canActivate = super.canActivate(context);
 
     if (canActivate instanceof Promise) {
@@ -39,7 +109,19 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       });
     }
 
-    return canActivate;
+    return canActivate as boolean;
+  }
+
+  /**
+   * ตรวจสอบว่า token เป็น JWT ของระบบหรือไม่
+   */
+  private isSystemJwtToken(token: string): boolean {
+    try {
+      jwt.verify(token, jwtConstants.secret);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   handleRequest<TUser = any>(err: any, user: any, info: any): TUser {
@@ -49,7 +131,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // console.log('Info:', info);
     // console.log('Info name:', (info as JwtInfo)?.name);
 
-    // ✅ ถ้ามี error หรือไม่มี user
+    // ถ้ามี error หรือไม่มี user
     if (err || !user) {
       let customResponse;
 

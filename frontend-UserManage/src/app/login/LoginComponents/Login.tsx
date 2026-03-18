@@ -25,6 +25,7 @@ export default function Login() {
   const [showError, setShowError] = useState(false);
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false);
+  const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false);
   const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
   const [disableSubmit, setDisableSubmit] = useState(false);
   const [shouldShowSessionAlert, setShouldShowSessionAlert] = useState(false);
@@ -140,6 +141,21 @@ export default function Login() {
       setTimeout(() => setShowError(true), 100);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftSignIn = async () => {
+    setIsMicrosoftLoading(true);
+    setError(null);
+    setShowError(false);
+
+    try {
+      await signIn('azure-ad', { callbackUrl: redirectPath });
+    } catch (error: any) {
+      console.error('Microsoft sign-in error:', error);
+      setError('ไม่สามารถเข้าสู่ระบบด้วย Microsoft ได้ กรุณาลองใหม่อีกครั้ง');
+      setTimeout(() => setShowError(true), 100);
+      setIsMicrosoftLoading(false);
     }
   };
 
@@ -264,7 +280,7 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || disableSubmit}
+              disabled={isLoading || isMicrosoftLoading || disableSubmit}
               className="w-full bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
               {isLoading ? (
@@ -273,6 +289,27 @@ export default function Login() {
                 'Sign In'
               )}
             </button>
+            <div>
+              <p className="text-center text-sm text-gray-600">
+                หรือเข้าสู่ระบบด้วย
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              type="button"
+              disabled={isLoading || isMicrosoftLoading || disableSubmit}
+              onClick={handleMicrosoftSignIn}
+              className="w-full"
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 23 23">
+                <path fill="#f35325" d="M0 0h11v11H0z"/>
+                <path fill="#81bc06" d="M12 0h11v11H12z"/>
+                <path fill="#05a6f0" d="M0 12h11v11H0z"/>
+                <path fill="#ffba08" d="M12 12h11v11H12z"/>
+              </svg>
+              {isMicrosoftLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isMicrosoftLoading ? 'กำลังเข้าสู่ระบบ...' : 'Microsoft'}
+            </Button>
           </form>
         </Form>
       </div>

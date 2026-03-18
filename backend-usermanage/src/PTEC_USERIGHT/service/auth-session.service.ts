@@ -192,7 +192,7 @@ export class AuthSessionService {
   /**
    * Get active sessions
    */
-  async getActiveSessions(userCode: string): Promise<any[]> {
+  async getActiveSessions(userCode: string): Promise<Partial<AuthSession>[]> {
     try {
       return await this.sessionRepo.find({
         where: {
@@ -202,6 +202,7 @@ export class AuthSessionService {
         },
         select: [
           'sessionId',
+          'accessToken',
           'source',
           'deviceInfo',
           'ipAddress',
