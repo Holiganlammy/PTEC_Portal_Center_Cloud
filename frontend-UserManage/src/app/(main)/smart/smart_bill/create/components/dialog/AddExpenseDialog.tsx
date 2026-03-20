@@ -1019,26 +1019,27 @@ export default function AddExpenseDialog({
             )}
           </Button>
         </DialogFooter>
+
+        <WarningDialog
+          open={openWarningDialog}
+          onOpenChange={setOpenWarningDialog}
+          title={warningTitle}
+          description={warningDescription}
+        />
+        <SuccessDialog
+          open={successDialogOpen}
+          onOpenChange={setSuccessDialogOpen}
+          title={successDialogTitle}
+          description={successDialogDescription}
+        />
+        <ErrorDialog
+          open={errorDialogOpen}
+          onOpenChange={setErrorDialogOpen}
+          title={errorDialogTitle}
+          description={errorDialogDescription}
+        />
       </DialogContent>
     </Dialog>
-    <WarningDialog
-      open={openWarningDialog}
-      onOpenChange={setOpenWarningDialog}
-      title={warningTitle}
-      description={warningDescription}
-    />
-    <SuccessDialog
-      open={successDialogOpen}
-      onOpenChange={setSuccessDialogOpen}
-      title={successDialogTitle}
-      description={successDialogDescription}
-    />
-    <ErrorDialog
-      open={errorDialogOpen}
-      onOpenChange={setErrorDialogOpen}
-      title={errorDialogTitle}
-      description={errorDialogDescription}
-    />
     </>
   )
 }
