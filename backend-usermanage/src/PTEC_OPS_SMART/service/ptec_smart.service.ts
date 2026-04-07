@@ -1102,7 +1102,7 @@ export class AppService {
 
     if (!newPath) throw new Error('Cannot generate running number');
 
-    const newFileName = `${newPath}/${extension}`;
+    const newFileName = `${newPath}${extension}`;
     const savePath = path.join(this.uploadDir, newFileName);
     fs.mkdirSync(this.uploadDir, { recursive: true });
 
@@ -1117,7 +1117,7 @@ export class AppService {
       console.log('📊 File size:', stats.size, 'bytes');
     }
 
-    const fileUrl = `${this.baseUrl}/${newFileName}`;
+    const fileUrl = `${this.baseUrl}/images/${newFileName}`;
 
     const attachBody = {
       nonpocode: st_code ?? '',

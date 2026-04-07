@@ -601,7 +601,7 @@ export default function FormsStart() {
 
       showAlert("สำเร็จ", 'บันทึกรายการแล้ว', 'success');
       setTimeout(() => {
-        router.push(`/FormUpdate?${sb_code}`);
+        router.push('/smart/smart_car/list');
       }, 1500);
 
     } catch (error: any) {
@@ -777,7 +777,7 @@ export default function FormsStart() {
               onClick={() => {
                 setAlertOpen(false);
                 setTimeout(() => {
-                  router.push('/smart/smart_bill/create');
+                  router.push('/smart/smart_car/list');
                 }, 300);
               }}
               className="w-full h-11 bg-black max-w-30 mx-auto hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all duration-200"
