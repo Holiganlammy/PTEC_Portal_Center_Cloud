@@ -600,9 +600,6 @@ export default function FormsStart() {
       }
 
       showAlert("สำเร็จ", 'บันทึกรายการแล้ว', 'success');
-      setTimeout(() => {
-        router.push('/smart/smart_car/list');
-      }, 1500);
 
     } catch (error: any) {
       console.error('❌ Submit error:', error);
@@ -748,16 +745,27 @@ export default function FormsStart() {
         </div>
       </div>
 
-      {/* Success Alert Dialog - Minimal */}
-      <AlertDialog open={alertOpen && alertType === 'success'} onOpenChange={setAlertOpen}>
+      {/* Alert Dialog */}
+      <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent className="max-w-md mx-4 sm:mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          {/* Success Icon */}
+          {/* Icon */}
           <div className="flex items-center justify-center mb-6">
             <div className="relative">
-              <div className="absolute inset-0 bg-black/5 rounded-full blur-lg"></div>
-              <div className="relative w-16 h-16 bg-black rounded-full flex items-center justify-center">
-                <Check className="h-8 w-8 text-white" strokeWidth={3} />
-              </div>
+              {alertType === 'success' ? (
+                <>
+                  <div className="absolute inset-0 bg-black/5 rounded-full blur-lg"></div>
+                  <div className="relative w-16 h-16 bg-black rounded-full flex items-center justify-center">
+                    <Check className="h-8 w-8 text-white" strokeWidth={3} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-red-500/10 rounded-full blur-lg"></div>
+                  <div className="relative w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                    <AlertCircle className="h-8 w-8 text-white" strokeWidth={2.5} />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -773,52 +781,21 @@ export default function FormsStart() {
 
           {/* Footer */}
           <AlertDialogFooter className="mt-6">
-            <AlertDialogAction
-              onClick={() => {
-                setAlertOpen(false);
-                setTimeout(() => {
+            {alertType === 'success' ? (
+              <AlertDialogAction
+                onClick={() => {
+                  setAlertOpen(false);
                   router.push('/smart/smart_car/list');
-                }, 300);
-              }}
-              className="w-full h-11 bg-black max-w-30 mx-auto hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all duration-200"
-            >
-              เรียบร้อย
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Error Alert Dialog - Minimal */}
-      <AlertDialog open={alertOpen && alertType === 'error'} onOpenChange={setAlertOpen}>
-        <AlertDialogContent className="max-w-md mx-4 sm:mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          {/* Error Icon */}
-          <div className="flex items-center justify-center mb-2">
-            <div className="relative">
-              <div className="absolute inset-0 bg-red-500/10 rounded-full blur-lg"></div>
-              <div className="relative w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-white" strokeWidth={2.5} />
-              </div>
-            </div>
-          </div>
-
-          {/* Content */}
-          <AlertDialogHeader className="space-y-3 text-center">
-            <AlertDialogTitle className="text-xl font-semibold text-gray-900 text-center">
-              {alertTitle}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 text-sm leading-relaxed text-center">
-              {alertMessage}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {/* Footer */}
-          <AlertDialogFooter className="mt-6 flex gap-3">
-            {/* <AlertDialogCancel className="flex-1 h-11 bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm font-medium rounded-lg border-0 transition-all duration-200">
-              ยกเลิก
-            </AlertDialogCancel> */}
-            <AlertDialogAction className="flex-1 h-11 max-w-30 mx-auto bg-black hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all duration-200">
-              ตรวจสอบ
-            </AlertDialogAction>
+                }}
+                className="w-full h-11 bg-black max-w-30 mx-auto hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all duration-200"
+              >
+                เรียบร้อย
+              </AlertDialogAction>
+            ) : (
+              <AlertDialogAction className="flex-1 h-11 max-w-30 mx-auto bg-black hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-all duration-200">
+                ตรวจสอบ
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

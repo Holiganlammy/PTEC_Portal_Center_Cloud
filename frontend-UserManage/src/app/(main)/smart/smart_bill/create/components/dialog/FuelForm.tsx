@@ -103,15 +103,8 @@ export default function FuelFormDialog({
         create_by_usercode: session?.user?.UserCode
       }])
 
-      onOpenChange(false)
-
-      setTimeout(() => {
-        setShowSuccessDialog(true)          // แสดง Success Dialog
-        window.scrollTo({ top: scrollY, behavior: 'instant' })  // Restore scroll
-        if (onSaveSuccess) {
-          onSaveSuccess()                    // เรียก fetchData()
-        }
-      }, 300)
+      if (onSaveSuccess) onSaveSuccess()
+      setShowSuccessDialog(true)
     } catch (error: any) {
       console.error('Save error:', error)
       toast.error('❌ ไม่สามารถบันทึกได้')
@@ -223,6 +216,7 @@ export default function FuelFormDialog({
         onOpenChange={setShowSuccessDialog}
         title="บันทึกค่าน้ำมันสำเร็จ!"
         description={`บันทึกค่าน้ำมัน ${amount} บาท เรียบร้อยแล้ว`}
+        onConfirm={() => onOpenChange(false)}
       />
     </>
   )

@@ -161,7 +161,6 @@ export default function ChecklistForm() {
   };
 
   const handleApprove = async () => {
-    setShowApproveDialog(false);
     setIsApproving(true);
 
     try {
@@ -188,10 +187,7 @@ export default function ChecklistForm() {
         );
       }
 
-      setTimeout(() => {
-        setAlertOpen(false);
-        fetchSmartBillData(sbCode || '');
-      }, 5000);
+      // ไม่ใช้ setTimeout auto-close — ให้ user กด "ตกลง" เอง (ปุ่ม onClick เรียก fetchSmartBillData แล้ว)
 
     } catch (error: any) {
       console.error('❌ Approve error:', error);

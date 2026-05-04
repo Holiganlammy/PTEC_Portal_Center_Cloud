@@ -213,9 +213,7 @@ export default function AddExpenseDialog({
       setSuccessDialogTitle('การทำรายการสำเร็จ')
       setSuccessDialogDescription('เพิ่มกิจกรรมเรียบร้อย')
       setSuccessDialogOpen(true)
-      
-      onOpenChange(false)
-      resetForm()
+
       
     } catch (error: any) {
       console.error('❌ Error:', error)
@@ -1019,27 +1017,31 @@ export default function AddExpenseDialog({
             )}
           </Button>
         </DialogFooter>
-
-        <WarningDialog
-          open={openWarningDialog}
-          onOpenChange={setOpenWarningDialog}
-          title={warningTitle}
-          description={warningDescription}
-        />
-        <SuccessDialog
-          open={successDialogOpen}
-          onOpenChange={setSuccessDialogOpen}
-          title={successDialogTitle}
-          description={successDialogDescription}
-        />
-        <ErrorDialog
-          open={errorDialogOpen}
-          onOpenChange={setErrorDialogOpen}
-          title={errorDialogTitle}
-          description={errorDialogDescription}
-        />
       </DialogContent>
     </Dialog>
+
+    {/* Sub-dialogs อยู่นอก Dialog หลักเพื่อป้องกัน Radix UI scroll-lock ติดค้าง */}
+    <WarningDialog
+      open={openWarningDialog}
+      onOpenChange={setOpenWarningDialog}
+      title={warningTitle}
+      description={warningDescription}
+    />
+    <SuccessDialog
+      open={successDialogOpen}
+      onOpenChange={setSuccessDialogOpen}
+      title={successDialogTitle}
+      description={successDialogDescription}
+      onConfirm={() => {
+        onOpenChange(false)
+      }}
+    />
+    <ErrorDialog
+      open={errorDialogOpen}
+      onOpenChange={setErrorDialogOpen}
+      title={errorDialogTitle}
+      description={errorDialogDescription}
+    />
     </>
   )
 }

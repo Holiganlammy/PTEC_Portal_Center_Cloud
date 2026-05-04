@@ -102,15 +102,8 @@ export default function TollFormDialog({
         create_by_usercode: session?.user?.UserCode
       }])
 
-      onOpenChange(false)
-
-      setTimeout(() => {
-        setShowSuccessDialog(true)          // แสดง Success Dialog
-        window.scrollTo({ top: scrollY, behavior: 'instant' })  // Restore scroll
-        if (onSaveSuccess) {
-          onSaveSuccess()                    // เรียก fetchData()
-        }
-      }, 300)
+      if (onSaveSuccess) onSaveSuccess()
+      setShowSuccessDialog(true)
     } catch (error: any) {
       console.error('Save error:', error)
       toast.error('❌ ไม่สามารถบันทึกได้')
@@ -222,6 +215,7 @@ export default function TollFormDialog({
         onOpenChange={setShowSuccessDialog}
         title="บันทึกค่าทางด่วนสำเร็จ!"
         description={`บันทึกค่าทางด่วน ${amount} บาท เรียบร้อยแล้ว`}
+        onConfirm={() => onOpenChange(false)}
       />
     </>
   )

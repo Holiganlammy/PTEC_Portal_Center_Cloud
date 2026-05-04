@@ -816,8 +816,9 @@ export class AppService {
       return docno;
     } catch (error) {
       console.error('Error in FA_Control_Running_NO:', error);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      throw new Error(`Cannot generate running number: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(`Cannot generate running number: ${errorMessage}`);
     }
   }
 
