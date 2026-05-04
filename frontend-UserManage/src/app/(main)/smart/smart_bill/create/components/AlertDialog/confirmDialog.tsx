@@ -1,4 +1,7 @@
-import { AlertTriangle, InfoIcon } from "lucide-react"
+"use client"
+
+import React, { useEffect } from 'react'
+import { InfoIcon } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogContent,
@@ -7,8 +10,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogAction,
+  AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/breadcrumb"
 
 interface ConfirmDialogProps {
   open: boolean
@@ -25,18 +28,34 @@ export default function ConfirmDialog({
   description,
   onConfirm,
 }: ConfirmDialogProps) {
-  const handleConfirm = () => {
-    onOpenChange(false)
-    if (onConfirm) {
-      onConfirm()
+  // ✅ Force cleanup body attributes เมื่อปิด dialog (production fix)
+  useEffect(() => {
+    if (!open) {
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = ''
+        document.body.removeAttribute('aria-hidden')
+        document.body.removeAttribute('data-scroll-locked')
+      }, 150)
+      
+      return () => clearTimeout(timer)
     }
+  }, [open])
+
+  const handleConfirm = () => {
+    // ✅ ปิด dialog ก่อน
+    onOpenChange(false)
+    
+    // ✅ รอให้ animation และ cleanup เสร็จก่อนเรียก callback
+    setTimeout(() => {
+      if (onConfirm) {
+        onConfirm()
+      }
+    }, 100)
   }
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent
-        forceMount
-      >
+      <AlertDialogContent>
         <AlertDialogHeader>
           <div className="flex gap-3">
             <InfoIcon className="h-6 w-6 text-red-600" />
@@ -53,12 +72,11 @@ export default function ConfirmDialog({
           </div>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2">
-          <Button
-            variant="outline"
+          <AlertDialogCancel
             onClick={() => onOpenChange(false)}
           >
             ยกเลิก
-          </Button>
+          </AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleConfirm}
             className="bg-red-600 hover:bg-red-700"

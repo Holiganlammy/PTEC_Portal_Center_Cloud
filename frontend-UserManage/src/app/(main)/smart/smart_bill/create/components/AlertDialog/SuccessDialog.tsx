@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -27,19 +27,34 @@ export default function SuccessDialog({
   description,
   onConfirm
 }: SuccessDialogProps) {
+  // ✅ Force cleanup body attributes เมื่อปิด dialog (production fix)
+  useEffect(() => {
+    if (!open) {
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = ''
+        document.body.removeAttribute('aria-hidden')
+        document.body.removeAttribute('data-scroll-locked')
+      }, 150)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [open])
+
   const handleConfirm = () => {
+    // ✅ ปิด dialog ก่อน
     onOpenChange(false)
     
-    if (onConfirm) {
-      onConfirm()
-    }
+    // ✅ รอให้ animation และ cleanup เสร็จก่อนเรียก callback
+    setTimeout(() => {
+      if (onConfirm) {
+        onConfirm()
+      }
+    }, 100)
   }
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent
-        forceMount
-      >
+      <AlertDialogContent>
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0">

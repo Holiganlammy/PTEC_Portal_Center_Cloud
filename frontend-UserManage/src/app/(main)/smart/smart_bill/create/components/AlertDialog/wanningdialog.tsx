@@ -1,3 +1,6 @@
+"use client"
+
+import React, { useEffect } from 'react'
 import { AlertTriangle } from "lucide-react"
 import {
   AlertDialog,
@@ -24,16 +27,34 @@ export default function WarningDialog({
   description,
   onConfirm,
 }: WarningDialogProps) {
-  const handleConfirm = () => {
-    onOpenChange(false)
-    if (onConfirm) {
-      onConfirm()
+  // ✅ Force cleanup body attributes เมื่อปิด dialog (production fix)
+  useEffect(() => {
+    if (!open) {
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = ''
+        document.body.removeAttribute('aria-hidden')
+        document.body.removeAttribute('data-scroll-locked')
+      }, 150)
+      
+      return () => clearTimeout(timer)
     }
+  }, [open])
+
+  const handleConfirm = () => {
+    // ✅ ปิด dialog ก่อน
+    onOpenChange(false)
+    
+    // ✅ รอให้ animation และ cleanup เสร็จก่อนเรียก callback
+    setTimeout(() => {
+      if (onConfirm) {
+        onConfirm()
+      }
+    }, 100)
   }
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent forceMount>
+      <AlertDialogContent>
         <AlertDialogHeader>
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 mt-1">
