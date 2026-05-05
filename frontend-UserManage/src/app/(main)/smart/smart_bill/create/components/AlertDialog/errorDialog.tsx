@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect } from "react"
+import React, { useEffect, useRef } from "react"
 import { AlertCircleIcon } from "lucide-react"
 import {
   AlertDialog,
@@ -28,16 +28,26 @@ export default function ErrorDialog({
   onConfirm,
 }: ErrorDialogProps) {
   // ✅ Force cleanup body attributes เมื่อปิด dialog (production fix)
+  // ใช้ wasOpenRef เพื่อกัน useEffect ไม่ให้ fire ตอน initial mount (open=false)
+  // ซึ่งจะไป remove body attributes ของ parent dialog ที่ยังเปิดอยู่
+  const wasOpenRef = useRef(false)
+
   useEffect(() => {
-    if (!open) {
-      const timer = setTimeout(() => {
-        document.body.style.pointerEvents = ''
-        document.body.removeAttribute('aria-hidden')
-        document.body.removeAttribute('data-scroll-locked')
-      }, 150)
-      
-      return () => clearTimeout(timer)
+    if (open) {
+      wasOpenRef.current = true
+      return
     }
+
+    if (!wasOpenRef.current) return // ยังไม่เคยเปิด — ข้ามการ cleanup
+
+    wasOpenRef.current = false
+    const timer = setTimeout(() => {
+      document.body.style.pointerEvents = ''
+      document.body.removeAttribute('aria-hidden')
+      document.body.removeAttribute('data-scroll-locked')
+    }, 300)
+
+    return () => clearTimeout(timer)
   }, [open])
 
   const handleConfirm = () => {
