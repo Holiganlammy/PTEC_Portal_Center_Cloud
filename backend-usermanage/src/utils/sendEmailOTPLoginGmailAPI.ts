@@ -105,5 +105,5 @@ export async function sendOtpWithGmailAPI(
     requestBody: { raw: encodedMessage },
   });
 
-  console.log(`✅ ส่ง OTP ไปยัง ${to} สำเร็จ`);
+  console.log(` ส่ง OTP ไปยัง ${to} สำเร็จ`);
 }

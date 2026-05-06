@@ -134,5 +134,5 @@ export async function sendResetPasswordWithGmailAPI(
     requestBody: { raw: encodedMessage },
   });
 
-  console.log(`✅ ส่ง Reset Password ไปยัง ${to} สำเร็จ`);
+  console.log(` ส่ง Reset Password ไปยัง ${to} สำเร็จ`);
 }

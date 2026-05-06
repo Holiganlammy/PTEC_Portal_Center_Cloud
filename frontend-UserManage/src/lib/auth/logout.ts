@@ -9,7 +9,7 @@ export async function logout(accessToken?: string) {
         access_token: accessToken
       });
       
-      console.log('✅ Token revoked from backend');
+      console.log(' Token revoked from backend');
     }
   } catch (error) {
     console.error('❌ Backend logout error:', error);

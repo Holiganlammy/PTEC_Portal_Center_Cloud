@@ -28,7 +28,7 @@ async function getAccessToken() {
     oAuth2Client.setCredentials(tokens);
 
     fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens));
-    console.log("✅ ได้ Token แล้ว เก็บไว้ที่ token.json");
+    console.log(" ได้ Token แล้ว เก็บไว้ที่ token.json");
   });
 }
 

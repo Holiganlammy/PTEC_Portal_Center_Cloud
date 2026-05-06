@@ -28,7 +28,7 @@ export default function ConfirmDialog({
   description,
   onConfirm,
 }: ConfirmDialogProps) {
-  // ✅ Force cleanup body attributes เมื่อปิด dialog (production fix)
+  //  Force cleanup body attributes เมื่อปิด dialog (production fix)
   useEffect(() => {
     if (!open) {
       const timer = setTimeout(() => {
@@ -42,10 +42,10 @@ export default function ConfirmDialog({
   }, [open])
 
   const handleConfirm = () => {
-    // ✅ ปิด dialog ก่อน
+    //  ปิด dialog ก่อน
     onOpenChange(false)
     
-    // ✅ รอให้ animation และ cleanup เสร็จก่อนเรียก callback
+    //  รอให้ animation และ cleanup เสร็จก่อนเรียก callback
     setTimeout(() => {
       if (onConfirm) {
         onConfirm()

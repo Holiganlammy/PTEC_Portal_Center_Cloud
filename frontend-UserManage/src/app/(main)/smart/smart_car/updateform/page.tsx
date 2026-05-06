@@ -670,7 +670,7 @@ export default function FormsUpdate() {
                 'Content-Type': 'multipart/form-data',
               },
             });
-            console.log(`✅ SmartBill file ${i + 1} uploaded successfully:`, uploadRes.data);
+            console.log(` SmartBill file ${i + 1} uploaded successfully:`, uploadRes.data);
           } catch (uploadErr: any) {
             console.error(`❌ Upload error for SmartBill file ${i + 1}:`, uploadErr);
             throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${i + 1} ได้: ${uploadErr.message}`);

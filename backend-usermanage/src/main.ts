@@ -2,10 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { MainAppModule } from './main-app.module';
-import * as fileUpload from 'express-fileupload';
-import * as cookieParser from 'cookie-parser';
+import fileUpload from 'express-fileupload';
+import cookieParser from 'cookie-parser';
 import * as fs from 'fs';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'; // ✅ เปลี่ยนเป็น AllExceptionsFilter
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'; //  เปลี่ยนเป็น AllExceptionsFilter
 
 async function bootstrap(): Promise<void> {
   try {
@@ -84,7 +84,7 @@ async function bootstrap(): Promise<void> {
     });
 
     app.useStaticAssets(join(__dirname, '..', 'public'));
-    // ✅ เพิ่ม: Serve uploaded files
+    //  เพิ่ม: Serve uploaded files
     app.useStaticAssets('D:\\files\\smartBill', {
       prefix: '/smartbill/',
     });

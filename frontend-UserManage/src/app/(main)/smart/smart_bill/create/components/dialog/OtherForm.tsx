@@ -59,7 +59,7 @@ export default function OtherFormDialog({
       return
     }
     
-    // ✅ ตรวจสอบว่ามีรายการนี้อยู่แล้วหรือไม่
+    //  ตรวจสอบว่ามีรายการนี้อยู่แล้วหรือไม่
     const isDuplicateInExisting = existingItems.some(item => 
       item.category_name === categoryName
     )

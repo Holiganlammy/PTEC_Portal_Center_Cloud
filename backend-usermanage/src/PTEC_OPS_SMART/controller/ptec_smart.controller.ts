@@ -99,7 +99,7 @@ export class AppController {
         );
         if (opResult.sb_operationid) {
           operationIds.push(opResult.sb_operationid);
-          console.log('✅ Added operation ID:', opResult.sb_operationid);
+          console.log(' Added operation ID:', opResult.sb_operationid);
         } else {
           console.warn('⚠️ Operation created but no ID returned');
         }
@@ -656,7 +656,7 @@ export class AppController {
     @Res() res: Response,
   ) {
     try {
-      // ✅ แปลงเป็น Array ถ้าไม่ใช่
+      //  แปลงเป็น Array ถ้าไม่ใช่
       const items = Array.isArray(body) ? body : [body];
       for (let i = 0; i < items.length; i++) {
         const data =
@@ -745,7 +745,7 @@ export class AppController {
           status = result[0] as { status?: string; message?: string };
         }
 
-        // ✅ ตรวจสอบ status
+        //  ตรวจสอบ status
         if (!status) {
           hasError = true;
           errorMessage = 'SP ไม่ส่งผลลัพธ์กลับมา';
@@ -761,7 +761,7 @@ export class AppController {
         results.push(status);
       }
 
-      // ✅ ถ้ามี error
+      //  ถ้ามี error
       if (hasError) {
         return res.status(400).json({
           status: 'failed',
@@ -1141,7 +1141,7 @@ export class AppController {
         usercode,
       );
 
-      // ✅ ตรวจสอบผลลัพธ์จาก Stored Procedure
+      //  ตรวจสอบผลลัพธ์จาก Stored Procedure
       if (!data || data.length === 0) {
         return res.status(404).json({
           success: false,

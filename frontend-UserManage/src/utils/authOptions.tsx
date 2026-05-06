@@ -128,7 +128,7 @@ export const authOptions: AuthOptions = {
           const name = user.name;
           const microsoftToken = account.access_token;
 
-          console.log('[Microsoft] ✅ Login successful');
+          console.log('[Microsoft]  Login successful');
           console.log('[Microsoft] Email:', email);
 
           const sessionId = randomUUID();
@@ -152,7 +152,7 @@ export const authOptions: AuthOptions = {
           }
 
           const data = await response.json();
-          console.log('[Microsoft] ✅ Session saved:', data);
+          console.log('[Microsoft]  Session saved:', data);
 
           // Parse userData จาก response
           const userData = data.userData;

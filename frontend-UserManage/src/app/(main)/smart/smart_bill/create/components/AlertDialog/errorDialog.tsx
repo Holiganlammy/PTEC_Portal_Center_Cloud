@@ -27,7 +27,7 @@ export default function ErrorDialog({
   description,
   onConfirm,
 }: ErrorDialogProps) {
-  // ✅ Force cleanup body attributes เมื่อปิด dialog (production fix)
+  //  Force cleanup body attributes เมื่อปิด dialog (production fix)
   // ใช้ wasOpenRef เพื่อกัน useEffect ไม่ให้ fire ตอน initial mount (open=false)
   // ซึ่งจะไป remove body attributes ของ parent dialog ที่ยังเปิดอยู่
   const wasOpenRef = useRef(false)
@@ -51,10 +51,10 @@ export default function ErrorDialog({
   }, [open])
 
   const handleConfirm = () => {
-    // ✅ ปิด dialog ก่อน
+    //  ปิด dialog ก่อน
     onOpenChange(false)
     
-    // ✅ รอให้ animation และ cleanup เสร็จก่อนเรียก callback
+    //  รอให้ animation และ cleanup เสร็จก่อนเรียก callback
     setTimeout(() => {
       if (onConfirm) {
         onConfirm()

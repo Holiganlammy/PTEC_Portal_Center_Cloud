@@ -50,7 +50,7 @@ export class MicrosoftSessionService {
         throw new Error('Invalid Microsoft token');
       }
 
-      console.log('[Microsoft Session] ✅ Token valid, saving session...');
+      console.log('[Microsoft Session]  Token valid, saving session...');
 
       // ดึงข้อมูล user จาก database
       const users = await this.appService.getUsersFromProcedure(
@@ -186,7 +186,7 @@ export class MicrosoftSessionService {
       const email = userInfo.mail || userInfo.userPrincipalName;
       const name = userInfo.displayName;
 
-      console.log('[Microsoft Session] ✅ Token valid:', email);
+      console.log('[Microsoft Session]  Token valid:', email);
 
       // 2. ดึงข้อมูล user จาก database
       const users = await this.appService.getUsersFromProcedure(

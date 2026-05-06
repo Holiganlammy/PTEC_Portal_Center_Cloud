@@ -228,7 +228,7 @@ export default function PaymentPage() {
           
           setSmartBill_Withdraw(headerData)
           setSmartBill_WithdrawHeader(billRes.data[0] || [])
-          setSmartBill_WithdrawDtl(billRes.data[1] || []) // ✅ อัพเดตข้อมูล
+          setSmartBill_WithdrawDtl(billRes.data[1] || []) //  อัพเดตข้อมูล
           
           if (headerData.car_infocode) {
             try {
@@ -405,7 +405,7 @@ export default function PaymentPage() {
       setCarInfoData([])
       setCarInfoDataCompany([])
       
-      // ✅ เคลียร์ smartBill_Withdraw
+      //  เคลียร์ smartBill_Withdraw
       setSmartBill_Withdraw(prev => ({
         ...prev,
         condition: null,
@@ -413,7 +413,7 @@ export default function PaymentPage() {
         car_infoid: null
       }))
       
-      console.log('✅ Cleared all vehicle state')
+      console.log(' Cleared all vehicle state')
     }
   }, [sbw_code])
   if (loading) {

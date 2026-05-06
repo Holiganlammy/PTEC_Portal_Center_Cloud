@@ -127,7 +127,7 @@ export default function ExpenseDialogs({
     if (typeof window !== 'undefined' && pendingItems.length > 0) {
       savePendingToStorage(pendingItems)
     } else if (typeof window !== 'undefined' && pendingItems.length === 0) {
-      // ✅ ลบ localStorage เมื่อไม่มี pending items
+      //  ลบ localStorage เมื่อไม่มี pending items
       clearPendingFromStorage()
     }
   }, [pendingItems])
@@ -452,7 +452,7 @@ export default function ExpenseDialogs({
   const handleSaveAll = async () => {
     const modifiedItems = existingItems.filter(i => i.isModified)
     
-    // ✅ ต้องมีรายการอย่างน้อย 1 รายการ
+    //  ต้องมีรายการอย่างน้อย 1 รายการ
     if (pendingItems.length === 0 && modifiedItems.length === 0) {
       return
     }
@@ -463,7 +463,7 @@ export default function ExpenseDialogs({
     try {
       const categoryId = getCategoryId(categoryType)
       
-      // ✅ รวมรายการทั้งหมดที่ต้อง save
+      //  รวมรายการทั้งหมดที่ต้อง save
       const itemsToSave = [
         ...pendingItems.map(item => ({ ...item, isNew: true })),
         ...modifiedItems.map(item => ({ ...item, isModified: true }))
@@ -643,7 +643,7 @@ export default function ExpenseDialogs({
         savedItems.push(savedItem)
       }
 
-      // ✅ อัปเดต existingItems
+      //  อัปเดต existingItems
       setExistingItems(prev => {
         const updatedItems = [...prev]
         
@@ -661,16 +661,16 @@ export default function ExpenseDialogs({
         return updatedItems
       })
       
-      // ✅ Clear pending items
+      //  Clear pending items
       setPendingItems([])
       
-      // ✅ Clear localStorage
+      //  Clear localStorage
       clearPendingFromStorage()
 
-      // ✅ Clear edit snapshots (reloaded data will be fresh)
+      //  Clear edit snapshots (reloaded data will be fresh)
       setOriginalItemsById({})
 
-      // ✅ Refresh from API so UI shows newly saved rows immediately
+      //  Refresh from API so UI shows newly saved rows immediately
       // (prevents needing to close/reopen the dialog)
       if (categoryType === 'hotel') {
         setHotelGuestsByHotelId({})
@@ -892,7 +892,7 @@ export default function ExpenseDialogs({
                   <h4 className="font-semibold text-sm flex items-center gap-2">
                     <Badge className="bg-green-600">บันทึกแล้ว</Badge>
                     รายการที่บันทึกแล้ว
-                    {/* ✅ แสดงจำนวนรายการที่แก้ไข */}
+                    {/*  แสดงจำนวนรายการที่แก้ไข */}
                     {existingItems.filter(i => i.isModified).length > 0 && (
                       <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">
                         {existingItems.filter(i => i.isModified).length} รายการถูกแก้ไข
@@ -904,12 +904,12 @@ export default function ExpenseDialogs({
                       key={idx} 
                       className={`flex items-center justify-between p-4 border rounded-lg ${
                         item.isModified 
-                          ? 'bg-blue-50 border-blue-300 border-2'  // ✅ สีฟ้าสำหรับรายการที่แก้ไข
+                          ? 'bg-blue-50 border-blue-300 border-2'  //  สีฟ้าสำหรับรายการที่แก้ไข
                           : 'bg-green-50 border-green-200'
                       }`}
                     >
                       <div className="flex-1">
-                        {/* ✅ แสดง Badge สำหรับรายการที่แก้ไข */}
+                        {/*  แสดง Badge สำหรับรายการที่แก้ไข */}
                         {item.isModified && (
                           <Badge variant="outline" className="mb-2 bg-blue-100 text-blue-800 border-blue-300">
                             รอบันทึก

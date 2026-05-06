@@ -558,7 +558,7 @@ export default function FormsStart() {
               },
             });
 
-            console.log(`✅ Upload success:`, uploadRes.data);
+            console.log(` Upload success:`, uploadRes.data);
           } catch (uploadErr: any) {
             console.error(`❌ Upload error for operation ${opIndex}, file ${fileIndex}:`, uploadErr);
             throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${fileIndex + 1} ของกิจกรรมที่ ${opIndex + 1}: ${uploadErr.message}`);
@@ -591,7 +591,7 @@ export default function FormsStart() {
                 'Content-Type': 'multipart/form-data',
               },
             });
-            console.log(`✅ SmartBill file ${i + 1} uploaded successfully:`, uploadRes.data);
+            console.log(` SmartBill file ${i + 1} uploaded successfully:`, uploadRes.data);
           } catch (uploadErr: any) {
             console.error(`❌ Upload error for SmartBill file ${i + 1}:`, uploadErr);
             throw new Error(`ไม่สามารถอัพโหลดไฟล์ที่ ${i + 1} ได้: ${uploadErr.message}`);

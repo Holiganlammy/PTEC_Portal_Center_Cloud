@@ -20,7 +20,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ScheduleModule.forRoot(),
     // Connection 1: default (Main - 4 modules)
     TypeOrmModule.forRootAsync({
-      name: 'default', // ✅ เพิ่ม name
+      name: 'default', //  เพิ่ม name
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -82,7 +82,7 @@ import { ScheduleModule } from '@nestjs/schedule';
           idleTimeoutMillis: 30000,
         },
 
-        // logging: true, // ✅ เปิด logging
+        // logging: true, //  เปิด logging
       }),
     }),
 

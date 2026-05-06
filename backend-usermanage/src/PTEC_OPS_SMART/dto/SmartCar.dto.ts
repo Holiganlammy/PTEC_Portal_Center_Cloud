@@ -66,7 +66,7 @@ export class SmartBillHeaderInput {
 }
 
 export class SmartBillOperationInput {
-  @IsOptional() // ✅ เปลี่ยนเป็น Optional เพราะจะได้จาก SP
+  @IsOptional() //  เปลี่ยนเป็น Optional เพราะจะได้จาก SP
   @IsNumber()
   sb_operationid?: number;
 

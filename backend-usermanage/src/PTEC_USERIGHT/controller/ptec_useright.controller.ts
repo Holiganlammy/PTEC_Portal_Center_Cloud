@@ -1,3 +1,4 @@
+// ptec_useright.controller.ts Portal Web
 import {
   Get,
   Post,
@@ -86,6 +87,7 @@ export class AppController {
           message: 'ใส่รหัสผ่านต้องมีตัวอักษรใหญ่และอักขระพิเศษ',
         });
       }
+      const source = loginDto.source ?? 'portal';
       const resultLogin = await this.appService.getUserLogin(loginDto);
       const user = resultLogin[0] as User;
       // console.log(resultLogin);
@@ -127,6 +129,7 @@ export class AppController {
       } catch (e) {
         console.error('Failed to parse trusted_devices cookie:', e);
       }
+      // console.log('Trusted devices from cookie:', trustedDevices);
       const userTrustedDevice = trustedDevices.find(
         (device) => device.userCode === user.UserCode,
       );
@@ -138,7 +141,7 @@ export class AppController {
             ',',
           )[0] ||
           'unknown';
-
+        // console.log('User trusted device:', userTrustedDevice);
         const isTrusted = await this.appService.checkTrustedDevice({
           userCode: user.UserCode,
           deviceId: userTrustedDevice.deviceId,
@@ -146,10 +149,12 @@ export class AppController {
           ipAddress,
         });
 
+        // console.log('Is trusted device:', isTrusted);
+
         if (isTrusted === true) {
           const token = await this.authSessionService.createSession(
             user,
-            'portal',
+            source,
             userAgent,
             ipAddress,
             userAgent,
@@ -186,6 +191,7 @@ export class AppController {
         success: true,
         request_Mfa: true,
         userCode: user.UserCode,
+        source,
         message: 'OTP sent to your email',
         expiresAt,
       });
