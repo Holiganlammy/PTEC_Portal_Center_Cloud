@@ -2,8 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { MainAppModule } from './main-app.module';
-import fileUpload from 'express-fileupload';
-import cookieParser from 'cookie-parser';
+import * as fileUpload from 'express-fileupload';
+import * as cookieParser from 'cookie-parser';
 import * as fs from 'fs';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'; //  เปลี่ยนเป็น AllExceptionsFilter
 
