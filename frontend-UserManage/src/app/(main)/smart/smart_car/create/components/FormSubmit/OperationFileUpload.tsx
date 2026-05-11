@@ -1,7 +1,7 @@
 // components/CarForm/OperationFileUpload.tsx
 'use client';
 
-import { X, Upload, Image as ImageIcon, Eye } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Eye, Gauge, Camera, CheckCircle2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import client from '@/lib/axios/interceptors';
 import { SmartBillFile } from '../../service/type/types';
@@ -18,6 +18,7 @@ import {
 import { useState } from 'react';
 import ImageDialog from '@/components/ImageDialog/ImageDialog';
 import Image from 'next/image';
+import exampleMile from '@/image/example-mile.jpg';
 
 interface OperationFileUploadProps {
   files: SmartBillFile[];
@@ -39,6 +40,9 @@ export default function OperationFileUpload({
   //  เพิ่ม state สำหรับ Image Dialog
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  // state สำหรับ modal รูปตัวอย่าง
+  const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
 
   const showAlert = (title: string, message: string, type: 'error' | 'success' = 'error') => {
     setAlertTitle(title);
@@ -181,7 +185,7 @@ export default function OperationFileUpload({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-gray-900">
-            รูปภาพประกอบ <span className="text-red-500">*</span> (สูงสุด 3 รูป)
+            รูปภาพไมล์รถยนต์หรือมอเตอร์ไซค์ <span className="text-red-500">*</span> (สูงสุด 3 รูป)
           </label>
           <span className="text-xs text-gray-500">
             {files.length}/3
@@ -202,11 +206,15 @@ export default function OperationFileUpload({
           )}
           >
             <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              <Upload className="w-8 h-8 mb-2 text-gray-400" />
+              <div className="flex items-center gap-2 mb-2">
+                <Upload className="w-7 h-7 text-gray-400" />
+                <Gauge className="w-7 h-7 text-amber-400" />
+              </div>
               <p className="mb-1 text-sm text-gray-600">
                 <span className="font-semibold">คลิกเพื่ออัพโหลด</span> หรือลากไฟล์มาวาง
               </p>
-              <p className="text-xs text-gray-500">PNG, JPG, GIF, WEBP (สูงสุด 5MB)</p>
+              <p className="text-xs font-medium text-amber-700 mb-1">รูปมาตรวัดไมล์รถยนต์ / มอเตอร์ไซค์</p>
+              <p className="text-xs text-gray-500">PNG, JPG, GIF, WEBP (สูงสุด 50MB)</p>
             </div>
             <input
               type="file"
@@ -273,6 +281,47 @@ export default function OperationFileUpload({
           </div>
         )}
 
+        {/* Example Hint */}
+        <div className="flex gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          {/* Clickable example image thumbnail */}
+          <button
+            type="button"
+            onClick={() => setExampleDialogOpen(true)}
+            className="shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-amber-300 hover:border-amber-500 transition-all relative group"
+            aria-label="ดูรูปตัวอย่าง"
+          >
+            <Image
+              src={exampleMile}
+              alt="ตัวอย่างรูปไมล์รถ"
+              fill
+              className="object-cover"
+              sizes="80px"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+              <Eye className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          </button>
+          {/* Tips */}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-800 flex items-center gap-1 mb-1">
+              <Camera className="w-3 h-3" /> ตัวอย่างรูปที่ควรอัพโหลด
+              <span className="text-amber-600 font-normal">(กดดูรูปตัวอย่าง)</span>
+            </p>
+            <ul className="space-y-0.5">
+              {[
+                'ถ่ายให้เห็นตัวเลขไมล์ชัดเจน',
+                'แสงสว่างเพียงพอ ไม่มีแสงสะท้อน',
+                'รูปตรง ไม่เอียง ไม่เบลอ',
+              ].map((tip, i) => (
+                <li key={i} className="text-[11px] text-amber-700 flex items-start gap-1">
+                  <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" />
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
         {/* Validation Message */}
         {files.length === 0 && (
           <p className="text-xs text-red-600 flex items-center gap-1">
@@ -288,6 +337,14 @@ export default function OperationFileUpload({
         initialIndex={selectedImageIndex}
         open={imageDialogOpen}
         onOpenChange={setImageDialogOpen}
+      />
+
+      {/* Example Image Dialog */}
+      <ImageDialog
+        images={[{ file: exampleMile.src, filename: 'ตัวอย่างรูปไมล์รถ' }]}
+        initialIndex={0}
+        open={exampleDialogOpen}
+        onOpenChange={setExampleDialogOpen}
       />
 
       {/* Alert Dialog */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Upload, X } from 'lucide-react';
+import { Upload, X, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import ImageDialog from '@/components/ImageDialog/ImageDialog';
@@ -24,11 +24,29 @@ export default function FileUpload({ dataFilesCount, onFileUpload, onFileRemove 
   const files = dataFilesCount || [];
 
   return (
-    <div className="space-y-4">
-      <label className="text-sm font-medium mr-5 text-gray-900">
-        อัปโหลดรูปภาพ <span className="text-red-500">*</span>
-      </label>
-      <label className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-all">
+    <div className="space-y-3">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-900">
+          อัปโหลดรูปภาพ <span className="text-red-500">*</span>
+        </span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-300 text-xs font-medium text-yellow-700">
+          <AlertTriangle className="w-3 h-3" />
+          ของเว็บเก่า
+        </span>
+      </div>
+
+      {/* Legacy notice */}
+      <div className="flex items-start gap-2.5 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs font-semibold text-yellow-800">ไม่จำเป็นต้องอัพโหลดในเว็บใหม่</p>
+          <p className="text-xs text-yellow-700 mt-0.5">ส่วนนี้ใช้สำหรับระบบเดิมเท่านั้น สามารถข้ามส่วนนี้ได้</p>
+        </div>
+      </div>
+
+      {/* Upload button */}
+      <label className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all">
         <Upload className="w-4 h-4" />
         <span>เลือกไฟล์</span>
         <input
