@@ -232,7 +232,7 @@ export class AuthSessionService {
       const oneDayAgo = new Date();
       oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-      // Revoke expired sessions older than 7 days (instead of deleting)
+      // Revoke expired sessions older than 7 days
       const expiredResult = await this.sessionRepo
         .createQueryBuilder()
         .update(AuthSession)
@@ -241,14 +241,13 @@ export class AuthSessionService {
         .andWhere('isRevoked = :isRevoked', { isRevoked: false })
         .execute();
 
-      // Revoke sessions older than 1 day that are already revoked (no-op but kept for parity)
+      // Revoke sessions older than 1 day
       const revokedResult = await this.sessionRepo
         .createQueryBuilder()
         .update(AuthSession)
         .set({ isRevoked: true })
         .where('isRevoked = :isRevoked', { isRevoked: false })
         .andWhere('createdAt < :date', { date: oneDayAgo })
-        .andWhere('expiresAt < :now', { now: new Date() })
         .execute();
 
       const totalRevoked =
