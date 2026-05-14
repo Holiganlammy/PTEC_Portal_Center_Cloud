@@ -232,25 +232,29 @@ export class AuthSessionService {
       const oneDayAgo = new Date();
       oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-      // Delete expired sessions older than 7 days
+      // Revoke expired sessions older than 7 days (instead of deleting)
       const expiredResult = await this.sessionRepo
         .createQueryBuilder()
-        .delete()
+        .update(AuthSession)
+        .set({ isRevoked: true })
         .where('expiresAt < :date', { date: sevenDaysAgo })
+        .andWhere('isRevoked = :isRevoked', { isRevoked: false })
         .execute();
 
-      // Delete revoked sessions older than 1 day
+      // Revoke sessions older than 1 day that are already revoked (no-op but kept for parity)
       const revokedResult = await this.sessionRepo
         .createQueryBuilder()
-        .delete()
-        .where('isRevoked = :isRevoked', { isRevoked: true })
+        .update(AuthSession)
+        .set({ isRevoked: true })
+        .where('isRevoked = :isRevoked', { isRevoked: false })
         .andWhere('createdAt < :date', { date: oneDayAgo })
+        .andWhere('expiresAt < :now', { now: new Date() })
         .execute();
 
-      const totalDeleted =
+      const totalRevoked =
         (expiredResult.affected || 0) + (revokedResult.affected || 0);
-      this.logger.log(`Cleaned up ${totalDeleted} expired sessions`);
-      return totalDeleted;
+      this.logger.log(`Revoked ${totalRevoked} expired sessions`);
+      return totalRevoked;
     } catch (error) {
       this.logger.error('Error cleaning up sessions:', error);
       throw error;
