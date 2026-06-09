@@ -91,7 +91,7 @@ export class AppController {
       const resultLogin = await this.appService.getUserLogin(loginDto);
       const user = resultLogin[0] as User;
       // console.log(resultLogin);
-      console.log('User fetched on login:', user);
+      // console.log('User fetched on login:', user);
 
       if (!user) {
         return res.status(401).json({

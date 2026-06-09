@@ -476,6 +476,22 @@ export default function FormsUpdate() {
     }
   };
 
+  const getMinimumStartMileForOperation = (operationIndex: number, operation: Operation) => {
+    const sameCarOperations = operations
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.carIndex === operation.carIndex)
+      .sort((left, right) => left.index - right.index);
+
+    const currentPosition = sameCarOperations.findIndex(({ index }) => index === operationIndex);
+
+    if (currentPosition <= 0) {
+      return parseFloat(cars[operation.carIndex]?.car_milerate?.toString() || '0') || 0;
+    }
+
+    const previousOperation = sameCarOperations[currentPosition - 1]?.item;
+    return parseFloat(previousOperation?.sb_operationid_endmile?.toString() || '0') || 0;
+  };
+
   const handleSubmit = async () => {
     if (typeCar === '') {
       showAlert(
@@ -534,6 +550,9 @@ export default function FormsUpdate() {
 
     for (let i = 0; i < operations.length; i++) {
       const op = operations[i];
+      const carOps = operations.filter(o => o.carIndex === op.carIndex);
+      const opIndexInCar = carOps.indexOf(op) + 1;
+
       if (
         !op.sb_operationid_startdate ||
         op.sb_operationid_startmile === null ||
@@ -546,8 +565,6 @@ export default function FormsUpdate() {
         op.sb_operationid_location === '' ||
         !op.return_parking_location || op.return_parking_location === ''
       ) {
-        const carOps = operations.filter(o => o.carIndex === op.carIndex);
-        const opIndexInCar = carOps.indexOf(op) + 1;
         showAlert("แจ้งเตือน", 
           `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: ${
             !op.sb_operationid_startdate || !op.sb_operationid_enddate ? 'ระบุวันที่เดินทาง' :
@@ -559,9 +576,18 @@ export default function FormsUpdate() {
         return;
       }
 
+      const minimumStartMile = getMinimumStartMileForOperation(i, op);
+      const currentStartMile = parseFloat(op.sb_operationid_startmile?.toString() || '0') || 0;
+
+      if (currentStartMile < minimumStartMile) {
+        showAlert(
+          "แจ้งเตือน",
+          `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: ไมล์เริ่มต้นต้องมากกว่าหรือเท่ากับ ${minimumStartMile.toFixed(1)}`
+        );
+        return;
+      }
+
       if (parseFloat(op.sb_operationid_startmile as any) > parseFloat(op.sb_operationid_endmile)) {
-        const carOps = operations.filter(o => o.carIndex === op.carIndex);
-        const opIndexInCar = carOps.indexOf(op) + 1;
         showAlert("แจ้งเตือน", `รถคันที่ ${op.carIndex + 1}, กิจกรรมที่ ${opIndexInCar}: เกิดข้อผิดพลาด *(ไมลล์สิ้นสุด < ไมลล์เริ่มต้น)`);
         return;
       }

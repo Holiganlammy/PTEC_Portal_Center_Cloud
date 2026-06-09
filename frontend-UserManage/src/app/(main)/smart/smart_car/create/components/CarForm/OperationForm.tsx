@@ -19,6 +19,15 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Operation } from '../../service/type/types';
 import OperationFileUpload from '../FormSubmit/OperationFileUpload';
 
@@ -83,12 +92,20 @@ export default function OperationForm({
   // เช็คว่าเป็นกิจกรรมแรกหรือไม่
   const isFirstOperation = carOperationIndex === 0;
   const previousOperation = carOperationIndex > 0 ? carOperations[carOperationIndex - 1] : null;
-  const minStartMile = previousOperation 
-    ? parseFloat(previousOperation.sb_operationid_endmile || '0') 
-    : 0;
+  const [initialFirstStartMile] = useState(() => {
+    if (!isFirstOperation) return 0;
+    return parseFloat(operation.sb_operationid_startmile?.toString() || '0') || 0;
+  });
+  const minStartMile = isFirstOperation
+    ? initialFirstStartMile
+    : previousOperation
+      ? parseFloat(previousOperation.sb_operationid_endmile || '0')
+      : 0;
   const [startMileError, setStartMileError] = useState('');
   const [endMileError, setEndMileError] = useState('');
   const [dateTimeError, setDateTimeError] = useState('');
+  const [startMileDialogOpen, setStartMileDialogOpen] = useState(false);
+  const [startMileDialogMessage, setStartMileDialogMessage] = useState('');
   
   const generateHourOptions = () => {
     const options = [];
@@ -199,24 +216,42 @@ export default function OperationForm({
   };
   
   //Validate ไมล์เริ่มต้น
-  const validateStartMile = (value: string) => {
+  const showStartMileDialog = (message: string) => {
+    setStartMileDialogMessage(message);
+    setStartMileDialogOpen(true);
+  };
+
+  const validateStartMile = (value: string, shouldShowDialog = false) => {
     const startMile = parseFloat(value);
     
     if (isNaN(startMile)) {
-      setStartMileError('กรุณาระบุไมล์เริ่มต้น');
+      const message = 'กรุณาระบุไมล์เริ่มต้น';
+      setStartMileError(message);
+      if (shouldShowDialog) {
+        showStartMileDialog(message);
+      }
       return false;
     }
     
-    // ถ้าไม่ใช่กิจกรรมแรก ต้องมากกว่าเท่ากับไมล์สิ้นสุดของกิจกรรมก่อนหน้า
-    if (!isFirstOperation && startMile < minStartMile) {
-      setStartMileError(`ไมล์เริ่มต้นต้องมากกว่าหรือเท่ากับ ${minStartMile.toFixed(1)}`);
+    // กิจกรรมแรก: ต้องไม่ต่ำกว่าไมล์เริ่มต้นตั้งต้นจากข้อมูลเดิม
+    // กิจกรรมถัดไป: ต้องไม่ต่ำกว่าไมล์สิ้นสุดของกิจกรรมก่อนหน้า
+    if (startMile < minStartMile) {
+      const message = `ไมล์เริ่มต้นต้องมากกว่าหรือเท่ากับ ${minStartMile.toFixed(1)}`;
+      setStartMileError(message);
+      if (shouldShowDialog) {
+        showStartMileDialog(message);
+      }
       return false;
     }
     
     // ต้องไม่มากกว่าไมล์สิ้นสุด
     const endMile = parseFloat(operation.sb_operationid_endmile || '0');
     if (endMile > 0 && startMile > endMile) {
-      setStartMileError('ไมล์เริ่มต้นต้องไม่มากกว่าไมล์สิ้นสุด');
+      const message = 'ไมล์เริ่มต้นต้องไม่มากกว่าไมล์สิ้นสุด';
+      setStartMileError(message);
+      if (shouldShowDialog) {
+        showStartMileDialog(message);
+      }
       return false;
     }
     
@@ -786,21 +821,20 @@ export default function OperationForm({
               inputMode="numeric"
               pattern="[0-9.]*"
               value={operation.sb_operationid_startmile}
-              disabled={isFirstOperation} //  กิจกรรมแรก disable
+              // disabled={isFirstOperation} //  กิจกรรมแรก disable
               onInput={(e) => {
                 const target = e.target as HTMLInputElement;
                 target.value = target.value.replace(/[^0-9.]/g, '');
               }}
               onChange={(e) => {
-                if (!isFirstOperation) {
-                  handleStartMileChange(e.target.value);
-                }
+                handleStartMileChange(e.target.value);
+              }}
+              onBlur={(e) => {
+                validateStartMile(e.target.value, true);
               }}
               className={cn(
                 "w-full px-3 py-2 border rounded-lg transition-all bg-white",
-                isFirstOperation 
-                  ? "bg-gray-100 cursor-not-allowed" 
-                  : "focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent",
+                "focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent",
                 startMileError && "border-red-500"
               )}
               placeholder="0"
@@ -811,7 +845,7 @@ export default function OperationForm({
                 {startMileError}
               </p>
             )}
-            {!isFirstOperation && !startMileError && minStartMile > 0 && (
+            {!startMileError && minStartMile > 0 && (
               <p className="text-xs text-gray-500">
                 ต้องมากกว่าหรือเท่ากับ {minStartMile.toFixed(1)}
               </p>
@@ -919,6 +953,33 @@ export default function OperationForm({
           </p>
         </div>
       )}
+
+      <AlertDialog open={startMileDialogOpen} onOpenChange={setStartMileDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-1 h-10 w-10 shrink-0 text-red-600" />
+              <div className="flex-1">
+                <AlertDialogTitle className="text-red-600">
+                  ข้อมูลไมล์เริ่มต้นไม่ถูกต้อง
+                </AlertDialogTitle>
+                <AlertDialogDescription className="mt-2 text-red-700/80">
+                  {startMileDialogMessage}
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => setStartMileDialogOpen(false)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              รับทราบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
