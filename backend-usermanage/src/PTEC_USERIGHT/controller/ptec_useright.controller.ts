@@ -707,6 +707,23 @@ export class AppController {
     }
   }
 
+  @Put('/user/expire-password/:UserID')
+  async expirePassword(@Param('UserID') UserID: string, @Res() res: Response) {
+    try {
+      await this.appService.expirePassword(UserID);
+      res.status(200).send({
+        success: true,
+        message: 'Password expired successfully',
+      });
+    } catch (error) {
+      console.error('Error expiring password:', error);
+      res.status(500).send({
+        success: false,
+        message: 'Error expiring password',
+      });
+    }
+  }
+
   @Put('/user/activate/:UserID')
   async activateUser(
     @Param('UserID') UserID: string,

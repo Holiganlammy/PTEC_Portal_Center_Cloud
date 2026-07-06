@@ -132,6 +132,13 @@ export class AppService {
     );
   }
 
+  async expirePassword(UserID: string): Promise<void> {
+    await this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.User_ExpirePassword`,
+      [{ name: 'UserID', type: sql.Int(), value: Number(UserID) }],
+    );
+  }
+
   async getBranch(): Promise<Branch[]> {
     return this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.Branch_ListAll`,

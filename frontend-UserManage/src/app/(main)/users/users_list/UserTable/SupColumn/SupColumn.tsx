@@ -12,6 +12,7 @@ import EditUserDialog from "@/app/(main)/users/users_list/EditUser/EditUserDialo
 import DeleteUserDialog from "@/app/(main)/users/users_list/ChangeStatusUser/Delete"
 import { useState } from "react"
 import ActivateDialog from "../../ChangeStatusUser/Activate"
+import ResetPasswordExpireDialog from "../../ChangeStatusUser/ResetPasswordExpire"
 
 interface Props {
   user: UserData;
@@ -27,6 +28,7 @@ export default function SupColumn({ user, onUserFetched, users, branches, depart
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [activateOpen, setActivateOpen] = useState(false)
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false) // เพิ่ม state นี้
   
   const handleEditClick = () => {
@@ -60,6 +62,15 @@ export default function SupColumn({ user, onUserFetched, users, branches, depart
           <DropdownMenuSeparator />
           <DropdownMenuItem>ดูรายละเอียด</DropdownMenuItem>
           <DropdownMenuItem onClick={handleEditClick}>แก้ไขข้อมูล</DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-orange-600"
+            onClick={() => {
+              setDropdownOpen(false)
+              setTimeout(() => setResetPasswordOpen(true), 100)
+            }}
+          >
+            บังคับหมดอายุรหัสผ่าน
+          </DropdownMenuItem>
           {user.Actived === true ? (
             <DropdownMenuItem 
               className="text-red-600" 
@@ -116,6 +127,13 @@ export default function SupColumn({ user, onUserFetched, users, branches, depart
         onOpenChange={setDeleteOpen}
         user={user}
         onUserDeleted={onUserFetched}
+      />
+
+      <ResetPasswordExpireDialog
+        open={resetPasswordOpen}
+        onOpenChange={setResetPasswordOpen}
+        user={user}
+        onPasswordExpired={onUserFetched}
       />
     </>
   )

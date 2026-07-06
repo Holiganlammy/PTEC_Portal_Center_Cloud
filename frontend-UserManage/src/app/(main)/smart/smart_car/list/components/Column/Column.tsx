@@ -330,7 +330,7 @@ export const SmartCarColumns: ColumnDef<SmartCarData>[] = [
               View Details
             </DropdownMenuItem> */}
             {/* </Link> */}
-            {(session?.user?.UserCode === smartCar.usercode || session?.user?.role_id === 1) && (
+            {(session?.user?.UserCode === smartCar.usercode || session?.user?.role_id === 1 || session?.user?.role_id === 4) && (
               <Link href={`/smart/smart_car/updateform?code=${smartCar.sb_code}`}>
                 <DropdownMenuItem>
                   <Edit className="mr-2 h-4 w-4" />

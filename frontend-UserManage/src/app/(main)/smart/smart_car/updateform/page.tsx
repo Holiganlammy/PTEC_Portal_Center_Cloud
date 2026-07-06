@@ -105,7 +105,7 @@ export default function FormsUpdate() {
     const currentRoleId = session?.user?.role_id;
     
     // ตรวจสอบ: เป็นเจ้าของ หรือ เป็น Admin
-    const canAccess = currentUserCode === ownerUserCode || currentRoleId === 1;
+    const canAccess = currentUserCode === ownerUserCode || currentRoleId === 1 || currentRoleId === 4;
     
     return canAccess;
   };
