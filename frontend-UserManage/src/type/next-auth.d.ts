@@ -16,7 +16,8 @@ declare module "next-auth" {
       loginMethod?: string;
       expiresAt?: number;
       sessionId?: string;
-      name?: string; 
+      name?: string;
+      source?: string;
     };
   }
   interface User {
@@ -35,9 +36,10 @@ declare module "next-auth" {
     loginTime?: number;
     expiresAt?: number;
     sessionId?: string;
+    source?: string;
   }
 
-  interface JWT { 
+  interface JWT {
     UserID: number;
     UserCode: string;
     fristName?: string;
@@ -46,5 +48,6 @@ declare module "next-auth" {
     access_token?: string;
     img_profile?: string;
     role_id?: number;
+    source?: string;
   }
 }

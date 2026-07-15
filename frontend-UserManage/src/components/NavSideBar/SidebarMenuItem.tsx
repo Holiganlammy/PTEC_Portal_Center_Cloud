@@ -31,6 +31,16 @@ interface SidebarMenuItemProps {
   level?: number;
 }
 
+// เมนูบาง entry เก็บเป็น URL เต็ม (ชี้ข้าม origin ไปแอปอื่น เช่น reservation) — ต้องตัด origin ออกก่อนเทียบ
+// ไม่งั้น active state จะไม่มีวันตรงกับ activePath ที่เป็น path เปล่าเสมอ
+function normalizePathname(path: string): string {
+  try {
+    return new URL(path).pathname;
+  } catch {
+    return path;
+  }
+}
+
 export function SidebarMenuItem({ 
   item, 
   activePath, 
@@ -40,7 +50,10 @@ export function SidebarMenuItem({
 }: SidebarMenuItemProps) {
   const [isOpen, setIsOpen] = useState(false)
   const hasChildren = item.children && item.children.length > 0
-  const isActive = activePath === item.path
+  const normalizedItemPath = item.path ? normalizePathname(item.path) : ""
+  const isActive = Boolean(normalizedItemPath) && (
+    activePath === normalizedItemPath || activePath.startsWith(`${normalizedItemPath}/`)
+  )
   
   const paddingLeft = isCollapsed ? 0 : level * 12
 

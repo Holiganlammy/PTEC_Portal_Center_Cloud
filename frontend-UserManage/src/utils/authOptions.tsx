@@ -200,6 +200,9 @@ export const authOptions: AuthOptions = {
         token.depid = user.depid;
         token.loginMethod = user.loginMethod;
         token.expiresAt = Date.now() + (SESSION_MAX_AGE * 60 * 1000);
+        // login เกิดขึ้นที่นี่แน่นอน (ไม่ว่า credentials หรือ microsoft) — ประกาศ source ตรงๆ
+        // ให้แอปอื่น (เช่น reservation) ที่แชร์ token นี้รู้ได้ว่า session นี้ login มาจาก Portal
+        token.source = 'portal';
 
         if (user.loginMethod === 'microsoft') {
           token.sessionId = user.sessionId;
@@ -245,6 +248,7 @@ export const authOptions: AuthOptions = {
           depid: token.depid as number,
           loginMethod: token.loginMethod as string,
           expiresAt: token.expiresAt as number,
+          source: token.source as string,
         };
 
         // เพิ่ม sessionId ถ้าเป็น Microsoft login
