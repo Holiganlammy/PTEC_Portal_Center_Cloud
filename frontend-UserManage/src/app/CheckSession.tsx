@@ -4,7 +4,16 @@
 import PageLoading from "@/components/PageLoading";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 const PUBLIC_ROUTES = ['/login', '/forget_password', '/reset-password'];
 
 interface CheckSessionProps {
@@ -12,46 +21,54 @@ interface CheckSessionProps {
 }
 
 export function CheckSession({ children }: CheckSessionProps) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const hasRedirected = useRef(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   const mustCheck = !PUBLIC_ROUTES.includes(pathname);
+  // Session หมดอายุ → ค้าง dialog ไว้จนกว่า user จะกดตกลง
+  const isExpired = mustCheck && status === "unauthenticated";
+  const showExpiredDialog = isExpired && !confirmed;
 
-  useEffect(() => {
-    // ถ้าไม่ต้อง check ให้ข้ามไป
-    if (!mustCheck) {
-      hasRedirected.current = false;
-      return;
-    }
-
-    if (status === "loading") return;
-
-    // ถ้า unauthenticated ให้ redirect
-    if (status === "unauthenticated" && !hasRedirected.current) {
-      hasRedirected.current = true;
-      console.log("⚠️ Session not found, redirecting to login...");
-      
-      // Clear session และ redirect
-      signOut({ redirect: false }).then(() => {
-        router.push("/login");
-      });
-    }
-
-    // Reset flag เมื่อ authenticated
-    if (status === "authenticated") {
-      hasRedirected.current = false;
-    }
-  }, [mustCheck, status, router]);
+  const handleConfirmExpired = () => {
+    setConfirmed(true);
+    router.push("/login");
+    signOut({ redirect: false }).catch((err) => {
+      console.error("SignOut error:", err);
+    });
+  };
 
   // แสดง loading เมื่อ checking
   if (mustCheck && status === "loading") {
     return <PageLoading />;
   }
 
-  // ถ้า unauthenticated แสดง loading (กำลัง redirect)
-  if (mustCheck && status === "unauthenticated") {
+  // ถ้า unauthenticated ให้ค้าง dialog ไว้จนกว่าจะกดตกลง
+  if (showExpiredDialog) {
+    return (
+      <AlertDialog open={showExpiredDialog}>
+        <AlertDialogContent
+          onEscapeKeyDown={(e: KeyboardEvent) => e.preventDefault()}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>เซสชันหมดอายุ</AlertDialogTitle>
+            <AlertDialogDescription>
+              เซสชันของคุณหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่อีกครั้ง
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleConfirmExpired}>
+              ตกลง
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
+  // กด "ตกลง" แล้ว กำลัง redirect ไป login อยู่
+  if (isExpired && confirmed) {
     return <PageLoading />;
   }
 

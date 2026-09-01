@@ -74,21 +74,42 @@ export class AppService {
   }
 
   async createUser(req: CreateUserDto): Promise<CreateUserResult[]> {
-    return this.dbManager.executeStoredProcedure<CreateUserResult>(
-      `${databaseConfig.database}.dbo.User_Save_Cloud`,
+    const result =
+      await this.dbManager.executeStoredProcedure<CreateUserResult>(
+        `${databaseConfig.database}.dbo.User_Save_Cloud`,
+        [
+          { name: 'Name', type: sql.NVarChar(100), value: req.Name },
+          { name: 'Firstname', type: sql.NVarChar(50), value: req.Firstname },
+          { name: 'Lastname', type: sql.NVarChar(50), value: req.Lastname },
+          { name: 'loginname', type: sql.NVarChar(20), value: req.loginname },
+          { name: 'branchid', type: sql.Int(), value: req.branchid },
+          { name: 'department', type: sql.NVarChar(20), value: req.department },
+          { name: 'secid', type: sql.Int(), value: req.secid },
+          { name: 'positionid', type: sql.Int(), value: req.positionid },
+          { name: 'empupper', type: sql.NVarChar(10), value: req.empupper },
+          { name: 'email', type: sql.NVarChar(100), value: req.email },
+          { name: 'password', type: sql.NVarChar(50), value: req.password },
+          { name: 'role_id', type: sql.VarChar(50), value: req.role_id },
+        ],
+      );
+
+    // ตั้งรหัสผ่านผ่าน User_ResetPassword เพื่อให้รูปแบบการเข้ารหัส
+    // (EncryptByPassPhrase ด้วย UPPER(UserCode)) สอดคล้องกับตอน reset/login
+    if (result?.[0]?.status === 'success' && req.password) {
+      await this.adminResetPassword(req.loginname, req.password);
+    }
+
+    return result;
+  }
+
+  // ใช้ตอน admin ตั้ง/เปลี่ยนรหัสผ่านให้ user จากหน้า create/edit user
+  // proc นี้จะ set changepassword = 0 (ไม่บังคับให้ user เปลี่ยนเอง)
+  async adminResetPassword(loginname: string, newPassword: string) {
+    return this.dbManager.executeStoredProcedure(
+      `${databaseConfig.database}.dbo.User_ResetPassword`,
       [
-        { name: 'Name', type: sql.NVarChar(100), value: req.Name },
-        { name: 'Firstname', type: sql.NVarChar(50), value: req.Firstname },
-        { name: 'Lastname', type: sql.NVarChar(50), value: req.Lastname },
-        { name: 'loginname', type: sql.NVarChar(20), value: req.loginname },
-        { name: 'branchid', type: sql.Int(), value: req.branchid },
-        { name: 'department', type: sql.NVarChar(20), value: req.department },
-        { name: 'secid', type: sql.Int(), value: req.secid },
-        { name: 'positionid', type: sql.Int(), value: req.positionid },
-        { name: 'empupper', type: sql.NVarChar(10), value: req.empupper },
-        { name: 'email', type: sql.NVarChar(100), value: req.email },
-        { name: 'password', type: sql.NVarChar(50), value: req.password },
-        { name: 'role_id', type: sql.VarChar(50), value: req.role_id },
+        { name: 'loginname', type: sql.VarChar(20), value: loginname },
+        { name: 'newpassword', type: sql.VarChar(20), value: newPassword },
       ],
     );
   }
@@ -108,18 +129,18 @@ export class AppService {
       { name: 'role_id', type: sql.VarChar(50), value: req.role_id },
     ];
 
-    if (req.password) {
-      params.push({
-        name: 'password',
-        type: sql.NVarChar(50),
-        value: req.password,
-      });
-    }
-
-    return this.dbManager.executeStoredProcedure(
+    const result = await this.dbManager.executeStoredProcedure(
       `${databaseConfig.database}.dbo.User_Save_Cloud`,
       params,
     );
+
+    // ถ้า admin กรอกรหัสผ่านใหม่ ให้ตั้งผ่าน User_ResetPassword
+    // เพื่อให้การเข้ารหัสสอดคล้องกับ flow reset/login และ set changepassword = 0
+    if (req.password) {
+      await this.adminResetPassword(req.loginname, req.password);
+    }
+
+    return result;
   }
 
   async changeStatus(ID: string, actived: string): Promise<void> {
